@@ -1,0 +1,132 @@
+import React, { useEffect, useState } from 'react';
+import { useCartStore } from '../../store/useCartStore';
+import { rupiah } from '../../lib/format';
+import { X, Plus, Minus, ShoppingBag } from 'lucide-react';
+import { router } from '@inertiajs/react';
+
+interface CartDrawerProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
+    const { items, updateQuantity, removeItem, getTotal, getItemCount } = useCartStore();
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    if (!isMounted) return null;
+
+    return (
+        <>
+            {/* Overlay */}
+            {isOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+                    onClick={onClose}
+                ></div>
+            )}
+            
+            {/* Drawer */}
+            <div 
+                className={`fixed top-0 right-0 h-full w-full sm:w-[400px] bg-white z-50 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
+                    isOpen ? 'translate-x-0' : 'translate-x-full'
+                }`}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                    <div className="flex items-center space-x-2">
+                        <ShoppingBag size={20} className="text-[#00C48C]" />
+                        <h2 className="font-poppins font-semibold text-lg text-[#1A1A1A]">
+                            Keranjang Belanja
+                        </h2>
+                        <span className="bg-[#F0FAF6] text-[#00C48C] text-xs font-bold px-2 py-0.5 rounded-full">
+                            {getItemCount()}
+                        </span>
+                    </div>
+                    <button onClick={onClose} className="text-gray-500 hover:text-black">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                {/* Items */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {items.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                            <ShoppingBag size={48} className="text-gray-300 mb-4" />
+                            <p className="font-inter">Keranjang belanja Anda kosong</p>
+                        </div>
+                    ) : (
+                        items.map((item) => (
+                            <div key={item.product.id} className="flex gap-4 border-b border-gray-100 pb-4">
+                                <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                                    {item.product.image_url ? (
+                                        <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">IMG</div>
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-poppins font-medium text-sm text-[#1A1A1A] line-clamp-2">
+                                        {item.product.name}
+                                    </h4>
+                                    <div className="text-[#00C48C] font-semibold text-sm mt-1">
+                                        {rupiah(item.product.price)}
+                                    </div>
+                                    <div className="flex items-center justify-between mt-2">
+                                        <div className="flex items-center border border-gray-200 rounded-md">
+                                            <button 
+                                                onClick={() => {
+                                                    if (item.quantity > 1) {
+                                                        updateQuantity(item.product.id, item.quantity - 1);
+                                                    } else {
+                                                        removeItem(item.product.id);
+                                                    }
+                                                }}
+                                                className="px-2 py-1 text-gray-600 hover:bg-gray-50"
+                                            >
+                                                <Minus size={14} />
+                                            </button>
+                                            <span className="px-2 py-1 text-sm font-medium w-8 text-center">
+                                                {item.quantity}
+                                            </span>
+                                            <button 
+                                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                                                className="px-2 py-1 text-gray-600 hover:bg-gray-50"
+                                            >
+                                                <Plus size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Footer */}
+                {items.length > 0 && (
+                    <div className="border-t border-gray-200 p-4 bg-gray-50">
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="font-inter text-gray-600 font-medium">Subtotal</span>
+                            <span className="font-poppins font-bold text-lg text-[#1A1A1A]">
+                                {rupiah(getTotal())}
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => {
+                                onClose();
+                                router.visit('/cart');
+                            }}
+                            className="w-full bg-[#00C48C] hover:bg-[#00a878] text-white font-semibold py-3 px-4 rounded-md transition-colors"
+                        >
+                            Lanjut ke Pembayaran
+                        </button>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}

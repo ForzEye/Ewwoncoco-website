@@ -1,0 +1,231 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\LandingController;
+use App\Http\Controllers\Customer\CustomerController;
+use App\Http\Controllers\Customer\CartController;
+use App\Http\Controllers\Customer\OrderController;
+use App\Http\Controllers\Customer\LoyaltyController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\MerchantProductController;
+use App\Http\Controllers\Admin\MerchantOrderController;
+use App\Http\Controllers\POS\POSController;
+use App\Http\Controllers\POS\ShiftController;
+use App\Http\Controllers\POS\TransactionController;
+use App\Http\Controllers\SuperAdmin\SuperAdminController;
+use App\Http\Controllers\SuperAdmin\BranchManagementController;
+use App\Http\Controllers\Admin\AdminSettingsController;
+use App\Http\Controllers\SuperAdmin\SuperAdminSettingsController;
+use Inertia\Inertia;
+use App\Http\Controllers\Admin\MonitoringController;
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes (no auth required)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/', [LandingController::class, 'index'])->name('home');
+Route::get('/contact', [LandingController::class, 'contact'])->name('contact');
+Route::get('/faq', [LandingController::class, 'faq'])->name('faq');
+
+// Informational Pages (others)
+Route::get('/terms', [LandingController::class, 'info'])->defaults('type', 'terms')->name('terms');
+Route::get('/privacy', [LandingController::class, 'info'])->defaults('type', 'privacy')->name('privacy');
+Route::get('/info/delivery', [LandingController::class, 'info'])->defaults('type', 'delivery')->name('info.delivery');
+Route::get('/info/pickup', [LandingController::class, 'info'])->defaults('type', 'pickup')->name('info.pickup');
+
+/*
+|--------------------------------------------------------------------------
+| Auth Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'register'])
+        ->middleware('throttle:6,1')
+        ->name('register.submit');
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:6,1')
+        ->name('login.submit');
+
+    // Google OAuth
+    Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('google.redirect');
+    Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
+});
+
+Route::post('/logout', [AuthController::class, 'logout'])
+    ->middleware('auth')
+    ->name('logout');
+
+/*
+|--------------------------------------------------------------------------
+| Customer Routes (auth required, role: customer)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/shop', [CustomerController::class, 'shop'])->name('shop');
+    Route::get('/shop/{slug}', [CustomerController::class, 'merchant'])->name('merchant.detail');
+    Route::get('/products/{slug}', [CustomerController::class, 'product'])->name('product.detail');
+
+    Route::get('/cart', [CartController::class, 'index'])->name('cart');
+
+    Route::get('/checkout', [OrderController::class, 'checkout'])->name('checkout');
+    Route::post('/checkout', [OrderController::class, 'store'])->name('checkout.store');
+
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders');
+    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.detail');
+    Route::post('/orders/{id}/payment-proof', [OrderController::class, 'uploadPaymentProof'])->name('orders.payment_proof');
+
+    Route::get('/profile', [CustomerController::class, 'profile'])->name('profile');
+
+    Route::get('/loyalty', [LoyaltyController::class, 'index'])->name('loyalty');
+    Route::get('/referral', [\App\Http\Controllers\Customer\ReferralController::class, 'index'])->name('referral');
+
+    // Reviews
+    Route::post('/reviews', [\App\Http\Controllers\Customer\ReviewController::class, 'store'])->name('reviews.store');
+    Route::get('/api/products/{id}/reviews', [\App\Http\Controllers\Customer\ReviewController::class, 'productReviews'])->name('api.product.reviews');
+
+    // Chat
+    Route::get('/chats', [\App\Http\Controllers\ChatController::class, 'index'])->name('chat.index');
+    Route::get('/chats/merchant/{merchantId}', [\App\Http\Controllers\ChatController::class, 'openRoom'])->name('chat.open');
+    Route::get('/chats/{id}', [\App\Http\Controllers\ChatController::class, 'show'])->name('chat.show');
+    Route::post('/chats/{id}/send', [\App\Http\Controllers\ChatController::class, 'sendMessage'])->name('chat.send');
+
+    // Delivery API (Internal)
+    Route::get('/api/delivery/quote', [OrderController::class, 'getDeliveryQuote'])->name('delivery.quote');
+
+    // FCM Notification
+    Route::post('/api/notifications/token', [\App\Http\Controllers\NotificationController::class, 'updateToken'])->name('notifications.token');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin / Owner Routes (role: admin)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    
+    // Products
+    Route::get('/products', [MerchantProductController::class, 'index'])->name('products.index');
+    Route::get('/products/create', [MerchantProductController::class, 'create'])->name('products.create');
+    Route::post('/products', [MerchantProductController::class, 'store'])->name('products.store');
+
+    // Orders
+    Route::get('/orders', [MerchantOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{id}', [MerchantOrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{id}/status', [MerchantOrderController::class, 'updateStatus'])->name('orders.status');
+
+    // Placeholders for other admin features
+    Route::get('/inventory', function () { return Inertia::render('Admin/Inventory'); })->name('inventory');
+    Route::get('/analytics', function () { return Inertia::render('Admin/Analytics'); })->name('analytics');
+    Route::get('/vouchers', [\App\Http\Controllers\Admin\VoucherController::class, 'index'])->name('vouchers');
+    Route::post('/vouchers', [\App\Http\Controllers\Admin\VoucherController::class, 'store'])->name('vouchers.store');
+    Route::post('/vouchers/{id}/toggle', [\App\Http\Controllers\Admin\VoucherController::class, 'toggle'])->name('vouchers.toggle');
+    Route::delete('/vouchers/{id}', [\App\Http\Controllers\Admin\VoucherController::class, 'destroy'])->name('vouchers.destroy');
+    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
+    Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+    Route::get('/pos-history', function () { return Inertia::render('Admin/POSHistory'); })->name('pos-history');
+
+    // Reports & Analytics
+    Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [\App\Http\Controllers\Admin\ReportController::class, 'exportCsv'])->name('reports.export');
+
+    // Marketing
+    Route::get('/marketing', [\App\Http\Controllers\Admin\MarketingController::class, 'index'])->name('marketing.index');
+    Route::post('/marketing', [\App\Http\Controllers\Admin\MarketingController::class, 'store'])->name('marketing.store');
+    Route::post('/marketing/{id}/toggle', [\App\Http\Controllers\Admin\MarketingController::class, 'toggle'])->name('marketing.toggle');
+    
+    // Inventory & Recipe Management
+    Route::get('/inventory/ingredients', [\App\Http\Controllers\Admin\IngredientController::class, 'index'])->name('inventory.ingredients.index');
+    Route::post('/inventory/ingredients', [\App\Http\Controllers\Admin\IngredientController::class, 'store'])->name('inventory.ingredients.store');
+    Route::post('/inventory/ingredients/{id}', [\App\Http\Controllers\Admin\IngredientController::class, 'update'])->name('inventory.ingredients.update');
+    Route::delete('/inventory/ingredients/{id}', [\App\Http\Controllers\Admin\IngredientController::class, 'destroy'])->name('inventory.ingredients.destroy');
+
+    Route::get('/inventory/stock', [\App\Http\Controllers\Admin\StockManagementController::class, 'index'])->name('inventory.stock.index');
+    Route::post('/inventory/stock/in', [\App\Http\Controllers\Admin\StockManagementController::class, 'stockIn'])->name('inventory.stock.in');
+    Route::post('/inventory/stock/adjust', [\App\Http\Controllers\Admin\StockManagementController::class, 'stockAdjust'])->name('inventory.stock.adjust');
+
+    Route::get('/inventory/recipes', [\App\Http\Controllers\Admin\RecipeController::class, 'index'])->name('inventory.recipes.index');
+    Route::post('/inventory/recipes', [\App\Http\Controllers\Admin\RecipeController::class, 'store'])->name('inventory.recipes.store');
+    Route::delete('/inventory/recipes/{id}', [\App\Http\Controllers\Admin\RecipeController::class, 'destroy'])->name('inventory.recipes.destroy');
+
+    // Shift Management (Admin)
+    Route::get('/shifts', [\App\Http\Controllers\POS\ShiftController::class, 'adminIndex'])->name('shifts.index');
+    Route::post('/shifts/{id}/unlock', [\App\Http\Controllers\POS\ShiftController::class, 'unlock'])->name('shifts.unlock');
+    Route::post('/shifts/{id}/force-close', [\App\Http\Controllers\POS\ShiftController::class, 'forceClose'])->name('shifts.force_close');
+});
+
+/*
+|--------------------------------------------------------------------------
+| POS Cashier Routes (role: kasir)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'role:kasir,super_admin'])->prefix('pos')->name('pos.')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'cashierIndex'])->name('dashboard');
+    Route::get('/', [POSController::class, 'index'])->name('screen');
+    Route::post('/store', [POSController::class, 'store'])->name('store');
+
+    Route::get('/shifts', [ShiftController::class, 'index'])->name('shifts');
+    Route::post('/shifts/open', [ShiftController::class, 'open'])->name('shifts.open');
+    Route::post('/shifts/close', [ShiftController::class, 'close'])->name('shifts.close');
+
+    Route::get('/history', [TransactionController::class, 'index'])->name('transactions');
+    Route::get('/history/{id}', [TransactionController::class, 'show'])->name('transactions.show');
+    Route::post('/history/{id}/void', [TransactionController::class, 'void'])->name('transactions.void');
+
+    // Online Orders (POS)
+    Route::get('/online-orders', [\App\Http\Controllers\POS\OnlineOrderController::class, 'index'])->name('online_orders.index');
+    Route::post('/online-orders/{id}/accept', [\App\Http\Controllers\POS\OnlineOrderController::class, 'accept'])->name('online_orders.accept');
+    Route::post('/online-orders/{id}/reject', [\App\Http\Controllers\POS\OnlineOrderController::class, 'reject'])->name('online_orders.reject');
+    Route::post('/online-orders/{id}/status', [\App\Http\Controllers\POS\OnlineOrderController::class, 'updateStatus'])->name('online_orders.status');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Super Admin Routes (role: super_admin)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('superadmin.')->group(function () {
+    Route::get('/', [SuperAdminController::class, 'dashboard'])->name('dashboard');
+    
+    // User Management
+    Route::get('/users', [SuperAdminController::class, 'users'])->name('users');
+    Route::post('/users', [SuperAdminController::class, 'storeUser'])->name('users.store');
+    Route::post('/users/{id}', [SuperAdminController::class, 'updateUser'])->name('users.update');
+
+    // Merchant Management
+    Route::get('/merchants', [SuperAdminController::class, 'merchants'])->name('merchants');
+    Route::get('/merchants/{id}', [SuperAdminController::class, 'showMerchant'])->name('merchants.show');
+    Route::post('/merchants/{id}/toggle', [SuperAdminController::class, 'toggleMerchantStatus'])->name('merchants.toggle');
+
+    // Branch Management
+    Route::get('/branches', [BranchManagementController::class, 'index'])->name('branches.index');
+    Route::post('/branches', [BranchManagementController::class, 'store'])->name('branches.store');
+    Route::post('/branches/{id}', [BranchManagementController::class, 'update'])->name('branches.update');
+    Route::delete('/branches/{id}', [BranchManagementController::class, 'destroy'])->name('branches.destroy');
+
+    // System Settings
+    Route::get('/settings', [SuperAdminController::class, 'settings'])->name('settings');
+    Route::post('/settings', [SuperAdminController::class, 'updateSettings'])->name('settings.update');
+
+    // Global Order Management
+    Route::get('/orders', [SuperAdminController::class, 'orders'])->name('orders');
+
+    // Placeholders for analytics
+    Route::get('/analytics', [SuperAdminController::class, 'analytics'])->name('analytics');
+    // Monitoring
+    Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring');
+    Route::get('/api/monitoring/otp-logs', [MonitoringController::class, 'getOtpLogs'])->name('api.monitoring.otp');
+    Route::get('/api/monitoring/error-logs', [MonitoringController::class, 'getErrorLogs'])->name('api.monitoring.errors');
+    Route::post('/api/monitoring/error-logs/clear', [MonitoringController::class, 'clearErrorLogs'])->name('api.monitoring.errors.clear');
+});
