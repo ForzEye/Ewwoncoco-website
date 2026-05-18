@@ -43,4 +43,9 @@ return [
             'webhook_secret' => env('GRAB_WEBHOOK_SECRET', 'grab_default_dummy_secret'),
         ],
 
+        'firebase' => [
+            'project_id' => env('FIREBASE_PROJECT_ID', 'ewwon-coco'),
+            'server_key' => env('FIREBASE_SERVER_KEY'),
+        ],
+
 ];
