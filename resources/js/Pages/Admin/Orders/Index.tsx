@@ -9,14 +9,25 @@ interface OrdersIndexProps {
     orders: Order[];
 }
 
+import { confirmAction, toastSuccess } from '@/lib/swal';
+
 export default function Index({ orders }: OrdersIndexProps) {
 
     const handleUpdateStatus = (id: number, status: string) => {
-        if (confirm(`Apakah Anda yakin ingin mengubah status pesanan menjadi ${status}?`)) {
-            router.post(route('admin.orders.status', id), { status }, {
-                preserveScroll: true
-            });
-        }
+        confirmAction(
+            'Ubah Status Pesanan?',
+            `Apakah Anda yakin ingin mengubah status pesanan menjadi ${status}?`,
+            'Ya, Ubah'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.orders.status', id), { status }, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        toastSuccess('Status pesanan berhasil diperbarui!');
+                    }
+                });
+            }
+        });
     };
 
     const getStatusConfig = (status: string) => {

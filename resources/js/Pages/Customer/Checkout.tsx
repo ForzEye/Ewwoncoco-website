@@ -5,6 +5,8 @@ import { useCartStore } from '../../store/useCartStore';
 import { rupiah } from '../../lib/format';
 import { MapPin, Truck, Wallet, CheckCircle } from 'lucide-react';
 
+import { toastWarning } from '../../lib/swal';
+
 export default function Checkout() {
     const { items, getTotal, clearCart } = useCartStore();
     const [isMounted, setIsMounted] = useState(false);
@@ -58,7 +60,7 @@ export default function Checkout() {
         
         // Basic validation for delivery
         if (data.delivery_type === 'delivery' && !data.address) {
-            alert('Silakan isi alamat pengiriman.');
+            toastWarning('Silakan isi alamat pengiriman.');
             return;
         }
 

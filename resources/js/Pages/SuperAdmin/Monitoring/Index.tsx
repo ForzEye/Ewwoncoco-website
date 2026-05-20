@@ -35,6 +35,8 @@ interface ErrorLog {
     message: string;
 }
 
+import { confirmAction, toastSuccess } from '@/lib/swal';
+
 export default function Monitoring() {
     const [activeTab, setActiveTab] = useState<'otp' | 'errors'>('otp');
     const [logs, setLogs] = useState<OtpLog[]>([]);
@@ -69,17 +71,25 @@ export default function Monitoring() {
     };
 
     const handleClearLogs = async () => {
-        if (!confirm('Apakah Anda yakin ingin menghapus semua log error Laravel?')) return;
-        setIsClearing(true);
-        try {
-            await axios.post('/super-admin/api/monitoring/error-logs/clear');
-            setErrorLogs([]);
-            setLastUpdated(new Date());
-        } catch (error) {
-            console.error('Failed to clear error logs', error);
-        } finally {
-            setIsClearing(false);
-        }
+        confirmAction(
+            'Hapus Log Error?',
+            'Apakah Anda yakin ingin menghapus semua log error Laravel?',
+            'Ya, Hapus'
+        ).then(async (result) => {
+            if (result.isConfirmed) {
+                setIsClearing(true);
+                try {
+                    await axios.post('/super-admin/api/monitoring/error-logs/clear');
+                    setErrorLogs([]);
+                    setLastUpdated(new Date());
+                    toastSuccess('Log error Laravel berhasil dibersihkan!');
+                } catch (error) {
+                    console.error('Failed to clear error logs', error);
+                } finally {
+                    setIsClearing(false);
+                }
+            }
+        });
     };
 
     useEffect(() => {

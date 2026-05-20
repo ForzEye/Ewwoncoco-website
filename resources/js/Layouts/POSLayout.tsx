@@ -13,6 +13,7 @@ import {
 import axios from 'axios';
 import OnlineOrdersModal from '../Components/POS/OnlineOrdersModal';
 import { PageProps } from '../types';
+import { requestNotificationPermission, onMessageListener } from '../lib/firebase-setup';
 
 interface POSLayoutProps {
     children: ReactNode;
@@ -35,6 +36,25 @@ export default function POSLayout({ children }: POSLayoutProps) {
         // Fetch initial pending orders
         fetchPendingOrders();
 
+        if (auth.user) {
+            requestNotificationPermission();
+
+            const unsubscribeFCM = onMessageListener((payload: any) => {
+                console.log('FCM Message received in foreground:', payload);
+                if (Notification.permission === 'granted') {
+                    new Notification(payload.notification.title, {
+                        body: payload.notification.body,
+                        icon: '/coconut_original.png',
+                    });
+                }
+            });
+
+            // Cleanup FCM when user changes or unmounts
+            var cleanupFCM = () => unsubscribeFCM();
+        } else {
+            var cleanupFCM = () => {};
+        }
+
         // Listen for new orders
         const merchantId = auth.user?.merchant_id || 1;
         const channel = (window as any).Echo.private(`merchant.${merchantId}.orders`);
@@ -50,6 +70,7 @@ export default function POSLayout({ children }: POSLayoutProps) {
             window.removeEventListener('offline', handleOffline);
             clearInterval(timer);
             (window as any).Echo.leave(`merchant.${merchantId}.orders`);
+            cleanupFCM();
         };
     }, [auth.user]);
 

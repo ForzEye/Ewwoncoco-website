@@ -3,12 +3,12 @@ import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import axios from 'axios';
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyD_zcK4IcJr6FeBnL5WzVdnKRX9R4nlaxw",
+    authDomain: "ewwon-coco.firebaseapp.com",
+    projectId: "ewwon-coco",
+    storageBucket: "ewwon-coco.firebasestorage.app",
+    messagingSenderId: "539905312817",
+    appId: "1:539905312817:web:3b60c0f51ef7fa1c2ded10"
 };
 
 let messaging: any = null;
@@ -24,7 +24,7 @@ export const requestNotificationPermission = async () => {
         const permission = await Notification.requestPermission();
         if (permission === 'granted' && messaging) {
             const token = await getToken(messaging, { 
-                vapidKey: 'YOUR_VAPID_KEY' 
+                vapidKey: 'BALpT1QmX_gwKU1XruellKiG-zszoLGCuXyJGaHQgaRMzmcc-wmNvO7aF-Rt5wWHVL5qHnWA2Ir5ukad7R08_9g' 
             });
             
             if (token) {
@@ -38,10 +38,9 @@ export const requestNotificationPermission = async () => {
     }
 };
 
-export const onMessageListener = () =>
-    new Promise((resolve) => {
-        if (!messaging) return resolve(null);
-        onMessage(messaging, (payload: any) => {
-            resolve(payload);
-        });
+export const onMessageListener = (callback: (payload: any) => void) => {
+    if (!messaging) return () => {};
+    return onMessage(messaging, (payload: any) => {
+        callback(payload);
     });
+};

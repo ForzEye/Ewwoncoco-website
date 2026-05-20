@@ -21,14 +21,26 @@ interface OnlineOrdersProps {
     orders: any[];
 }
 
+import { confirmAction, toastSuccess } from '@/lib/swal';
+
 export default function OnlineOrders({ orders }: OnlineOrdersProps) {
     const [processing, setProcessing] = useState<number | null>(null);
 
     const handleAccept = (id: number) => {
-        if (!confirm('Terima pesanan ini?')) return;
-        setProcessing(id);
-        router.post(route('pos.online_orders.accept', id), {}, {
-            onFinish: () => setProcessing(null)
+        confirmAction(
+            'Terima Pesanan?',
+            'Apakah Anda yakin ingin menerima pesanan online ini?',
+            'Ya, Terima'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                setProcessing(id);
+                router.post(route('pos.online_orders.accept', id), {}, {
+                    onSuccess: () => {
+                        toastSuccess('Pesanan berhasil diterima!');
+                    },
+                    onFinish: () => setProcessing(null)
+                });
+            }
         });
     };
 

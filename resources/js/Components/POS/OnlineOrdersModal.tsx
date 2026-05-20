@@ -11,6 +11,8 @@ interface OnlineOrdersModalProps {
     onUpdate: () => void;
 }
 
+import { toastSuccess, toastError, toastWarning } from '../../lib/swal';
+
 export default function OnlineOrdersModal({ isOpen, onClose, orders, onUpdate }: OnlineOrdersModalProps) {
     const [processingId, setProcessingId] = React.useState<number | null>(null);
     const [reviewedIds, setReviewedIds] = React.useState<number[]>([]);
@@ -23,7 +25,7 @@ export default function OnlineOrdersModal({ isOpen, onClose, orders, onUpdate }:
 
     const handleAccept = async (orderId: number) => {
         if (!reviewedIds.includes(orderId)) {
-            alert('Harap tinjau bukti pembayaran terlebih dahulu!');
+            toastWarning('Harap tinjau bukti pembayaran terlebih dahulu!');
             return;
         }
         
@@ -31,10 +33,10 @@ export default function OnlineOrdersModal({ isOpen, onClose, orders, onUpdate }:
         try {
             await axios.post(route('pos.online_orders.accept', orderId));
             onUpdate();
-            alert('Pesanan diterima! Mencetak struk dapur...');
+            toastSuccess('Pesanan diterima! Mencetak struk dapur...');
         } catch (error) {
             console.error(error);
-            alert('Gagal menerima pesanan.');
+            toastError('Gagal menerima pesanan.');
         } finally {
             setProcessingId(null);
         }
@@ -51,9 +53,10 @@ export default function OnlineOrdersModal({ isOpen, onClose, orders, onUpdate }:
             setRejectOrderId(null);
             setRejectionReason('');
             onUpdate();
+            toastSuccess('Pesanan berhasil ditolak.');
         } catch (error) {
             console.error(error);
-            alert('Gagal menolak pesanan.');
+            toastError('Gagal menolak pesanan.');
         } finally {
             setProcessingId(null);
         }

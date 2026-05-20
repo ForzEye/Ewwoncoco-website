@@ -52,23 +52,25 @@ class OnlineOrderController extends Controller
             ->whereNull('closed_at')
             ->first();
 
-        $order->update([
-            'status' => 'confirmed',
-            'cashier_id' => $user->id,
-            'shift_id' => $activeShift ? $activeShift->id : null,
-        ]);
+        DB::transaction(function () use ($order, $user, $activeShift) {
+            $order->update([
+                'status' => 'confirmed',
+                'cashier_id' => $user->id,
+                'shift_id' => $activeShift ? $activeShift->id : null,
+            ]);
 
-        // Deduct Stock for all items in order
-        $order->load('items.product');
-        foreach ($order->items as $item) {
-            \App\Services\StockService::deductFromRecipe(
-                $item->product_id, 
-                $order->branch_id, 
-                $item->quantity, 
-                $order->id, 
-                'OnlineOrder'
-            );
-        }
+            // Deduct Stock for all items in order
+            $order->load('items.product');
+            foreach ($order->items as $item) {
+                \App\Services\StockService::deductFromRecipe(
+                    $item->product_id, 
+                    $order->branch_id, 
+                    $item->quantity, 
+                    $order->id, 
+                    'OnlineOrder'
+                );
+            }
+        });
 
         // Create notification for customer
         if ($order->customer_id) {
@@ -79,6 +81,14 @@ class OnlineOrderController extends Controller
                 'type' => 'order_update',
                 'data' => ['order_id' => $order->id]
             ]);
+
+            // Send premium WhatsApp receipt
+            try {
+                $waService = app(\App\Services\Notification\WhatsAppService::class);
+                $waService->sendOnlineReceipt($order);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to send WA online receipt: " . $e->getMessage());
+            }
         }
 
         // Broadcast status update to customer

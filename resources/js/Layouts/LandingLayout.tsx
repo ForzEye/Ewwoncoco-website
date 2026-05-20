@@ -7,7 +7,7 @@ interface LandingLayoutProps {
     children: ReactNode;
 }
 
-import { requestNotificationPermission } from '@/lib/firebase-setup';
+import { requestNotificationPermission, onMessageListener } from '@/lib/firebase-setup';
 
 export default function LandingLayout({ children }: LandingLayoutProps) {
     const { auth, site_settings = {} } = usePage<PageProps>().props;
@@ -27,6 +27,20 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
     useEffect(() => {
         if (auth.user) {
             requestNotificationPermission();
+
+            const unsubscribe = onMessageListener((payload: any) => {
+                console.log('FCM Message received in foreground:', payload);
+                if (Notification.permission === 'granted') {
+                    new Notification(payload.notification.title, {
+                        body: payload.notification.body,
+                        icon: '/coconut_original.png',
+                    });
+                }
+            });
+
+            return () => {
+                unsubscribe();
+            };
         }
     }, [auth.user]);
 

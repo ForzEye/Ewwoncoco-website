@@ -226,16 +226,17 @@ class PointsService
     {
         $user = User::findOrFail($userId);
 
-        // Get or create referral code
-        $referral = Referral::firstOrCreate(
-            ['referrer_id' => $userId],
-            ['referral_code' => Referral::generateUniqueCode()]
-        );
+        if (empty($user->referral_code)) {
+            do {
+                $code = strtoupper(\Illuminate\Support\Str::random(6));
+            } while (User::where('referral_code', $code)->exists());
+            $user->update(['referral_code' => $code]);
+        }
 
         $totalReferrals = Referral::getTotalReferralsForUser($userId);
 
         return [
-            'code' => $referral->referral_code,
+            'code' => $user->referral_code,
             'total_referrals' => $totalReferrals,
         ];
     }
@@ -245,21 +246,27 @@ class PointsService
      */
     public static function applyReferralCode(int $userId, string $code): bool
     {
-        // Find referral by code
-        $referral = Referral::where('referral_code', $code)
-            ->where('is_used', false)
-            ->first();
+        $referrer = User::where('referral_code', $code)->first();
 
-        if (!$referral || $referral->referrer_id === $userId) {
+        if (!$referrer || $referrer->id === $userId) {
             return false; // Invalid or self-referral
         }
 
-        DB::transaction(function () use ($userId, $referral) {
-            // Mark referral as used
-            $referral->markAsUsed($userId);
+        $alreadyReferred = Referral::where('referee_id', $userId)->exists();
+        if ($alreadyReferred) {
+            return false;
+        }
 
-            // Give bonus to referrer
-            self::giveReferralBonus($referral->referrer_id, $referral->id);
+        DB::transaction(function () use ($userId, $referrer) {
+            $referee = User::findOrFail($userId);
+            $referee->update(['referred_by_id' => $referrer->id]);
+
+            $referral = Referral::create([
+                'referrer_id' => $referrer->id,
+                'referee_id' => $userId,
+            ]);
+
+            self::giveReferralBonus($referrer->id, $referral->id);
         });
 
         return true;

@@ -23,6 +23,8 @@ interface IngredientsProps {
     ingredients: Ingredient[];
 }
 
+import { confirmAction, toastSuccess } from '@/lib/swal';
+
 export default function Ingredients({ ingredients }: IngredientsProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
@@ -59,6 +61,7 @@ export default function Ingredients({ ingredients }: IngredientsProps) {
                 onSuccess: () => {
                     setIsModalOpen(false);
                     reset();
+                    toastSuccess('Bahan baku berhasil diperbarui!');
                 }
             });
         } else {
@@ -66,15 +69,26 @@ export default function Ingredients({ ingredients }: IngredientsProps) {
                 onSuccess: () => {
                     setIsModalOpen(false);
                     reset();
+                    toastSuccess('Bahan baku baru berhasil ditambahkan!');
                 }
             });
         }
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('Hapus bahan baku ini? Ini juga akan menghapus data stok terkait.')) {
-            destroy(route('admin.inventory.ingredients.destroy', id));
-        }
+        confirmAction(
+            'Hapus Bahan Baku?',
+            'Apakah Anda yakin ingin menghapus bahan baku ini? Ini juga akan menghapus data stok terkait.',
+            'Ya, Hapus'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                destroy(route('admin.inventory.ingredients.destroy', id), {
+                    onSuccess: () => {
+                        toastSuccess('Bahan baku berhasil dihapus!');
+                    }
+                });
+            }
+        });
     };
 
     return (

@@ -17,11 +17,12 @@ class SecurityHeaders
 
         // Strict Content Security Policy (Remove wildcards, specify trusted sources)
         $csp = "default-src 'self'; " .
-               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://app.sandbox.midtrans.com; " .
+               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://app.sandbox.midtrans.com https://app.midtrans.com; " .
                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " .
-               "img-src 'self' data: blob: https://s3.morrbali.com https://manly-process-huddle.ngrok-free.dev; " .
-               "connect-src 'self' wss: ws: https://api.gojek.com https://partner-api.grab.com; " .
-               "frame-src 'self' https://app.sandbox.midtrans.com; " .
+               "img-src 'self' data: blob: https:; " .
+               "connect-src 'self' wss: ws: https://api.gojek.com https://partner-api.grab.com https://*.googleapis.com; " .
+               "font-src 'self' https://fonts.gstatic.com data:; " .
+               "frame-src 'self' https://app.sandbox.midtrans.com https://app.midtrans.com; " .
                "frame-ancestors 'self'; " .
                "object-src 'none';";
 

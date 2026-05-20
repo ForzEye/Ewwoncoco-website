@@ -23,17 +23,28 @@ interface OrderShowProps {
     order: Order;
 }
 
+import { confirmAction, toastSuccess } from '@/lib/swal';
+
 export default function Show({ order }: OrderShowProps) {
     const [processing, setProcessing] = useState(false);
 
     const handleUpdateStatus = (status: string) => {
-        if (confirm(`Ubah status menjadi ${status}?`)) {
-            setProcessing(true);
-            router.post(route('admin.orders.status', order.id), { status }, {
-                preserveScroll: true,
-                onFinish: () => setProcessing(false)
-            });
-        }
+        confirmAction(
+            'Ubah Status Pesanan?',
+            `Apakah Anda yakin ingin mengubah status menjadi ${status}?`,
+            'Ya, Ubah'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                setProcessing(true);
+                router.post(route('admin.orders.status', order.id), { status }, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        toastSuccess('Status pesanan berhasil diperbarui!');
+                    },
+                    onFinish: () => setProcessing(false)
+                });
+            }
+        });
     };
 
     const getStatusStep = () => {

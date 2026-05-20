@@ -25,6 +25,8 @@ interface MerchantsProps {
     };
 }
 
+import { confirmAction, toastSuccess } from '@/lib/swal';
+
 export default function Merchants({ merchants, filters }: MerchantsProps) {
     const [search, setSearch] = useState(filters.search || '');
 
@@ -34,9 +36,19 @@ export default function Merchants({ merchants, filters }: MerchantsProps) {
     };
 
     const handleToggleStatus = (id: number) => {
-        if (confirm('Apakah Anda yakin ingin mengubah status aktif merchant ini?')) {
-            router.post(route('superadmin.merchants.toggle', id));
-        }
+        confirmAction(
+            'Ubah Status Merchant?',
+            'Apakah Anda yakin ingin mengubah status aktif merchant ini?',
+            'Ya, Ubah'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('superadmin.merchants.toggle', id), {}, {
+                    onSuccess: () => {
+                        toastSuccess('Status merchant berhasil diubah!');
+                    }
+                });
+            }
+        });
     };
 
     return (

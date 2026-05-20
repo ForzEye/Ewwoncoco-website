@@ -47,9 +47,16 @@ class OrderSanitizationTest extends TestCase
             'is_available' => true,
         ]);
 
-        // Force DB::beginTransaction to throw error or make Order::create crash by passing invalid values that pass request validation
-        // Subtotal is numeric, we pass large or formatted string that triggers DB query error during insertion but passes request validate.
-        // E.g. set subtotal to 10000000000000000000000000000.00 (triggers Decimal/Float range overflow on DB insertion)
+        // Force Order::create to throw a QueryException during insertion to simulate a DB/SQL exception
+        Order::creating(function ($order) {
+            throw new \Illuminate\Database\QueryException(
+                'sqlite',
+                'insert into "orders" ("customer_id", "merchant_id", "branch_id", "order_number", "subtotal", "total") values (?, ?, ?, ?, ?, ?)',
+                [1, 1, 1, 'ORD-X', 15000.00, 15000.00],
+                new \Exception("Simulated SQLSTATE[HY000]: General error: database is locked")
+            );
+        });
+
         $payload = [
             'branch_id' => $branch->id,
             'items' => [
@@ -59,10 +66,10 @@ class OrderSanitizationTest extends TestCase
                     'unit_price' => 15000,
                 ]
             ],
-            'subtotal' => 100000000000000000000.00, // DB schema subtotal overflow
+            'subtotal' => 15000.00,
             'delivery_fee' => 0,
             'discount' => 0,
-            'total' => 100000000000000000000.00,
+            'total' => 15000.00,
             'payment_method' => 'qris',
             'delivery_type' => 'pickup',
         ];

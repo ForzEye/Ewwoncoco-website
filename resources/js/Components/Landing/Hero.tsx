@@ -57,31 +57,7 @@ export default function Hero() {
                         </a>
                     </div>
 
-                    {/* Social proof strip */}
-                    <div className="flex items-center gap-8 flex-wrap">
-                        <div className="flex items-center gap-4">
-                            <div className="flex -space-x-3">
-                                {[1, 2, 3, 4, 5].map((i) => (
-                                    <div key={i} className="w-10 h-10 rounded-full border-[3px] border-white bg-gray-200 overflow-hidden shadow-sm hover:z-20 hover:scale-110 transition-transform duration-300" style={{ zIndex: 6 - i }}>
-                                        <img src={`https://i.pravatar.cc/100?img=${i + 15}`} alt="Customer" className="w-full h-full object-cover" />
-                                    </div>
-                                ))}
-                            </div>
-                            <div>
-                                <div className="flex gap-0.5 mb-0.5">
-                                    {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-3.5 h-3.5 fill-[#00C48C] text-[#00C48C]" />)}
-                                </div>
-                                <p className="text-xs text-[#6B7280]"><span className="font-black text-[#1A1A1A]">4.9</span> dari 1,200+ ulasan</p>
-                            </div>
-                        </div>
 
-                        <div className="h-8 w-px bg-gray-200 hidden sm:block"></div>
-
-                        <div className="flex items-center gap-2 text-xs font-bold text-[#6B7280]">
-                            <Truck className="w-4 h-4 text-[#00C48C]" />
-                            <span>Gratis Ongkir &lt; 3km</span>
-                        </div>
-                    </div>
                 </div>
 
                 <div className="relative hidden lg:flex items-center justify-center min-h-[550px]" style={{ animation: 'fadeInUp 0.9s ease-out 0.2s both' }}>

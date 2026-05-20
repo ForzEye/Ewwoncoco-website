@@ -25,22 +25,26 @@ class StockService
 
             $branchIngredient = BranchIngredient::where('branch_id', $branchId)
                 ->where('ingredient_id', $recipe->ingredient_id)
+                ->lockForUpdate()
                 ->first();
 
-            if ($branchIngredient) {
-                $branchIngredient->decrement('stock', $totalNeeded);
-
-                // Record Movement
-                StockMovement::create([
-                    'branch_id' => $branchId,
-                    'ingredient_id' => $recipe->ingredient_id,
-                    'type' => 'OUT',
-                    'quantity' => $totalNeeded,
-                    'reference_id' => $referenceId,
-                    'reference_type' => $referenceType,
-                    'notes' => "Otomatis dari {$referenceType} #{$referenceId}",
-                ]);
+            if (!$branchIngredient || $branchIngredient->stock < $totalNeeded) {
+                $ingredientName = $recipe->ingredient->name ?? ('Bahan #' . $recipe->ingredient_id);
+                throw new \Exception("Stok tidak mencukupi untuk bahan: {$ingredientName} (Dibutuhkan: {$totalNeeded}, Tersedia: " . ($branchIngredient->stock ?? 0) . ")");
             }
+
+            $branchIngredient->decrement('stock', $totalNeeded);
+
+            // Record Movement
+            StockMovement::create([
+                'branch_id' => $branchId,
+                'ingredient_id' => $recipe->ingredient_id,
+                'type' => 'OUT',
+                'quantity' => $totalNeeded,
+                'reference_id' => $referenceId,
+                'reference_type' => $referenceType,
+                'notes' => "Otomatis dari {$referenceType} #{$referenceId}",
+            ]);
         }
     }
 }

@@ -42,15 +42,14 @@ export default function Users({ users, filters, merchants }: UsersProps) {
         is_active: true,
         merchant_id: '' as string | number,
     });
-
     const createForm = useForm({
         name: '',
         email: '',
+        phone: '',
         password: '',
         role: 'customer' as Role,
         merchant_id: '',
     });
-
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         router.get('/super-admin/users', { search, role: selectedRole }, { preserveState: true });
@@ -349,7 +348,18 @@ export default function Users({ users, filters, merchants }: UsersProps) {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-5">
+                             <div className="grid grid-cols-2 gap-5">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Nomor WhatsApp</label>
+                                    <input 
+                                        type="text" 
+                                        className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                        placeholder="081234567890"
+                                        value={createForm.data.phone}
+                                        onChange={e => createForm.setData('phone', e.target.value)}
+                                        required
+                                    />
+                                </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
                                     <input 
@@ -361,19 +371,20 @@ export default function Users({ users, filters, merchants }: UsersProps) {
                                         required
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Pilih Role</label>
-                                    <select 
-                                        className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
-                                        value={createForm.data.role}
-                                        onChange={e => createForm.setData('role', e.target.value as Role)}
-                                    >
-                                        <option value="customer">Customer</option>
-                                        <option value="kasir">Kasir</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="super_admin">Super Admin</option>
-                                    </select>
-                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Pilih Role</label>
+                                <select 
+                                    className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                    value={createForm.data.role}
+                                    onChange={e => createForm.setData('role', e.target.value as Role)}
+                                >
+                                    <option value="customer">Customer</option>
+                                    <option value="kasir">Kasir</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="super_admin">Super Admin</option>
+                                </select>
                             </div>
 
                             {(createForm.data.role === 'admin' || createForm.data.role === 'kasir') && (

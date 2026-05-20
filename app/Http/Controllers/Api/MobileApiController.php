@@ -51,17 +51,18 @@ class MobileApiController extends Controller
             if ($isNewDevice || $isLongInactive) {
                 // Auto-send OTP for security verification
                 $otpService = app(OtpService::class);
-                $identifier = $user->email; // Default to email for login verification
+                $identifier = $user->phone ?? $user->email;
+                $channel = $user->phone ? 'whatsapp' : 'email';
                 
                 // Track this as a login type OTP
-                $otpService->sendOtp($identifier, 'login', 'email');
+                $otpService->sendOtp($identifier, 'login', $channel);
 
                 return response()->json([
                     'success' => false,
                     'otp_required' => true,
                     'message' => 'Login dari perangkat baru atau sudah lama tidak login. Verifikasi OTP diperlukan.',
                     'identifier' => $identifier,
-                    'channel' => 'email'
+                    'channel' => $channel
                 ], 202); 
             }
 
@@ -394,9 +395,6 @@ class MobileApiController extends Controller
         ]);
     }
 
-    /**
-     * Upload payment proof for an order
-     */
     public function uploadPaymentProof(Request $request, $orderId)
     {
         $request->validate([
@@ -408,17 +406,36 @@ class MobileApiController extends Controller
 
         if ($request->hasFile('payment_proof')) {
             $file = $request->file('payment_proof');
-            $path = $file->store('payment_proofs', 's3');
+
+            // 1. Magic byte check (SEC-003)
+            $filePath = $file->getRealPath();
+            $contents = file_get_contents($filePath);
+            $hex = bin2hex(substr($contents, 0, 3));
+
+            $validSignatures = [
+                'ffd8ff', // JPEG/JPG
+                '89504e', // PNG
+            ];
+
+            if (!in_array($hex, $validSignatures)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Format file tidak valid atau berbahaya.'
+                ], 422);
+            }
+
+            // 2. Upload file securely as private to S3 (SEC-002)
+            $path = Storage::disk('s3')->putFile('payment_proofs', $file, 'private');
             
             $order->update([
-                'payment_proof_url' => Storage::disk('s3')->url($path),
+                'payment_proof_url' => $path,
             ]);
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Bukti pembayaran berhasil diunggah.',
-            'order' => $order,
+            'order' => $order->fresh(),
         ]);
     }
 

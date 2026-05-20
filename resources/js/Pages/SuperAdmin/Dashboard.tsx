@@ -139,7 +139,7 @@ export default function Dashboard({ stats, chartData, insights }: DashboardProps
                                         />
                                         <Tooltip 
                                             contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
-                                            formatter={(value: number) => [rupiah(value), 'Revenue']}
+                                            formatter={(value: any) => [rupiah(Number(value)), 'Revenue']}
                                         />
                                         <Area 
                                             type="monotone" 

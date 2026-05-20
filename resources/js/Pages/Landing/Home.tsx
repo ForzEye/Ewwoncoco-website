@@ -27,43 +27,6 @@ export default function Home({ meta }: HomeProps) {
 
             <Hero />
 
-            {/* Mobile-Style Order Methods (Bento Section) */}
-            <section className="relative -mt-12 mb-12 z-20 container-max section-px">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Pick Up Card */}
-                    <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col group hover:border-[#00C48C]/30 transition-all duration-500">
-                        <div className="flex justify-between items-start mb-12">
-                            <div>
-                                <h3 className="text-2xl font-poppins font-black text-[#008B5E] mb-2">Pick Up</h3>
-                                <p className="text-gray-500 font-medium">Ambil di store tanpa antri</p>
-                            </div>
-                            <div className="w-14 h-14 bg-[#F1F8F6] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                                <ArrowRight className="w-6 h-6 text-[#008B5E]" />
-                            </div>
-                        </div>
-                        <div className="flex-1 flex items-end justify-end opacity-10 group-hover:opacity-20 transition-opacity">
-                            <CheckCircle2 className="w-24 h-24 text-[#008B5E]" />
-                        </div>
-                    </div>
-
-                    {/* Delivery Card */}
-                    <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col group hover:border-[#D35400]/30 transition-all duration-500">
-                        <div className="flex justify-between items-start mb-12">
-                            <div>
-                                <h3 className="text-2xl font-poppins font-black text-[#D35400] mb-2">Delivery</h3>
-                                <p className="text-gray-500 font-medium">Garansi tepat waktu, dijamin!</p>
-                            </div>
-                            <div className="w-14 h-14 bg-[#FFF7F2] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                                <ArrowRight className="w-6 h-6 text-[#D35400]" />
-                            </div>
-                        </div>
-                        <div className="flex-1 flex items-end justify-end opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Clock className="w-24 h-24 text-[#D35400]" />
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             {/* Trust Numbers Bar */}
             <section className="relative py-12 bg-white border-b border-gray-50">
                 <div className="container-max section-px">

@@ -64,8 +64,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/outlets/{branchId}/products', [MobileApiController::class, 'getProducts']);
     Route::post('/login', [MobileApiController::class, 'login'])->middleware('throttle:6,1');
     Route::post('/register', [MobileApiController::class, 'register'])->middleware('throttle:6,1');
-    Route::post('/otp/send', [MobileApiController::class, 'sendOtp'])->middleware('throttle:3,1');
-    Route::post('/otp/verify', [MobileApiController::class, 'verifyOtp'])->middleware('throttle:6,1');
+    Route::post('/otp/send', [MobileApiController::class, 'sendOtp'])->middleware('throttle:otp-send');
+    Route::post('/otp/verify', [MobileApiController::class, 'verifyOtp'])->middleware('throttle:otp-verify');
     Route::get('/promos', [MobileApiController::class, 'getPromos']);
     Route::get('/health', [MobileApiController::class, 'health'])->middleware('throttle:30,1');
     Route::get('/settings', [MobileApiController::class, 'getSettings']);
@@ -76,6 +76,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/orders', [MobileApiController::class, 'storeOrder'])->middleware('throttle:orders');
         Route::get('/orders', [MobileApiController::class, 'getOrders']);
         Route::get('/orders/{orderId}', [MobileApiController::class, 'getOrderDetail']);
+        Route::post('/orders/{orderId}/payment-proof', [MobileApiController::class, 'uploadPaymentProof']);
         Route::get('/notifications', [MobileApiController::class, 'getNotifications']);
         
         // Chat

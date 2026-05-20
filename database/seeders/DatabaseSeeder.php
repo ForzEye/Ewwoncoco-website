@@ -82,6 +82,10 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        // Link users to merchant
+        $admin->update(['merchant_id' => $merchant->id]);
+        $kasir->update(['merchant_id' => $merchant->id]);
+
         // 3. Create Branches
         $branch1 = Branch::create([
             'merchant_id' => $merchant->id,
@@ -116,7 +120,7 @@ class DatabaseSeeder extends Seeder
             'slug' => 'es-kelapa-muda-original',
             'description' => 'Es kelapa muda asli yang menyegarkan dengan tambahan gula aren pilihan.',
             'price' => 15000,
-            'image_url' => 'https://images.unsplash.com/photo-1543218196-9cf5d50f2844?auto=format&fit=crop&q=80&w=600',
+            'image_url' => 'https://s3.morrbali.com/ewwoncoco/products/coconut_original.png',
             'barcode' => '899123456001',
             'stock' => 100,
             'min_stock' => 10,
@@ -130,7 +134,7 @@ class DatabaseSeeder extends Seeder
             'slug' => 'kelapa-jeruk-nipis',
             'description' => 'Perpaduan air kelapa murni dengan kesegaran jeruk nipis asli.',
             'price' => 18000,
-            'image_url' => 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&q=80&w=600',
+            'image_url' => 'https://s3.morrbali.com/ewwoncoco/products/coconut_lime.png',
             'barcode' => '899123456002',
             'stock' => 80,
             'min_stock' => 10,
@@ -144,7 +148,7 @@ class DatabaseSeeder extends Seeder
             'slug' => 'puding-kelapa',
             'description' => 'Puding lembut yang terbuat dari air dan daging kelapa muda pilihan.',
             'price' => 25000,
-            'image_url' => 'https://images.unsplash.com/photo-1590473226648-390757ff759d?auto=format&fit=crop&q=80&w=600',
+            'image_url' => 'https://s3.morrbali.com/ewwoncoco/products/coconut_pudding.png',
             'barcode' => '899123456003',
             'stock' => 50,
             'min_stock' => 5,

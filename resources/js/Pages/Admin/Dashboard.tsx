@@ -49,17 +49,39 @@ interface DashboardProps {
     insights: any[];
 }
 
+import { confirmAction, toastSuccess } from '@/lib/swal';
+
 export default function Dashboard({ stats, todayStats, chartData, branches, activeShifts, insights }: DashboardProps) {
     const handleUnlock = (shiftId: number) => {
-        if (confirm('Buka kunci shift ini? Kasir akan bisa melakukan transaksi kembali.')) {
-            router.post(route('admin.shifts.unlock', shiftId));
-        }
+        confirmAction(
+            'Buka Kunci Shift?',
+            'Buka kunci shift ini? Kasir akan bisa melakukan transaksi kembali.',
+            'Ya, Unlock'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.shifts.unlock', shiftId), {}, {
+                    onSuccess: () => {
+                        toastSuccess('Shift berhasil di-unlock!');
+                    }
+                });
+            }
+        });
     };
 
     const handleForceClose = (shiftId: number) => {
-        if (confirm('Tutup paksa shift ini? Kasir akan dikeluarkan dari terminal POS.')) {
-            router.post(route('admin.shifts.force_close', shiftId));
-        }
+        confirmAction(
+            'Tutup Paksa Shift?',
+            'Tutup paksa shift ini? Kasir akan dikeluarkan dari terminal POS.',
+            'Ya, Tutup Paksa'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.shifts.force_close', shiftId), {}, {
+                    onSuccess: () => {
+                        toastSuccess('Shift berhasil ditutup paksa!');
+                    }
+                });
+            }
+        });
     };
     return (
         <AdminLayout title="Ringkasan Bisnis">

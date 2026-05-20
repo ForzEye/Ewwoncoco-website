@@ -36,20 +36,50 @@ interface AdminShiftsProps {
     recentShifts: Shift[];
 }
 
+import { confirmAction, swal, toastSuccess } from '@/lib/swal';
+
 export default function Index({ activeShifts, recentShifts }: AdminShiftsProps) {
     const handleUnlock = (shiftId: number) => {
-        if (confirm('Buka kunci shift ini? Kasir akan bisa melakukan transaksi kembali.')) {
-            router.post(route('admin.shifts.unlock', shiftId));
-        }
+        confirmAction(
+            'Buka Kunci Shift?',
+            'Buka kunci shift ini? Kasir akan bisa melakukan transaksi kembali.',
+            'Ya, Unlock'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.shifts.unlock', shiftId), {}, {
+                    onSuccess: () => {
+                        toastSuccess('Shift berhasil di-unlock!');
+                    }
+                });
+            }
+        });
     };
 
     const handleForceClose = (shiftId: number) => {
-        const closingCash = prompt('Masukkan kas akhir (Closing Cash):', '0');
-        if (closingCash !== null) {
-            router.post(route('admin.shifts.force_close', shiftId), {
-                closing_cash: closingCash
-            });
-        }
+        swal.fire({
+            title: 'Tutup Paksa Shift',
+            text: 'Masukkan jumlah kas akhir (Closing Cash):',
+            input: 'number',
+            inputValue: '0',
+            showCancelButton: true,
+            confirmButtonText: 'Tutup Paksa',
+            cancelButtonText: 'Batal',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Jumlah kas akhir tidak boleh kosong!';
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value !== undefined) {
+                router.post(route('admin.shifts.force_close', shiftId), {
+                    closing_cash: result.value
+                }, {
+                    onSuccess: () => {
+                        toastSuccess('Shift berhasil ditutup paksa!');
+                    }
+                });
+            }
+        });
     };
 
     const formatDuration = (start: string, end: string | null) => {

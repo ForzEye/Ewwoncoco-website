@@ -28,6 +28,8 @@ interface BranchesProps {
     };
 }
 
+import { confirmAction, toastSuccess } from '@/lib/swal';
+
 export default function Branches({ branches, merchants, filters }: BranchesProps) {
     const [search, setSearch] = useState(filters.search || '');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -74,6 +76,7 @@ export default function Branches({ branches, merchants, filters }: BranchesProps
                 onSuccess: () => {
                     setIsModalOpen(false);
                     reset();
+                    toastSuccess('Cabang berhasil diperbarui!');
                 }
             });
         } else {
@@ -81,15 +84,26 @@ export default function Branches({ branches, merchants, filters }: BranchesProps
                 onSuccess: () => {
                     setIsModalOpen(false);
                     reset();
+                    toastSuccess('Cabang baru berhasil dibuat!');
                 }
             });
         }
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('Apakah Anda yakin ingin menghapus cabang ini?')) {
-            destroy(route('superadmin.branches.destroy', id));
-        }
+        confirmAction(
+            'Hapus Cabang?',
+            'Apakah Anda yakin ingin menghapus cabang ini?',
+            'Ya, Hapus'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                destroy(route('superadmin.branches.destroy', id), {
+                    onSuccess: () => {
+                        toastSuccess('Cabang berhasil dihapus!');
+                    }
+                });
+            }
+        });
     };
 
     return (

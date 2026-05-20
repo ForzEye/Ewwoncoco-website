@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { ShoppingBag, Calendar, User, CreditCard, ChevronRight, Download, Search, Filter, ArrowUpRight, Monitor } from 'lucide-react';
+import { ShoppingBag, Calendar, User, CreditCard, ChevronRight, Download, Search, Filter, ArrowUpRight, Monitor, Sparkles } from 'lucide-react';
 import { rupiah, tanggalWaktu } from '../../lib/format';
 
 const transactions = [

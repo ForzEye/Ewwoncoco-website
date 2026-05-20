@@ -15,6 +15,7 @@ import {
     ShoppingBag
 } from 'lucide-react';
 import { PageProps } from '../types';
+import { requestNotificationPermission, onMessageListener } from '../lib/firebase-setup';
 
 interface SuperAdminLayoutProps {
     children: ReactNode;
@@ -23,6 +24,26 @@ interface SuperAdminLayoutProps {
 export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     const { auth } = usePage<PageProps>().props;
     const { url } = usePage();
+
+    React.useEffect(() => {
+        if (auth.user) {
+            requestNotificationPermission();
+
+            const unsubscribe = onMessageListener((payload: any) => {
+                console.log('FCM Message received in foreground:', payload);
+                if (Notification.permission === 'granted') {
+                    new Notification(payload.notification.title, {
+                        body: payload.notification.body,
+                        icon: '/coconut_original.png',
+                    });
+                }
+            });
+
+            return () => {
+                unsubscribe();
+            };
+        }
+    }, [auth.user]);
 
     const navItems = [
         { label: 'Dashboard', icon: LayoutDashboard, href: '/super-admin', active: url === '/super-admin' },

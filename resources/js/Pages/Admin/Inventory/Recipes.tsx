@@ -43,6 +43,8 @@ interface RecipesProps {
     ingredients: Ingredient[];
 }
 
+import { confirmAction, toastSuccess } from '@/lib/swal';
+
 export default function Recipes({ products, ingredients }: RecipesProps) {
     const [expandedProduct, setExpandedProduct] = useState<number | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,14 +77,25 @@ export default function Recipes({ products, ingredients }: RecipesProps) {
             onSuccess: () => {
                 setIsModalOpen(false);
                 reset('ingredient_id', 'quantity');
+                toastSuccess('Bahan berhasil ditambahkan ke resep!');
             }
         });
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('Hapus bahan ini dari resep?')) {
-            destroy(route('admin.inventory.recipes.destroy', id));
-        }
+        confirmAction(
+            'Hapus Bahan Resep?',
+            'Apakah Anda yakin ingin menghapus bahan ini dari resep?',
+            'Ya, Hapus'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                destroy(route('admin.inventory.recipes.destroy', id), {
+                    onSuccess: () => {
+                        toastSuccess('Bahan berhasil dihapus dari resep!');
+                    }
+                });
+            }
+        });
     };
 
     return (

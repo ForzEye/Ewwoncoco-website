@@ -47,20 +47,27 @@ class MerchantOrderController extends Controller
 
         $order = Order::where('merchant_id', $merchant->id)->with('items.product')->findOrFail($id);
         $oldStatus = $order->status;
-        $order->update(['status' => $request->status]);
 
-        // Trigger simulation if status changes to preparing or on_delivery
-        if ($oldStatus !== 'confirmed' && $request->status === 'confirmed') {
-            // Deduct Stock for all items in order
-            foreach ($order->items as $item) {
-                StockService::deductFromRecipe(
-                    $item->product_id, 
-                    $order->branch_id, 
-                    $item->quantity, 
-                    $order->order_number, 
-                    'OnlineOrder'
-                );
-            }
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($order, $request, $oldStatus) {
+                $order->update(['status' => $request->status]);
+
+                // Trigger simulation if status changes to preparing or on_delivery
+                if ($oldStatus !== 'confirmed' && $request->status === 'confirmed') {
+                    // Deduct Stock for all items in order
+                    foreach ($order->items as $item) {
+                        StockService::deductFromRecipe(
+                            $item->product_id, 
+                            $order->branch_id, 
+                            $item->quantity, 
+                            $order->order_number, 
+                            'OnlineOrder'
+                        );
+                    }
+                }
+            });
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
         }
 
         if ($oldStatus !== 'preparing' && $request->status === 'preparing' && $order->delivery_type === 'delivery') {

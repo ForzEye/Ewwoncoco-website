@@ -17,6 +17,7 @@ class OtpCode extends Model
         'is_used',
         'status',
         'error_message',
+        'failed_attempts',
     ];
 
     protected $casts = [

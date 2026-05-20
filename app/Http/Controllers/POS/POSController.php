@@ -129,6 +129,14 @@ class POSController extends Controller
             // Award points for this purchase if customer is selected
             if ($transaction->customer_id) {
                 \App\Services\PointsService::earnPoints($transaction->customer_id, $transaction->id, 'pos_transaction');
+
+                // Send premium WhatsApp receipt
+                try {
+                    $waService = app(\App\Services\Notification\WhatsAppService::class);
+                    $waService->sendOfflineReceipt($transaction);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Failed to send WA offline receipt: " . $e->getMessage());
+                }
             }
 
             return response()->json([

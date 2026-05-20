@@ -30,6 +30,8 @@ interface POSScreenProps {
     activeShift: PosShift & { branch: Branch };
 }
 
+import { toastError, alertError } from '../../lib/swal';
+
 export default function Screen({ products, categories, activeShift }: POSScreenProps) {
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -65,7 +67,7 @@ export default function Screen({ products, categories, activeShift }: POSScreenP
                 setCustomerName(response.data.data.user_name);
             }
         } catch (error: any) {
-            alert(error.response?.data?.message || 'Customer tidak ditemukan');
+            toastError(error.response?.data?.message || 'Customer tidak ditemukan');
         } finally {
             setIsSearchingCustomer(false);
         }
@@ -104,7 +106,7 @@ export default function Screen({ products, categories, activeShift }: POSScreenP
             }
         } catch (error) {
             console.error(error);
-            alert('Terjadi kesalahan saat memproses transaksi.');
+            alertError('Pembayaran Gagal', 'Terjadi kesalahan saat memproses transaksi.');
         } finally {
             setIsProcessing(false);
         }

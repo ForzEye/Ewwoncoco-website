@@ -105,6 +105,7 @@ class SuperAdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
+            'phone' => 'required|string|max:20',
             'password' => 'required|string|min:8',
             'role' => 'required|in:super_admin,admin,kasir,customer',
             'merchant_id' => 'required_if:role,admin,kasir',
@@ -113,6 +114,7 @@ class SuperAdminController extends Controller
         User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'phone' => $request->phone,
             'password' => bcrypt($request->password),
             'role' => $request->role,
             'merchant_id' => $request->merchant_id,
@@ -289,11 +291,11 @@ class SuperAdminController extends Controller
                 );
             }
         }
-
         // Handle System Text Settings
         $textSettings = [
             'site_name', 'site_title', 'hero_title', 'hero_subtitle', 
-            'footer_text', 'contact_whatsapp', 'contact_email', 'instagram_url'
+            'footer_text', 'contact_whatsapp', 'contact_email', 'instagram_url',
+            'otp_enabled', 'wa_notifications_enabled'
         ];
 
         foreach ($textSettings as $key) {

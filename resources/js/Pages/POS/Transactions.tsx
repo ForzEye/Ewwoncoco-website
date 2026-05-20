@@ -25,6 +25,8 @@ interface TransactionsProps {
     };
 }
 
+import { confirmAction, toastSuccess, toastError } from '../../lib/swal';
+
 export default function Transactions({ transactions, filters }: TransactionsProps) {
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [isReceiptOpen, setIsReceiptOpen] = useState(false);
@@ -43,19 +45,24 @@ export default function Transactions({ transactions, filters }: TransactionsProp
     };
 
     const handleVoid = (id: number) => {
-        if (confirm('Apakah Anda yakin ingin membatalkan (VOID) transaksi ini? Stok akan dikembalikan dan jumlah void Anda akan bertambah.')) {
-            router.post(route('pos.transactions.void', id), {}, {
-                onSuccess: (page: any) => {
-                    // Check if there was a message in the response
-                    const flash = page.props.flash;
-                    if (flash?.success) alert(flash.success);
-                    if (flash?.error) alert(flash.error);
-                },
-                onError: (errors) => {
-                    alert('Gagal melakukan void transaksi.');
-                }
-            });
-        }
+        confirmAction(
+            'Void Transaksi?',
+            'Apakah Anda yakin ingin membatalkan (VOID) transaksi ini? Stok akan dikembalikan dan jumlah void Anda akan bertambah.',
+            'Ya, Void'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('pos.transactions.void', id), {}, {
+                    onSuccess: (page: any) => {
+                        const flash = page.props.flash;
+                        if (flash?.success) toastSuccess(flash.success);
+                        if (flash?.error) toastError(flash.error);
+                    },
+                    onError: (errors) => {
+                        toastError('Gagal melakukan void transaksi.');
+                    }
+                });
+            }
+        });
     };
 
     return (

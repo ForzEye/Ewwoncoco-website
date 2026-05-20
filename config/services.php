@@ -48,4 +48,8 @@ return [
             'server_key' => env('FIREBASE_SERVER_KEY'),
         ],
 
+        'fonnte' => [
+            'token' => env('FONNTE_TOKEN'),
+        ],
+
 ];

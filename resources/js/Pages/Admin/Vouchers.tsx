@@ -23,6 +23,8 @@ interface VouchersProps {
     vouchers: Voucher[];
 }
 
+import { confirmAction, toastSuccess } from '@/lib/swal';
+
 export default function Vouchers({ vouchers }: VouchersProps) {
     const [showModal, setShowModal] = useState(false);
     const { data, setData, post, delete: destroy, processing, reset, errors } = useForm({
@@ -43,23 +45,34 @@ export default function Vouchers({ vouchers }: VouchersProps) {
             onSuccess: () => {
                 setShowModal(false);
                 reset();
+                toastSuccess('Voucher berhasil dibuat!');
             }
         });
     };
 
     const toggleStatus = (id: number) => {
-        post(route('vouchers.toggle', id));
+        post(route('vouchers.toggle', id), {
+            onSuccess: () => {
+                toastSuccess('Status kupon diperbarui!');
+            }
+        });
     };
 
     const deleteVoucher = (id: number) => {
-        if (confirm('Hapus voucher ini?')) {
-            destroy(route('vouchers.destroy', id));
-        }
+        confirmAction('Hapus Voucher?', 'Apakah Anda yakin ingin menghapus kupon voucher ini?', 'Ya, Hapus').then((result) => {
+            if (result.isConfirmed) {
+                destroy(route('vouchers.destroy', id), {
+                    onSuccess: () => {
+                        toastSuccess('Voucher berhasil dihapus!');
+                    }
+                });
+            }
+        });
     };
 
     const copyCode = (code: string) => {
         navigator.clipboard.writeText(code);
-        alert('Kode disalin!');
+        toastSuccess('Kode disalin!');
     };
 
     return (

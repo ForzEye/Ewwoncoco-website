@@ -38,6 +38,8 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
         instagram_url: settings.instagram_url || '',
         site_logo: null as File | null,
         site_favicon: null as File | null,
+        otp_enabled: settings.otp_enabled !== undefined ? String(settings.otp_enabled) : '1',
+        wa_notifications_enabled: settings.wa_notifications_enabled !== undefined ? String(settings.wa_notifications_enabled) : '1',
 
         // Mobile App Settings
         app_landing_promo_text: appSettings.app_landing_promo_text || '',
@@ -247,6 +249,43 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
                                             className="w-full px-5 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
                                             placeholder="hello@ewwoncoco.com"
                                         />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Feature Toggles (OTP & WA) */}
+                            <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
+                                <h3 className="font-poppins font-bold text-lg flex items-center gap-2 text-charcoal">
+                                    <SettingsIcon size={20} className="text-[#00C48C]" />
+                                    Kontrol Fitur & OTP
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                                        <div className="flex-1 pr-2">
+                                            <p className="text-xs font-bold text-charcoal">Kirim OTP WhatsApp</p>
+                                            <p className="text-[9px] text-gray-400">Nonaktifkan untuk mempermudah pengujian login/register.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setData('otp_enabled', data.otp_enabled === '1' ? '0' : '1')}
+                                            className={`px-4 py-2 rounded-lg font-black text-[10px] tracking-wider uppercase transition-all ${data.otp_enabled === '1' ? 'bg-[#F0FAF6] text-[#00C48C] border border-[#00C48C]' : 'bg-red-50 text-red-500 border border-red-200'}`}
+                                        >
+                                            {data.otp_enabled === '1' ? 'AKTIF' : 'NONAKTIF'}
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                                        <div className="flex-1 pr-2">
+                                            <p className="text-xs font-bold text-charcoal">Notifikasi WA (Struk)</p>
+                                            <p className="text-[9px] text-gray-400">Nonaktifkan untuk lewati pengiriman struk via Fonnte.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setData('wa_notifications_enabled', data.wa_notifications_enabled === '1' ? '0' : '1')}
+                                            className={`px-4 py-2 rounded-lg font-black text-[10px] tracking-wider uppercase transition-all ${data.wa_notifications_enabled === '1' ? 'bg-[#F0FAF6] text-[#00C48C] border border-[#00C48C]' : 'bg-red-50 text-red-500 border border-red-200'}`}
+                                        >
+                                            {data.wa_notifications_enabled === '1' ? 'AKTIF' : 'NONAKTIF'}
+                                        </button>
                                     </div>
                                 </div>
                             </div>

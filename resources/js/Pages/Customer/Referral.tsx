@@ -2,7 +2,6 @@ import React from 'react';
 import { Head } from '@inertiajs/react';
 import LandingLayout from '@/Layouts/LandingLayout';
 import { Share2, Users, Gift, Copy, Check } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 
 interface ReferralProps {
     referral_code: string;

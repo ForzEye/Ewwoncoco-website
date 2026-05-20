@@ -157,11 +157,27 @@ class OrderController extends Controller
         
         if ($request->hasFile('payment_proof')) {
             $file = $request->file('payment_proof');
+
+            // 1. Magic byte check (SEC-003)
+            $filePath = $file->getRealPath();
+            $contents = file_get_contents($filePath);
+            $hex = bin2hex(substr($contents, 0, 3));
+
+            $validSignatures = [
+                'ffd8ff', // JPEG/JPG
+                '89504e', // PNG
+            ];
+
+            if (!in_array($hex, $validSignatures)) {
+                return back()->with('error', 'Format file tidak valid atau berbahaya.');
+            }
+
+            // 2. Upload file securely as private to S3 (SEC-002)
             $filename = 'proof_' . $order->order_number . '_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('payment_proofs', $filename, 's3');
+            $path = Storage::disk('s3')->putFileAs('payment_proofs', $file, $filename, 'private');
             
             $order->update([
-                'payment_proof_url' => Storage::disk('s3')->url($path)
+                'payment_proof_url' => $path
             ]);
         }
 

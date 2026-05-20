@@ -56,7 +56,8 @@ class PointsRaceConditionTest extends TestCase
             'total' => 60000,
             'subtotal' => 60000,
             'discount' => 0,
-            'status' => 'pending'
+            'status' => 'pending',
+            'payment_method' => 'qris',
         ]);
 
         $order2 = Order::create([
@@ -67,7 +68,8 @@ class PointsRaceConditionTest extends TestCase
             'total' => 60000,
             'subtotal' => 60000,
             'discount' => 0,
-            'status' => 'pending'
+            'status' => 'pending',
+            'payment_method' => 'qris',
         ]);
 
         // Simulating 2 concurrent processes in a transaction flow

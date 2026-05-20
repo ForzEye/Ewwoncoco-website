@@ -38,6 +38,14 @@ class OtpService
 
         // 4. Send via channel
         try {
+            // Global OTP Toggle Check
+            $otpEnabled = \App\Models\SystemSetting::getVal('otp_enabled', '1') === '1';
+            if (!$otpEnabled) {
+                Log::info("OTP BYPASSED (OTP is globally disabled in settings). Code for {$identifier}: {$code}");
+                $otp->update(['status' => 'sent']);
+                return true;
+            }
+
             $success = false;
             if ($channel === 'email') {
                 $success = $this->sendViaEmail($identifier, $code);
@@ -64,15 +72,24 @@ class OtpService
     public function verifyOtp(string $identifier, string $code, string $type = 'register'): bool
     {
         $otp = OtpCode::where('identifier', $identifier)
-            ->where('code', $code)
             ->where('type', $type)
             ->where('is_used', false)
             ->where('expires_at', '>', Carbon::now())
             ->first();
 
-        if ($otp) {
+        if (!$otp) {
+            return false;
+        }
+
+        if ($otp->code === $code) {
             $otp->update(['is_used' => true]);
             return true;
+        }
+
+        $otp->increment('failed_attempts');
+
+        if ($otp->failed_attempts >= 5) {
+            $otp->update(['is_used' => true]);
         }
 
         return false;
@@ -91,19 +108,7 @@ class OtpService
 
     private function sendViaWhatsapp(string $phone, string $code): bool
     {
-        // Placeholder for Fonnte integration
-        Log::info("WA OTP Sent to $phone: $code (Fonnte Integration Pending)");
-        
-        // Example structure for later:
-        /*
-        $token = config('services.fonnte.token');
-        $response = Http::withHeaders(['Authorization' => $token])->post('https://api.fonnte.com/send', [
-            'target' => $phone,
-            'message' => "Kode OTP Ewwon Coco Anda adalah: $code. Rahasiakan kode ini dari siapapun.",
-        ]);
-        return $response->successful();
-        */
-        
-        return true; 
+        $waService = app(\App\Services\Notification\WhatsAppService::class);
+        return $waService->sendOtp($phone, $code);
     }
 }
