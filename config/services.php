@@ -46,6 +46,8 @@ return [
         'firebase' => [
             'project_id' => env('FIREBASE_PROJECT_ID', 'ewwon-coco'),
             'server_key' => env('FIREBASE_SERVER_KEY'),
+            'client_email' => env('FIREBASE_CLIENT_EMAIL'),
+            'private_key' => env('FIREBASE_PRIVATE_KEY'),
         ],
 
         'fonnte' => [

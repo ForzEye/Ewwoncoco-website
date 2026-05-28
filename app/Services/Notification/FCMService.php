@@ -100,21 +100,31 @@ class FCMService
             return Cache::get($cacheKey);
         }
 
-        $credentialsPath = base_path('app/firebase/service-account.json');
+        $privateKey = config('services.firebase.private_key');
+        $clientEmail = config('services.firebase.client_email');
 
-        if (!file_exists($credentialsPath)) {
-            Log::error('FCM Service Account file not found at: ' . $credentialsPath);
-            return null;
+        if (!$privateKey || !$clientEmail) {
+            $credentialsPath = base_path('app/firebase/service-account.json');
+
+            if (!file_exists($credentialsPath)) {
+                Log::error('FCM Service Account file not found and Env variables are not set.');
+                return null;
+            }
+
+            $credentials = json_decode(file_get_contents($credentialsPath), true);
+            if (!$credentials) {
+                Log::error('FCM Service Account JSON invalid');
+                return null;
+            }
+
+            $privateKey = $credentials['private_key'] ?? null;
+            $clientEmail = $credentials['client_email'] ?? null;
         }
 
-        $credentials = json_decode(file_get_contents($credentialsPath), true);
-        if (!$credentials) {
-            Log::error('FCM Service Account JSON invalid');
+        if (!$privateKey || !$clientEmail) {
+            Log::error('FCM credentials (private_key or client_email) are missing.');
             return null;
         }
-
-        $privateKey = $credentials['private_key'];
-        $clientEmail = $credentials['client_email'];
 
         $header = $this->base64UrlEncode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
         
