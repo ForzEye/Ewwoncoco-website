@@ -28,11 +28,12 @@ interface POSScreenProps {
     products: Product[];
     categories: ProductCategory[];
     activeShift: PosShift & { branch: Branch };
+    promotions: any[];
 }
 
 import { toastError, alertError } from '../../lib/swal';
 
-export default function Screen({ products, categories, activeShift }: POSScreenProps) {
+export default function Screen({ products, categories, activeShift, promotions }: POSScreenProps) {
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
@@ -83,6 +84,50 @@ export default function Screen({ products, categories, activeShift }: POSScreenP
     const grandTotal = useMemo(() => {
         return Math.max(0, getTotal() - pointsDiscount);
     }, [items, pointsDiscount]);
+
+    const freeBogoItems = useMemo(() => {
+        if (!promotions || promotions.length === 0 || items.length === 0) return [];
+        
+        const specificBogoPromos = promotions.filter(p => p.buy_product_id !== null);
+        const globalBogoPromo = promotions.find(p => p.buy_product_id === null);
+
+        const freeItemsMap: { [productId: number]: { product: Product; quantity: number; promoName: string } } = {};
+
+        items.forEach(item => {
+            const productId = item.product.id;
+            const qty = item.quantity;
+
+            let promo = specificBogoPromos.find(p => p.buy_product_id === productId);
+            if (!promo && globalBogoPromo) {
+                promo = globalBogoPromo;
+            }
+
+            if (promo) {
+                const buyQty = promo.buy_quantity || 1;
+                const getQty = promo.get_quantity || 1;
+                const multiplier = Math.floor(qty / buyQty);
+                const freeQty = multiplier * getQty;
+
+                if (freeQty > 0) {
+                    const freeProductId = promo.get_product_id || productId;
+                    const freeProd = products.find(p => p.id === freeProductId);
+                    if (freeProd) {
+                        if (freeItemsMap[freeProductId]) {
+                            freeItemsMap[freeProductId].quantity += freeQty;
+                        } else {
+                            freeItemsMap[freeProductId] = {
+                                product: freeProd,
+                                quantity: freeQty,
+                                promoName: promo.name
+                            };
+                        }
+                    }
+                }
+            }
+        });
+
+        return Object.values(freeItemsMap);
+    }, [items, promotions, products]);
 
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
@@ -368,36 +413,61 @@ export default function Screen({ products, categories, activeShift }: POSScreenP
                                 </p>
                             </div>
                         ) : (
-                            items.map((item, idx) => (
-                                <div key={item.product.id} className="flex items-center gap-3 bg-[#FAFAF8] p-3 rounded-2xl border border-[#F0EDE8] hover:bg-[#F5F3EF] transition-colors">
-                                    <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD]">
-                                        <img 
-                                            src={item.product.name.includes('Original') ? '/coconut_original.png' : (item.product.name.includes('Jeruk') ? '/coconut_lime.png' : (item.product.name.includes('Puding') ? '/coconut_pudding.png' : item.product.image_url || '/coconut_original.png'))} 
-                                            className="w-full h-full object-cover" 
-                                            alt=""
-                                        />
+                            <>
+                                {items.map((item, idx) => (
+                                    <div key={item.product.id} className="flex items-center gap-3 bg-[#FAFAF8] p-3 rounded-2xl border border-[#F0EDE8] hover:bg-[#F5F3EF] transition-colors">
+                                        <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD]">
+                                            <img 
+                                                src={item.product.name.includes('Original') ? '/coconut_original.png' : (item.product.name.includes('Jeruk') ? '/coconut_lime.png' : (item.product.name.includes('Puding') ? '/coconut_pudding.png' : item.product.image_url || '/coconut_original.png'))} 
+                                                className="w-full h-full object-cover" 
+                                                alt=""
+                                            />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h5 className="text-[12px] font-black text-[#1A1A1A] truncate font-poppins">{item.product.name}</h5>
+                                            <p className="text-[11px] text-[#2D6A4F] font-black">{rupiah(item.product.price * item.quantity)}</p>
+                                        </div>
+                                        <div className="flex items-center bg-white rounded-xl p-0.5 border border-[#E8E4DD] shadow-sm">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity - 1); }} 
+                                                className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                            >
+                                                <Minus size={13} strokeWidth={2.5} />
+                                            </button>
+                                            <span className="w-7 text-center text-[12px] font-black text-[#1A1A1A]">{angka(item.quantity)}</span>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity + 1); }} 
+                                                className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-[#2D6A4F] hover:bg-[#E8F5E9] rounded-lg transition-all"
+                                            >
+                                                <Plus size={13} strokeWidth={2.5} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h5 className="text-[12px] font-black text-[#1A1A1A] truncate font-poppins">{item.product.name}</h5>
-                                        <p className="text-[11px] text-[#2D6A4F] font-black">{rupiah(item.product.price * item.quantity)}</p>
+                                ))}
+
+                                {freeBogoItems.map((freeItem, idx) => (
+                                    <div key={`free-${freeItem.product.id}`} className="flex items-center gap-3 bg-[#E8F5E9]/50 p-3 rounded-2xl border border-dashed border-[#2D6A4F]/20 relative overflow-hidden transition-all duration-200">
+                                        <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD]">
+                                            <img 
+                                                src={freeItem.product.name.includes('Original') ? '/coconut_original.png' : (freeItem.product.name.includes('Jeruk') ? '/coconut_lime.png' : (freeItem.product.name.includes('Puding') ? '/coconut_pudding.png' : freeItem.product.image_url || '/coconut_original.png'))} 
+                                                className="w-full h-full object-cover" 
+                                                alt=""
+                                            />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                <span className="bg-[#2D6A4F] text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Gratis BOGO</span>
+                                                <span className="text-[9px] text-[#2D6A4F] font-bold truncate max-w-[120px]">{freeItem.promoName}</span>
+                                            </div>
+                                            <h5 className="text-[12px] font-black text-[#1A1A1A] truncate font-poppins">{freeItem.product.name}</h5>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-bold text-gray-400 line-through">{rupiah(freeItem.product.price * freeItem.quantity)}</span>
+                                            <span className="text-xs font-black text-[#2D6A4F]">{angka(freeItem.quantity)}x</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center bg-white rounded-xl p-0.5 border border-[#E8E4DD] shadow-sm">
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity - 1); }} 
-                                            className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                        >
-                                            <Minus size={13} strokeWidth={2.5} />
-                                        </button>
-                                        <span className="w-7 text-center text-[12px] font-black text-[#1A1A1A]">{angka(item.quantity)}</span>
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity + 1); }} 
-                                            className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-[#2D6A4F] hover:bg-[#E8F5E9] rounded-lg transition-all"
-                                        >
-                                            <Plus size={13} strokeWidth={2.5} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
+                                ))}
+                            </>
                         )}
                     </div>
 

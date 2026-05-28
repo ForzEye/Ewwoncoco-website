@@ -6,9 +6,10 @@ import { rupiah } from '../../../lib/format';
 
 interface MarketingProps {
     promotions: any[];
+    products: any[];
 }
 
-export default function Marketing({ promotions }: MarketingProps) {
+export default function Marketing({ promotions, products = [] }: MarketingProps) {
     const { data, setData, post, processing, reset } = useForm({
         name: '',
         description: '',
@@ -18,6 +19,10 @@ export default function Marketing({ promotions }: MarketingProps) {
         max_reward: '',
         start_date: '',
         end_date: '',
+        buy_product_id: '',
+        get_product_id: '',
+        buy_quantity: '1',
+        get_quantity: '1',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -25,7 +30,6 @@ export default function Marketing({ promotions }: MarketingProps) {
         post(route('admin.marketing.store'), {
             onSuccess: () => {
                 reset();
-                // Close modal if needed
             }
         });
     };
@@ -52,6 +56,7 @@ export default function Marketing({ promotions }: MarketingProps) {
                                     placeholder="Contoh: Cashback Akhir Bulan"
                                     value={data.name}
                                     onChange={e => setData('name', e.target.value)}
+                                    required
                                 />
                             </div>
 
@@ -65,30 +70,107 @@ export default function Marketing({ promotions }: MarketingProps) {
                                     >
                                         <option value="cashback_points">Cashback Poin</option>
                                         <option value="fixed_discount">Diskon Tetap</option>
+                                        <option value="bogo">Buy 1 Get 1 (BOGO)</option>
                                     </select>
                                 </div>
+                                {data.type !== 'bogo' && (
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">Nilai (Rp/Poin)</label>
+                                        <input 
+                                            type="number" 
+                                            className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                            placeholder="5000"
+                                            value={data.value}
+                                            onChange={e => setData('value', e.target.value)}
+                                            required={data.type !== 'bogo'}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {data.type !== 'bogo' ? (
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Nilai (Rp/Poin)</label>
+                                    <label className="text-xs font-bold text-gray-400 uppercase">Minimal Belanja</label>
                                     <input 
                                         type="number" 
                                         className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
-                                        placeholder="5000"
-                                        value={data.value}
-                                        onChange={e => setData('value', e.target.value)}
+                                        placeholder="50000"
+                                        value={data.min_purchase}
+                                        onChange={e => setData('min_purchase', e.target.value)}
+                                        required={data.type !== 'bogo'}
                                     />
                                 </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-400 uppercase">Minimal Belanja</label>
-                                <input 
-                                    type="number" 
-                                    className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
-                                    placeholder="50000"
-                                    value={data.min_purchase}
-                                    onChange={e => setData('min_purchase', e.target.value)}
-                                />
-                            </div>
+                            ) : (
+                                <div className="space-y-4 border-l-2 border-[#00C48C] pl-4 mt-2">
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-gray-400 uppercase">Produk yang Dibeli</label>
+                                            <select 
+                                                className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                                value={data.buy_product_id}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    setData(prev => ({
+                                                        ...prev,
+                                                        buy_product_id: val,
+                                                        get_product_id: val === 'all' ? 'all' : (prev.get_product_id === 'all' ? '' : prev.get_product_id)
+                                                    }));
+                                                }}
+                                                required={data.type === 'bogo'}
+                                            >
+                                                <option value="">Pilih Produk...</option>
+                                                <option value="all">⭐ Semua Menu (Beli Menu Apa Saja)</option>
+                                                {products.map(p => (
+                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-gray-400 uppercase">Produk Gratis</label>
+                                            <select 
+                                                className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                                value={data.get_product_id}
+                                                onChange={e => setData('get_product_id', e.target.value)}
+                                                required={data.type === 'bogo'}
+                                            >
+                                                <option value="">Pilih Produk Gratis...</option>
+                                                {data.buy_product_id === 'all' && (
+                                                    <option value="all">Sama dengan Produk yang Dibeli (Beli A Gratis A)</option>
+                                                )}
+                                                {products.map(p => (
+                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-gray-400 uppercase">Jumlah Beli</label>
+                                            <input 
+                                                type="number" 
+                                                className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                                placeholder="1"
+                                                value={data.buy_quantity}
+                                                onChange={e => setData('buy_quantity', e.target.value)}
+                                                required={data.type === 'bogo'}
+                                                min="1"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-gray-400 uppercase">Jumlah Gratis</label>
+                                            <input 
+                                                type="number" 
+                                                className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                                placeholder="1"
+                                                value={data.get_quantity}
+                                                onChange={e => setData('get_quantity', e.target.value)}
+                                                required={data.type === 'bogo'}
+                                                min="1"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
@@ -98,6 +180,7 @@ export default function Marketing({ promotions }: MarketingProps) {
                                         className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
                                         value={data.start_date}
                                         onChange={e => setData('start_date', e.target.value)}
+                                        required
                                     />
                                 </div>
                                 <div className="space-y-1">
@@ -107,6 +190,7 @@ export default function Marketing({ promotions }: MarketingProps) {
                                         className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
                                         value={data.end_date}
                                         onChange={e => setData('end_date', e.target.value)}
+                                        required
                                     />
                                 </div>
                             </div>
@@ -138,7 +222,19 @@ export default function Marketing({ promotions }: MarketingProps) {
                                         <div>
                                             <h4 className="font-bold text-[#1A1A1A]">{promo.name}</h4>
                                             <p className="text-xs text-gray-400 mt-1">
-                                                Min. Belanja: {rupiah(promo.min_purchase)} • Reward: {promo.type === 'cashback_points' ? `${promo.value} Poin` : rupiah(promo.value)}
+                                                {promo.type === 'bogo' ? (
+                                                    <span>
+                                                        {(!promo.buy_product && !promo.buyProduct) ? (
+                                                            <span>Beli {promo.buy_quantity} Menu Apa Saja → Gratis {promo.get_quantity} Menu yang Sama (Semua Menu)</span>
+                                                        ) : (
+                                                            <span>Beli {promo.buy_quantity} {promo.buy_product?.name || promo.buyProduct?.name || 'Produk'} → Gratis {promo.get_quantity} {promo.get_product?.name || promo.getProduct?.name || 'Produk'}</span>
+                                                        )}
+                                                    </span>
+                                                ) : (
+                                                    <span>
+                                                        Min. Belanja: {rupiah(promo.min_purchase)} • Reward: {promo.type === 'cashback_points' ? `${promo.value} Poin` : rupiah(promo.value)}
+                                                    </span>
+                                                )}
                                             </p>
                                             <div className="flex items-center space-x-2 mt-2 text-[10px] font-bold text-gray-500">
                                                 <Calendar size={12} />

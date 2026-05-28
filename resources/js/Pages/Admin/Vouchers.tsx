@@ -31,6 +31,7 @@ export default function Vouchers({ vouchers }: VouchersProps) {
     const [showModal, setShowModal] = useState(false);
     const { data, setData, post, delete: destroy, processing, reset, errors } = useForm({
         name: '',
+        description: '',
         code: '',
         discount_type: 'percent',
         discount_value: '',
@@ -44,7 +45,7 @@ export default function Vouchers({ vouchers }: VouchersProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('vouchers.store'), {
+        post(route('admin.vouchers.store'), {
             onSuccess: () => {
                 setShowModal(false);
                 reset();
@@ -54,7 +55,7 @@ export default function Vouchers({ vouchers }: VouchersProps) {
     };
 
     const toggleStatus = (id: number) => {
-        post(route('vouchers.toggle', id), {
+        post(route('admin.vouchers.toggle', id), {
             onSuccess: () => {
                 toastSuccess('Status kupon diperbarui!');
             }
@@ -64,7 +65,7 @@ export default function Vouchers({ vouchers }: VouchersProps) {
     const deleteVoucher = (id: number) => {
         confirmAction('Hapus Voucher?', 'Apakah Anda yakin ingin menghapus kupon voucher ini?', 'Ya, Hapus').then((result) => {
             if (result.isConfirmed) {
-                destroy(route('vouchers.destroy', id), {
+                destroy(route('admin.vouchers.destroy', id), {
                     onSuccess: () => {
                         toastSuccess('Voucher berhasil dihapus!');
                     }
@@ -247,6 +248,18 @@ export default function Vouchers({ vouchers }: VouchersProps) {
                                     />
                                     {errors.code && <p className="text-red-500 text-xs font-bold">{errors.code}</p>}
                                 </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Deskripsi Poin / Voucher (Optional)</label>
+                                <textarea 
+                                    className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-[#2D6A4F]/5"
+                                    placeholder="Contoh: Tukarkan poinmu dengan segelas Es Kelapa Muda Original gratis!"
+                                    value={data.description}
+                                    onChange={e => setData('description', e.target.value)}
+                                    rows={2}
+                                />
+                                {errors.description && <p className="text-red-500 text-xs font-bold">{errors.description}</p>}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

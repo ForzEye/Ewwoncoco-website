@@ -36,10 +36,17 @@ class POSController extends Controller
         $products = Product::where('is_available', true)->with('category')->get();
         $categories = ProductCategory::all();
 
+        $merchantId = $user->merchant_id ?? 1;
+        $promotions = \App\Models\Promotion::active()
+            ->where('merchant_id', $merchantId)
+            ->where('type', 'bogo')
+            ->get();
+
         return Inertia::render('POS/Screen', [
             'products' => $products,
             'categories' => $categories,
-            'activeShift' => $activeShift->load('branch')
+            'activeShift' => $activeShift->load('branch'),
+            'promotions' => $promotions
         ]);
     }
 
@@ -82,6 +89,18 @@ class POSController extends Controller
             $merchantId = $user->merchant_id ?? 1; // fallback ke merchant pertama
             $branchId = $activeShift->branch_id;
 
+            // Fetch active BOGO promotions for this merchant
+            $bogoPromosCollection = \App\Models\Promotion::active()
+                ->where('merchant_id', $merchantId)
+                ->where('type', 'bogo')
+                ->get();
+
+            // Specific BOGOs (linked to a product)
+            $specificBogoPromos = $bogoPromosCollection->whereNotNull('buy_product_id')->keyBy('buy_product_id');
+
+            // Global BOGO (applies to "all menus")
+            $globalBogoPromo = $bogoPromosCollection->whereNull('buy_product_id')->first();
+
             $transaction = PosTransaction::create([
                 'merchant_id' => $merchantId,
                 'branch_id' => $branchId,
@@ -104,26 +123,75 @@ class POSController extends Controller
             }
 
             foreach ($request->items as $item) {
+                $productId = $item['product']['id'];
+                $qty = $item['quantity'];
+                $unitPrice = $item['product']['price'];
+
                 PosTransactionItem::create([
                     'transaction_id' => $transaction->id,
-                    'product_id' => $item['product']['id'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['product']['price'],
-                    'subtotal' => $item['product']['price'] * $item['quantity'],
+                    'product_id' => $productId,
+                    'quantity' => $qty,
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $unitPrice * $qty,
                 ]);
 
                 // Reduce Stock (Simple & Recipe)
-                $product = Product::find($item['product']['id']);
-                $product->decrement('stock', $item['quantity']);
+                $product = Product::find($productId);
+                $product->decrement('stock', $qty);
 
                 // Deduct Ingredients based on Recipe
                 StockService::deductFromRecipe(
-                    $item['product']['id'], 
+                    $productId, 
                     $branchId, 
-                    $item['quantity'], 
+                    $qty, 
                     $transaction->transaction_number, 
                     'PosTransaction'
                 );
+
+                // Apply BOGO Promo
+                $promo = null;
+                $freeProductId = null;
+
+                if (isset($specificBogoPromos[$productId])) {
+                    $promo = $specificBogoPromos[$productId];
+                    $freeProductId = $promo->get_product_id;
+                } elseif ($globalBogoPromo) {
+                    $promo = $globalBogoPromo;
+                    $freeProductId = $globalBogoPromo->get_product_id ?: $productId; // Specific free product or same product
+                }
+
+                if ($promo && $freeProductId) {
+                    $buyQty = $promo->buy_quantity ?: 1;
+                    $getQty = $promo->get_quantity ?: 1;
+
+                    $multiplier = floor($qty / $buyQty);
+                    $freeQty = $multiplier * $getQty;
+
+                    if ($freeQty > 0) {
+                        PosTransactionItem::create([
+                            'transaction_id' => $transaction->id,
+                            'product_id' => $freeProductId,
+                            'quantity' => $freeQty,
+                            'unit_price' => 0,
+                            'subtotal' => 0,
+                            'notes' => 'PROMO BOGO: ' . $promo->name
+                        ]);
+
+                        // Reduce Stock of free product
+                        $freeProduct = Product::find($freeProductId);
+                        if ($freeProduct) {
+                            $freeProduct->decrement('stock', $freeQty);
+                            
+                            StockService::deductFromRecipe(
+                                $freeProductId, 
+                                $branchId, 
+                                $freeQty, 
+                                $transaction->transaction_number, 
+                                'PosTransaction'
+                            );
+                        }
+                    }
+                }
             }
 
             // Award points for this purchase if customer is selected

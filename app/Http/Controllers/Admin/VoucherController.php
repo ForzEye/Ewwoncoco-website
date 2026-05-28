@@ -29,6 +29,7 @@ class VoucherController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:500',
             'code' => 'required|string|max:30|unique:vouchers,code',
             'discount_type' => 'required|in:percent,fixed',
             'discount_value' => 'required|numeric|min:0',
@@ -45,6 +46,7 @@ class VoucherController extends Controller
         Voucher::create([
             'merchant_id' => $merchant->id,
             'name' => $request->name,
+            'description' => $request->description,
             'code' => strtoupper($request->code),
             'discount_type' => $request->discount_type,
             'discount_value' => $request->discount_value,

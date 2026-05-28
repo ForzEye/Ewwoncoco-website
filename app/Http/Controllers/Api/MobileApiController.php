@@ -191,6 +191,19 @@ class MobileApiController extends Controller
 
         $user = $request->user();
         $branch = Branch::find($validated['branch_id']);
+        $merchantId = $branch->merchant_id ?? 1;
+
+        // Fetch active BOGO promotions for this merchant
+        $bogoPromosCollection = \App\Models\Promotion::active()
+            ->where('merchant_id', $merchantId)
+            ->where('type', 'bogo')
+            ->get();
+
+        // Specific BOGOs (linked to a product)
+        $specificBogoPromos = $bogoPromosCollection->whereNotNull('buy_product_id')->keyBy('buy_product_id');
+
+        // Global BOGO (applies to "all menus")
+        $globalBogoPromo = $bogoPromosCollection->whereNull('buy_product_id')->first();
 
         try {
             DB::beginTransaction();
@@ -199,7 +212,7 @@ class MobileApiController extends Controller
 
             $order = Order::create([
                 'customer_id' => $user?->id,
-                'merchant_id' => $branch->merchant_id ?? null,
+                'merchant_id' => $merchantId,
                 'branch_id' => $validated['branch_id'],
                 'order_number' => $orderNumber,
                 'delivery_type' => $validated['delivery_type'],
@@ -217,14 +230,49 @@ class MobileApiController extends Controller
             ]);
 
             foreach ($validated['items'] as $item) {
+                $productId = $item['product_id'];
+                $qty = $item['quantity'];
+                $unitPrice = $item['unit_price'];
+
                 OrderItem::create([
                     'order_id' => $order->id,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'subtotal' => $item['quantity'] * $item['unit_price'],
+                    'product_id' => $productId,
+                    'quantity' => $qty,
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $qty * $unitPrice,
                     'notes' => $item['notes'] ?? null,
                 ]);
+
+                // Apply BOGO Promo
+                $promo = null;
+                $freeProductId = null;
+
+                if (isset($specificBogoPromos[$productId])) {
+                    $promo = $specificBogoPromos[$productId];
+                    $freeProductId = $promo->get_product_id;
+                } elseif ($globalBogoPromo) {
+                    $promo = $globalBogoPromo;
+                    $freeProductId = $globalBogoPromo->get_product_id ?: $productId; // Specific free product or same product
+                }
+
+                if ($promo && $freeProductId) {
+                    $buyQty = $promo->buy_quantity ?: 1;
+                    $getQty = $promo->get_quantity ?: 1;
+
+                    $multiplier = floor($qty / $buyQty);
+                    $freeQty = $multiplier * $getQty;
+
+                    if ($freeQty > 0) {
+                        OrderItem::create([
+                            'order_id' => $order->id,
+                            'product_id' => $freeProductId,
+                            'quantity' => $freeQty,
+                            'unit_price' => 0,
+                            'subtotal' => 0,
+                            'notes' => 'PROMO BOGO: ' . $promo->name
+                        ]);
+                    }
+                }
             }
 
             // 3. Handle Auto Point Redemption
@@ -344,6 +392,7 @@ class MobileApiController extends Controller
     {
         $promos = \Illuminate\Support\Facades\Cache::remember('promotions_active', 300, function () {
             return Promotion::where('is_active', true)
+                ->with(['buyProduct', 'getProduct'])
                 ->where(function($query) {
                     $query->whereNull('end_date')
                           ->orWhere('end_date', '>=', now());

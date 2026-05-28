@@ -34,7 +34,8 @@ export default function Sidebar() {
         { name: 'Stok Cabang', icon: Box, href: '/admin/inventory/stock', active: url === '/admin/inventory/stock', roles: ['admin', 'super_admin'] },
         { name: 'Resep (BOM)', icon: FileSpreadsheet, href: '/admin/inventory/recipes', active: url === '/admin/inventory/recipes', roles: ['admin', 'super_admin'] },
         { name: 'Laporan BI', icon: BarChart3, href: '/admin/reports', active: url === '/admin/reports', roles: ['admin', 'super_admin'] },
-        { name: 'Voucher Promo', icon: Ticket, href: '/admin/marketing', active: url === '/admin/marketing', roles: ['admin', 'super_admin'] },
+        { name: 'Promo BOGO', icon: Sparkles, href: '/admin/marketing', active: url === '/admin/marketing', roles: ['admin', 'super_admin'] },
+        { name: 'Kupon Belanja', icon: Ticket, href: '/admin/vouchers', active: url === '/admin/vouchers', roles: ['admin', 'super_admin'] },
         
         // Super Admin Specific
 

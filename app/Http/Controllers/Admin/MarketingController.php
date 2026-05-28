@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Promotion;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -18,11 +19,15 @@ class MarketingController extends Controller
         }
 
         $promotions = Promotion::where('merchant_id', $merchant->id)
+            ->with(['buyProduct', 'getProduct'])
             ->latest()
             ->get();
 
+        $products = Product::where('merchant_id', $merchant->id)->get();
+
         return Inertia::render('Admin/Marketing/Index', [
-            'promotions' => $promotions
+            'promotions' => $promotions,
+            'products' => $products
         ]);
     }
 
@@ -30,11 +35,15 @@ class MarketingController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:cashback_points,fixed_discount',
-            'value' => 'required|numeric|min:0',
-            'min_purchase' => 'required|numeric|min:0',
+            'type' => 'required|in:cashback_points,fixed_discount,bogo',
+            'value' => 'required_unless:type,bogo|nullable|numeric|min:0',
+            'min_purchase' => 'required_unless:type,bogo|nullable|numeric|min:0',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
+            'buy_product_id' => 'nullable',
+            'get_product_id' => 'nullable',
+            'buy_quantity' => 'required_if:type,bogo|nullable|integer|min:1',
+            'get_quantity' => 'required_if:type,bogo|nullable|integer|min:1',
         ]);
 
         $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
@@ -45,11 +54,15 @@ class MarketingController extends Controller
             'name' => $request->name,
             'description' => $request->description,
             'type' => $request->type,
-            'value' => $request->value,
-            'min_purchase' => $request->min_purchase,
+            'value' => $request->type === 'bogo' ? 0 : $request->value,
+            'min_purchase' => $request->type === 'bogo' ? 0 : $request->min_purchase,
             'max_reward' => $request->max_reward,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
+            'buy_product_id' => ($request->buy_product_id === 'all' || !$request->buy_product_id) ? null : $request->buy_product_id,
+            'get_product_id' => ($request->get_product_id === 'all' || !$request->get_product_id) ? null : $request->get_product_id,
+            'buy_quantity' => $request->buy_quantity,
+            'get_quantity' => $request->get_quantity,
             'is_active' => true,
         ]);
 
