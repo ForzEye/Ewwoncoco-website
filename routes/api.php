@@ -78,6 +78,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/orders/{orderId}', [MobileApiController::class, 'getOrderDetail']);
         Route::post('/orders/{orderId}/payment-proof', [MobileApiController::class, 'uploadPaymentProof']);
         Route::get('/notifications', [MobileApiController::class, 'getNotifications']);
+        Route::post('/notifications/token', [\App\Http\Controllers\NotificationController::class, 'updateToken']);
         
         // Chat
         Route::get('/chat/rooms', [MobileApiController::class, 'getChatRooms']);
@@ -93,15 +94,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/points/apply-referral', [PointsController::class, 'applyReferralCode']);
         Route::get('/points/settings', [PointsController::class, 'getSettings']);
 
-        // POS Customer Search
-        Route::get('/points/find-customer', [AdminPointsController::class, 'findCustomer'])->name('api.points.find-customer');
-
         // Reviews
         Route::post('/reviews', [PointsController::class, 'submitReview']);
         Route::get('/products/{productId}/reviews', [PointsController::class, 'getProductReviews']);
         Route::get('/orders/{orderId}/review', [PointsController::class, 'getOrderReview']);
 
         // Vouchers
+        Route::get('/vouchers', [MobileApiController::class, 'getVouchers']);
+        Route::post('/vouchers/redeem', [MobileApiController::class, 'redeemVoucher']);
+        Route::get('/vouchers/my', [MobileApiController::class, 'getMyVouchers']);
         Route::post('/vouchers/validate', [MobileApiController::class, 'validateVoucher'])->middleware('throttle:vouchers');
 
         // Profile

@@ -22,7 +22,7 @@ class SecurityHeaders
                "img-src 'self' data: blob: https:; " .
                "connect-src 'self' wss: ws: https://api.gojek.com https://partner-api.grab.com https://*.googleapis.com; " .
                "font-src 'self' https://fonts.gstatic.com data:; " .
-               "frame-src 'self' https://app.sandbox.midtrans.com https://app.midtrans.com; " .
+               "frame-src 'self' https://app.sandbox.midtrans.com https://app.midtrans.com https://www.openstreetmap.org https://*.openstreetmap.org; " .
                "frame-ancestors 'self'; " .
                "object-src 'none';";
 

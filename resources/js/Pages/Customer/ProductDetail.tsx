@@ -171,7 +171,7 @@ export default function ProductDetail({ product, reviews, avgRating, reviewCount
                                         <div className="flex items-center space-x-3">
                                             <div className="w-10 h-10 bg-white rounded-full border border-gray-100 flex items-center justify-center font-bold text-[#00C48C]">
                                                 {review.customer?.avatar_url ? (
-                                                    <img src={review.customer.avatar_url} className="w-full h-full rounded-full object-cover" />
+                                                    <img src={review.customer.avatar_url} className="w-full h-full rounded-full object-cover" loading="lazy" />
                                                 ) : (
                                                     review.customer?.name?.charAt(0).toUpperCase()
                                                 )}

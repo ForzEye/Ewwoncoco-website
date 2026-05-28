@@ -190,12 +190,17 @@ export default function Contact() {
                     </div>
                     
                     <div className="relative rounded-[48px] overflow-hidden bg-gray-200 h-[500px] border-8 border-white shadow-2xl group">
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-200 text-[#B5AFA6]">
-                            <div className="text-center">
-                                <MapPin size={64} className="mx-auto mb-4 opacity-20" />
-                                <p className="text-xs font-black uppercase tracking-widest">Peta Interaktif Outlet Ewwon Coco</p>
-                            </div>
-                        </div>
+                        <iframe 
+                            width="100%" 
+                            height="100%" 
+                            frameBorder="0" 
+                            scrolling="no" 
+                            marginHeight={0} 
+                            marginWidth={0} 
+                            src="https://www.openstreetmap.org/export/embed.html?bbox=106.810%2C-6.235%2C106.822%2C-6.224&amp;layer=mapnik&amp;marker=-6.2297%2C106.8159"
+                            style={{ border: 0 }}
+                            title="Kantor Pusat Ewwon Coco"
+                        ></iframe>
                         {/* Static Overlay for UX */}
                         <div className="absolute bottom-8 left-8 p-6 bg-white rounded-3xl shadow-xl border border-gray-100 max-w-xs text-left animate-in slide-in-from-left-8">
                             <h4 className="font-poppins font-black text-sm text-charcoal mb-2 flex items-center gap-2">

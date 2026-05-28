@@ -17,7 +17,7 @@ return new class extends Migration
         DB::table('app_settings')->insert([
             [
                 'key' => 'point_per_rupiah',
-                'value' => '25000',
+                'value' => '20000',
                 'type' => 'number',
                 'group' => 'point',
                 'created_at' => now(),
@@ -41,7 +41,7 @@ return new class extends Migration
             ],
             [
                 'key' => 'point_to_discount_ratio',
-                'value' => '1',
+                'value' => '1000',
                 'type' => 'number',
                 'group' => 'point',
                 'created_at' => now(),

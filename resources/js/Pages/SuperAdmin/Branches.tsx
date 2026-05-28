@@ -267,6 +267,59 @@ export default function Branches({ branches, merchants, filters }: BranchesProps
                                 />
                             </div>
 
+                            {/* GPS Coordinates & Picker for Branch */}
+                            <div className="space-y-4 pt-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Koordinat GPS Cabang</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (navigator.geolocation) {
+                                                navigator.geolocation.getCurrentPosition((position) => {
+                                                    setData((prev: any) => ({
+                                                        ...prev,
+                                                        lat: position.coords.latitude.toFixed(8),
+                                                        lng: position.coords.longitude.toFixed(8)
+                                                    }));
+                                                }, (error) => {
+                                                    alert('Gagal mendeteksi lokasi otomatis. Silakan masukkan koordinat secara manual.');
+                                                });
+                                            } else {
+                                                alert('Geolocation tidak didukung oleh browser Anda.');
+                                            }
+                                        }}
+                                        className="px-3 py-1.5 bg-[#F0FAF6] hover:bg-[#00C48C] text-[#00C48C] hover:text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                                    >
+                                        Deteksi GPS Otomatis
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <span className="text-[9px] font-bold text-gray-400">Latitude (Lintang)</span>
+                                        <input 
+                                            type="text"
+                                            value={data.lat}
+                                            onChange={e => setData('lat', e.target.value)}
+                                            placeholder="-6.20880000"
+                                            className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-xs font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <span className="text-[9px] font-bold text-gray-400">Longitude (Bujur)</span>
+                                        <input 
+                                            type="text"
+                                            value={data.lng}
+                                            onChange={e => setData('lng', e.target.value)}
+                                            placeholder="106.84560000"
+                                            className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-xs font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-[9px] text-[#00C48C] font-semibold bg-[#F0FAF6] p-2.5 rounded-lg">
+                                    💡 Tip: Koordinat GPS ini wajib diisi dengan akurat agar peta jarak pengantaran mobile apps berfungsi 100% normal.
+                                </p>
+                            </div>
+
                             {editingBranch && (
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status Operasional</label>

@@ -68,14 +68,18 @@ class DashboardController extends Controller
         }
 
         // Branch Status
-        $branches = Branch::where('merchant_id', $merchantId)->get()->map(function($branch) {
-            $activeOrders = Order::where('branch_id', $branch->id)->whereIn('status', ['pending', 'confirmed', 'preparing'])->count();
-            return [
-                'name' => $branch->name,
-                'status' => 'Online', // Simplified
-                'orders' => $activeOrders
-            ];
-        });
+        $branches = Branch::where('merchant_id', $merchantId)
+            ->withCount(['orders as orders' => function($q) {
+                $q->whereIn('status', ['pending', 'confirmed', 'preparing']);
+            }])
+            ->get()
+            ->map(function($branch) {
+                return [
+                    'name' => $branch->name,
+                    'status' => 'Online', // Simplified
+                    'orders' => $branch->orders
+                ];
+            });
 
         // Active Shifts for Monitoring
         $activeShifts = PosShift::whereHas('branch', function($q) use ($merchantId) {

@@ -15,7 +15,8 @@ class FCMService
     public function __construct()
     {
         $this->projectId = config('services.firebase.project_id');
-        $this->accessToken = $this->getAccessToken();
+        // accessToken akan di-load secara malas (lazy-loading) saat sendToToken dipanggil
+        $this->accessToken = null;
     }
 
     /**
@@ -23,6 +24,10 @@ class FCMService
      */
     public function sendToToken(string $token, string $title, string $body, array $data = [])
     {
+        if (!$this->accessToken) {
+            $this->accessToken = $this->getAccessToken();
+        }
+
         if (!$this->projectId || !$token || !$this->accessToken) {
             Log::warning('FCM Send skipped: missing projectId, token, or accessToken');
             return false;
@@ -30,8 +35,17 @@ class FCMService
 
         $url = sprintf($this->endpoint, $this->projectId);
 
+        $formattedData = [];
+        foreach ($data as $key => $value) {
+            $formattedData[(string)$key] = (string)$value;
+        }
+
+        $link = $formattedData['link'] ?? '/';
+
         try {
             $response = Http::withToken($this->accessToken)
+                ->timeout(3) // Timeout total request 3 detik
+                ->connectTimeout(2) // Timeout jabat tangan koneksi 2 detik
                 ->post($url, [
                     'message' => [
                         'token' => $token,
@@ -39,10 +53,18 @@ class FCMService
                             'title' => $title,
                             'body' => $body,
                         ],
-                        'data' => $data,
+                        'data' => empty($formattedData) ? new \stdClass() : $formattedData,
+                        'android' => [
+                            'priority' => 'high',
+                            'notification' => [
+                                'channel_id' => 'ewwon_alert_1',
+                                'sound' => 'default',
+                                'default_vibrate_timings' => true,
+                            ],
+                        ],
                         'webpush' => [
                             'fcm_options' => [
-                                'link' => $data['link'] ?? '/',
+                                'link' => $link,
                             ],
                         ],
                     ],
@@ -117,10 +139,13 @@ class FCMService
         $jwt = "$signatureInput.$signedSignature";
 
         try {
-            $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
-                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                'assertion' => $jwt
-            ]);
+            $response = Http::asForm()
+                ->timeout(3) // Timeout total request 3 detik
+                ->connectTimeout(2) // Timeout jabat tangan koneksi 2 detik
+                ->post('https://oauth2.googleapis.com/token', [
+                    'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                    'assertion' => $jwt
+                ]);
 
             if ($response->failed()) {
                 Log::error('FCM Token Generation Failed: ' . $response->body());

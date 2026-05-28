@@ -42,6 +42,7 @@ class BranchManagementController extends Controller
         ]);
 
         Branch::create($request->all());
+        \Illuminate\Support\Facades\Cache::forget('outlets_active');
 
         return back()->with('success', 'Cabang berhasil ditambahkan.');
     }
@@ -57,6 +58,7 @@ class BranchManagementController extends Controller
 
         $branch = Branch::findOrFail($id);
         $branch->update($request->all());
+        \Illuminate\Support\Facades\Cache::forget('outlets_active');
 
         return back()->with('success', 'Cabang berhasil diperbarui.');
     }
@@ -65,6 +67,7 @@ class BranchManagementController extends Controller
     {
         $branch = Branch::findOrFail($id);
         $branch->delete();
+        \Illuminate\Support\Facades\Cache::forget('outlets_active');
 
         return back()->with('success', 'Cabang berhasil dihapus.');
     }

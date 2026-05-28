@@ -23,6 +23,7 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $orders = Order::where('customer_id', $request->user()->id)
+            ->with(['items.product', 'branch', 'merchant'])
             ->orderBy('created_at', 'desc')
             ->get();
 

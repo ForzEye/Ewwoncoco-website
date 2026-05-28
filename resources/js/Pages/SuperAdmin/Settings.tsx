@@ -13,7 +13,8 @@ import {
     Mail,
     ChevronRight,
     Search,
-    Settings as SettingsIcon
+    Settings as SettingsIcon,
+    Download
 } from 'lucide-react';
 
 interface SettingsProps {
@@ -39,16 +40,20 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
         site_logo: null as File | null,
         site_favicon: null as File | null,
         otp_enabled: settings.otp_enabled !== undefined ? String(settings.otp_enabled) : '1',
+        otp_email_enabled: settings.otp_email_enabled !== undefined ? String(settings.otp_email_enabled) : '1',
         wa_notifications_enabled: settings.wa_notifications_enabled !== undefined ? String(settings.wa_notifications_enabled) : '1',
+        android_download_url: settings.android_download_url || '',
 
         // Mobile App Settings
         app_landing_promo_text: appSettings.app_landing_promo_text || '',
         app_support_whatsapp: appSettings.app_support_whatsapp || settings.contact_whatsapp || '',
         app_landing_hero_image: null as File | null,
+        app_screenshot: null as File | null,
     });
 
     const [logoPreview, setLogoPreview] = useState<string | null>(settings.site_logo || null);
     const [faviconPreview, setFaviconPreview] = useState<string | null>(settings.site_favicon || null);
+    const [appScreenshotPreview, setAppScreenshotPreview] = useState<string | null>(settings.app_screenshot || null);
     
     // Support multiple app hero previews
     const initialAppHeroes = Array.isArray(appImages.app_landing_hero_image) 
@@ -72,6 +77,7 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
             const previewUrl = URL.createObjectURL(file);
             if (field === 'site_logo') setLogoPreview(previewUrl);
             else if (field === 'site_favicon') setFaviconPreview(previewUrl);
+            else if (field === 'app_screenshot') setAppScreenshotPreview(previewUrl);
         }
     };
 
@@ -259,21 +265,66 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
                                     <SettingsIcon size={20} className="text-[#00C48C]" />
                                     Kontrol Fitur & OTP
                                 </h3>
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                                <div className="space-y-3">
+
+                                    {/* OTP via WhatsApp */}
+                                    <div className={`flex items-center justify-between p-3 rounded-xl transition-opacity ${
+                                        data.otp_email_enabled !== '1' ? 'bg-gray-50 opacity-40 pointer-events-none' : 'bg-gray-50'
+                                    }`}>
                                         <div className="flex-1 pr-2">
-                                            <p className="text-xs font-bold text-charcoal">Kirim OTP WhatsApp</p>
-                                            <p className="text-[9px] text-gray-400">Nonaktifkan untuk mempermudah pengujian login/register.</p>
+                                            <p className="text-xs font-bold text-charcoal">OTP via WhatsApp</p>
+                                            <p className="text-[9px] text-gray-400">
+                                                {data.otp_email_enabled !== '1'
+                                                    ? 'Aktifkan OTP Email terlebih dahulu.'
+                                                    : 'Nonaktifkan jika Fonnte/WA sedang bermasalah.'}
+                                            </p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => setData('otp_enabled', data.otp_enabled === '1' ? '0' : '1')}
-                                            className={`px-4 py-2 rounded-lg font-black text-[10px] tracking-wider uppercase transition-all ${data.otp_enabled === '1' ? 'bg-[#F0FAF6] text-[#00C48C] border border-[#00C48C]' : 'bg-red-50 text-red-500 border border-red-200'}`}
+                                            className={`px-4 py-2 rounded-lg font-black text-[10px] tracking-wider uppercase transition-all ${
+                                                data.otp_enabled === '1'
+                                                    ? 'bg-[#F0FAF6] text-[#00C48C] border border-[#00C48C]'
+                                                    : 'bg-red-50 text-red-500 border border-red-200'
+                                            }`}
                                         >
                                             {data.otp_enabled === '1' ? 'AKTIF' : 'NONAKTIF'}
                                         </button>
                                     </div>
 
+                                    {/* OTP via Email — master switch */}
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                                        <div className="flex-1 pr-2">
+                                            <p className="text-xs font-bold text-charcoal flex items-center gap-1">
+                                                <Mail size={11} className="inline" />
+                                                OTP via Email
+                                                <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded text-[8px] font-black uppercase">Master</span>
+                                            </p>
+                                            <p className="text-[9px] text-gray-400">
+                                                {data.otp_email_enabled !== '1'
+                                                    ? '⚠️ Semua OTP dinonaktifkan — registrasi tanpa verifikasi.'
+                                                    : 'Jika dinonaktifkan, semua OTP (WA & Email) akan dimatikan.'}
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const next = data.otp_email_enabled === '1' ? '0' : '1';
+                                                setData('otp_email_enabled', next);
+                                                // Turning email off also forces WA off (both disabled)
+                                                if (next === '0') setData('otp_enabled', '0');
+                                            }}
+                                            className={`px-4 py-2 rounded-lg font-black text-[10px] tracking-wider uppercase transition-all ${
+                                                data.otp_email_enabled === '1'
+                                                    ? 'bg-[#F0FAF6] text-[#00C48C] border border-[#00C48C]'
+                                                    : 'bg-red-50 text-red-500 border border-red-200'
+                                            }`}
+                                        >
+                                            {data.otp_email_enabled === '1' ? 'AKTIF' : 'NONAKTIF'}
+                                        </button>
+                                    </div>
+
+                                    {/* WA Notifications (receipts) */}
                                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                                         <div className="flex-1 pr-2">
                                             <p className="text-xs font-bold text-charcoal">Notifikasi WA (Struk)</p>
@@ -426,6 +477,34 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
                                     <p className="text-[10px] text-gray-400 text-center">Rekomendasi: 1200x675px (16:9). Bisa pilih lebih dari 1.</p>
                                 </div>
                             </div>
+
+                            {/* App Screenshot Upload */}
+                            <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
+                                <h3 className="font-poppins font-bold text-lg flex items-center gap-2 text-charcoal">
+                                    <Smartphone size={20} className="text-blue-500" />
+                                    Screenshot Aplikasi
+                                </h3>
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Gambar Tampilan Aplikasi</label>
+                                    
+                                    <div className="relative group aspect-[9/16] max-w-[200px] mx-auto bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden hover:border-[#00C48C] hover:bg-[#F0FAF6]/30 transition-all cursor-pointer">
+                                        {appScreenshotPreview ? (
+                                            <img src={appScreenshotPreview} className="w-full h-full object-contain p-2" />
+                                        ) : (
+                                            <div className="flex flex-col items-center text-gray-400 p-4 text-center">
+                                                <Upload size={32} strokeWidth={1.5} />
+                                                <span className="text-[9px] font-bold mt-2 uppercase">Upload Screenshot</span>
+                                            </div>
+                                        )}
+                                        <input 
+                                            type="file" 
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                            onChange={(e) => handleFileChange(e, 'app_screenshot')}
+                                        />
+                                    </div>
+                                    <p className="text-[9px] text-gray-400 text-center leading-relaxed">Rekomendasi ukuran: Aspek rasio 9:16 (seperti screenshot HP portrait).</p>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="lg:col-span-8 space-y-6">
@@ -463,6 +542,25 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
                                             </div>
                                         </div>
                                         <p className="text-[10px] text-gray-400 ml-1">Nomor ini akan digunakan pada tombol bantuan di aplikasi mobile.</p>
+                                    </div>
+
+                                    <div className="space-y-2.5">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Link Download Aplikasi Android (APK)</label>
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex-1">
+                                                <input 
+                                                    type="text" 
+                                                    value={data.android_download_url}
+                                                    onChange={e => setData('android_download_url', e.target.value)}
+                                                    placeholder="Contoh: https://drive.google.com/uc?export=download&id=... atau https://domain.com/downloads/ewwoncoco.apk"
+                                                    className="w-full px-7 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-[#00C48C]/10 outline-none"
+                                                />
+                                            </div>
+                                            <div className="w-12 h-12 bg-[#00C48C]/10 rounded-2xl flex items-center justify-center text-[#00C48C]">
+                                                <Download size={24} />
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 ml-1">Gunakan link penyimpanan file APK (seperti Google Drive, Dropbox, atau hosting) agar ketika tombol unduh di landing page diklik, user langsung diarahkan mengunduh berkas APK.</p>
                                     </div>
                                 </div>
 

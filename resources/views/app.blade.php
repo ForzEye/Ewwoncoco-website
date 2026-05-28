@@ -5,6 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#00C48C" />
 
+        {{-- Preconnect to Google Fonts to speed up asset loading --}}
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
         {{-- SEO Meta --}}
         <meta name="description" content="EWWON COCO — Platform digital commerce internal. Satu platform untuk kelola semua operasional bisnis: online ordering, POS kasir, inventaris, pengiriman, dan analitik." />
         <meta name="robots" content="index, follow" />

@@ -82,9 +82,27 @@ class MerchantProductController extends Controller
         return redirect()->route('admin.products.index')->with('success', 'Produk berhasil ditambahkan.');
     }
 
+    public function edit($id)
+    {
+        $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
+        if (!$merchant) return redirect()->route('admin.dashboard');
+
+        $product = Product::where('merchant_id', $merchant->id)->with('recipes')->findOrFail($id);
+        $categories = ProductCategory::all();
+        $ingredients = \App\Models\Ingredient::where('merchant_id', $merchant->id)->get();
+
+        return Inertia::render('Admin/Products/Edit', [
+            'product' => $product,
+            'categories' => $categories,
+            'ingredients' => $ingredients
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
+        if (!$merchant) return back()->with('error', 'Toko tidak ditemukan.');
+        
         $product = Product::where('merchant_id', $merchant->id)->findOrFail($id);
 
         $request->validate([
@@ -95,7 +113,7 @@ class MerchantProductController extends Controller
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $data = $request->except('image');
+        $data = $request->except(['image', 'recipes']);
         
         if ($request->hasFile('image')) {
             // Delete old image if exists
@@ -111,7 +129,24 @@ class MerchantProductController extends Controller
         }
 
         $product->update($data);
-        return back()->with('success', 'Produk berhasil diperbarui.');
+
+        // Handle Recipe items sync
+        if ($request->has('recipes') && is_array($request->recipes)) {
+            // Delete old ones first
+            $product->recipes()->delete();
+
+            foreach ($request->recipes as $recipeData) {
+                if (!empty($recipeData['ingredient_id']) && !empty($recipeData['quantity'])) {
+                    \App\Models\Recipe::create([
+                        'product_id' => $product->id,
+                        'ingredient_id' => $recipeData['ingredient_id'],
+                        'quantity' => $recipeData['quantity'],
+                    ]);
+                }
+            }
+        }
+
+        return redirect()->route('admin.products.index')->with('success', 'Produk berhasil diperbarui.');
     }
 
     public function destroy($id)

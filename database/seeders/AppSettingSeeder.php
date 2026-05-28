@@ -24,7 +24,7 @@ class AppSettingSeeder extends Seeder
             ],
             [
                 'key' => 'app_last_connected_at',
-                'value' => now()->toDateTimeString(),
+                'value' => now()->toIso8601String(),
                 'type' => 'text',
                 'group' => 'system',
             ],

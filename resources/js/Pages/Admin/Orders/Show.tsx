@@ -122,8 +122,8 @@ export default function Show({ order }: OrderShowProps) {
                         </div>
                         <div className="divide-y divide-[#F8F8F8]">
                             {order.items?.map((item) => (
-                                <div key={item.id} className="p-10 flex items-center justify-between group hover:bg-[#FAFAFA] transition-all">
-                                    <div className="flex items-center gap-6">
+                                <div key={item.id} className="p-10 flex items-start justify-between group hover:bg-[#FAFAFA] transition-all">
+                                    <div className="flex items-start gap-6">
                                         <div className="w-20 h-20 bg-[#F9F9F9] border border-[#F0F0F0] rounded-[24px] overflow-hidden flex-shrink-0 shadow-sm group-hover:shadow-md transition-all">
                                             {item.product?.image_url ? (
                                                 <img src={item.product.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -136,9 +136,14 @@ export default function Show({ order }: OrderShowProps) {
                                             <p className="text-[12px] font-bold text-[#B5AFA6] mt-1.5 uppercase tracking-wider">
                                                 {item.quantity} <span className="mx-1">×</span> {rupiah(item.price)}
                                             </p>
+                                            {item.notes && (
+                                                <span className="text-[11px] text-[#8C5E3C] bg-[#FAF3EC] border border-[#F0E2D3] px-2.5 py-1 rounded-xl mt-2 font-bold inline-block">
+                                                    Catatan: {item.notes}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-right mt-1">
                                         <span className="text-[16px] font-black text-[#1A1A1A] tracking-tighter">{rupiah(item.subtotal)}</span>
                                     </div>
                                 </div>
@@ -220,6 +225,17 @@ export default function Show({ order }: OrderShowProps) {
                                     <p className="text-[13px] font-black text-[#1A1A1A] uppercase tracking-wider">{order.payment_method.replace('_', ' ')}</p>
                                 </div>
                             </div>
+                            {order.notes && (
+                                <div className="flex items-start gap-4 pt-4 border-t border-[#F8F8F8]">
+                                    <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0">
+                                        <span className="text-[14px]">✍️</span>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest mb-1">Catatan Pembeli</p>
+                                        <p className="text-[13px] font-bold text-amber-900 leading-relaxed bg-[#FAF6F0] border border-[#F5ECE2] p-3.5 rounded-2xl mt-1">{order.notes}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

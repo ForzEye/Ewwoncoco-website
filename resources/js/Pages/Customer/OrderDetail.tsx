@@ -129,6 +129,11 @@ export default function OrderDetail({ order: initialOrder }: OrderDetailProps) {
                                             <div className="flex justify-between font-inter text-sm">
                                                 <div className="flex-1">
                                                     <div className="font-medium text-[#1A1A1A]">{item.quantity}x {item.product?.name}</div>
+                                                    {item.notes && (
+                                                        <div className="text-xs text-amber-800 bg-[#FAF6F0] border border-[#F5ECE2] px-2 py-0.5 rounded-md mt-1 italic w-fit">
+                                                            Catatan: {item.notes}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="font-semibold text-[#1A1A1A]">{rupiah(item.subtotal)}</div>
                                             </div>
@@ -185,6 +190,16 @@ export default function OrderDetail({ order: initialOrder }: OrderDetailProps) {
                                             {order.delivery_type === 'pickup' ? (order.branch?.name || 'Outlet Ewwon Coco') : order.delivery_address}
                                         </p>
                                     </div>
+                                    {order.notes && (
+                                        <div className="bg-[#FAF6F0] rounded-md p-4 border border-[#F5ECE2] font-inter text-sm mt-3 animate-in fade-in slide-in-from-top-1 duration-300">
+                                            <p className="font-semibold text-amber-850 mb-1 flex items-center gap-1.5">
+                                                <span>✍️</span> Catatan Anda
+                                            </p>
+                                            <p className="text-amber-900 font-medium">
+                                                {order.notes}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>

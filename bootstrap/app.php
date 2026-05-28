@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ForceHttps::class,
             SecurityHeaders::class,
             HandleInertiaRequests::class,
+            \App\Http\Middleware\ApiMonitoringMiddleware::class,
         ]);
 
         // Force HTTPS & Security headers & CORS for API routes
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ForceHttps::class,
             SecurityHeaders::class,
             HandleCors::class,
+            \App\Http\Middleware\ApiMonitoringMiddleware::class,
         ]);
 
         // Role-based access middleware alias
@@ -40,5 +42,28 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        \Sentry\Laravel\Integration::handles($exceptions);
+        $exceptions->reportable(function (Throwable $e) {
+            try {
+                $userAgent = request()->header('User-Agent', '');
+                $isMobile = str_contains(strtolower($userAgent), 'dart') || 
+                            str_contains(strtolower($userAgent), 'flutter') || 
+                            request()->hasHeader('X-Platform') ||
+                            request()->is('api/*');
+                
+                $projectName = $isMobile ? 'ewwoncoco-apps' : 'ewwoncoco-website';
+
+                $sentryUrl = rtrim(env('EWWONCOCO_SENTRY_URL', 'http://127.0.0.1:9000'), '/');
+                \Illuminate\Support\Facades\Http::timeout(3)->post($sentryUrl . '/api/store-log', [
+                    'project_name' => $projectName,
+                    'environment' => app()->environment(),
+                    'level' => 'error',
+                    'message' => $e->getMessage() ?: get_class($e),
+                    'stack_trace' => $e->getTraceAsString(),
+                    'url' => request()->fullUrl(),
+                    'user_data' => request()->user() ? request()->user()->toArray() : null,
+                ]);
+            } catch (\Throwable $err) {
+                // Ignore if logging server is down
+            }
+        });
     })->create();

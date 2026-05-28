@@ -16,6 +16,7 @@ class VoucherController extends Controller
         if (!$merchant) return redirect()->route('admin.dashboard');
 
         $vouchers = Voucher::where('merchant_id', $merchant->id)
+            ->whereNull('user_id')
             ->latest()
             ->get();
 
@@ -36,6 +37,7 @@ class VoucherController extends Controller
             'usage_limit' => 'nullable|integer|min:1',
             'expires_at' => 'nullable|date|after:today',
             'is_online_only' => 'boolean',
+            'points_cost' => 'nullable|integer|min:1',
         ]);
 
         $merchant = Auth::user()->merchant;
@@ -51,6 +53,7 @@ class VoucherController extends Controller
             'usage_limit' => $request->usage_limit,
             'expires_at' => $request->expires_at,
             'is_online_only' => $request->is_online_only ?? true,
+            'points_cost' => $request->points_cost,
             'is_active' => true,
         ]);
 
@@ -60,7 +63,7 @@ class VoucherController extends Controller
     public function toggle(Request $request, $id)
     {
         $merchant = Auth::user()->merchant;
-        $voucher = Voucher::where('merchant_id', $merchant->id)->findOrFail($id);
+        $voucher = Voucher::where('merchant_id', $merchant->id)->whereNull('user_id')->findOrFail($id);
         $voucher->update(['is_active' => !$voucher->is_active]);
 
         return back()->with('success', 'Status voucher diperbarui.');
@@ -69,7 +72,7 @@ class VoucherController extends Controller
     public function destroy($id)
     {
         $merchant = Auth::user()->merchant;
-        $voucher = Voucher::where('merchant_id', $merchant->id)->findOrFail($id);
+        $voucher = Voucher::where('merchant_id', $merchant->id)->whereNull('user_id')->findOrFail($id);
         $voucher->delete();
 
         return back()->with('success', 'Voucher berhasil dihapus.');

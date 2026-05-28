@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\MerchantOrderController;
 use App\Http\Controllers\POS\POSController;
 use App\Http\Controllers\POS\ShiftController;
 use App\Http\Controllers\POS\TransactionController;
+use App\Http\Controllers\Api\AdminPointsController;
 use App\Http\Controllers\SuperAdmin\SuperAdminController;
 use App\Http\Controllers\SuperAdmin\BranchManagementController;
 use App\Http\Controllers\Admin\AdminSettingsController;
@@ -117,6 +118,9 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     Route::get('/products', [MerchantProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [MerchantProductController::class, 'create'])->name('products.create');
     Route::post('/products', [MerchantProductController::class, 'store'])->name('products.store');
+    Route::get('/products/{id}/edit', [MerchantProductController::class, 'edit'])->name('products.edit');
+    Route::post('/products/{id}', [MerchantProductController::class, 'update'])->name('products.update');
+    Route::delete('/products/{id}', [MerchantProductController::class, 'destroy'])->name('products.destroy');
 
     // Orders
     Route::get('/orders', [MerchantOrderController::class, 'index'])->name('orders.index');
@@ -173,6 +177,7 @@ Route::middleware(['auth', 'role:kasir,super_admin'])->prefix('pos')->name('pos.
     Route::get('/dashboard', [DashboardController::class, 'cashierIndex'])->name('dashboard');
     Route::get('/', [POSController::class, 'index'])->name('screen');
     Route::post('/store', [POSController::class, 'store'])->name('store');
+    Route::get('/find-customer', [AdminPointsController::class, 'findCustomer'])->name('find-customer');
 
     Route::get('/shifts', [ShiftController::class, 'index'])->name('shifts');
     Route::post('/shifts/open', [ShiftController::class, 'open'])->name('shifts.open');

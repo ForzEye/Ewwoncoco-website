@@ -51,15 +51,10 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
                 <div className="container-max section-px h-16 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2 group">
                         {site_settings.site_logo ? (
-                            <img src={site_settings.site_logo} alt={site_settings.site_name} className="h-10 w-auto object-contain" />
+                            <img src={site_settings.site_logo} alt={site_settings.site_name} className="h-12 w-auto object-contain" />
                         ) : (
-                            <div className="w-10 h-10 bg-primary text-white rounded-lg flex items-center justify-center text-xl group-hover:scale-105 transition-transform">
-                                🥥
-                            </div>
+                            <img src="/images/logo.png" alt={site_settings.site_name || 'EWWON COCO'} className="h-12 w-auto object-contain" />
                         )}
-                        <span className="font-heading font-bold text-xl tracking-tight text-charcoal hidden sm:block uppercase">
-                            {site_settings.site_name || 'EWWON COCO'}
-                        </span>
                     </Link>
 
                     <nav className="hidden lg:flex items-center gap-10">
@@ -179,13 +174,10 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
                     <div className="col-span-1 md:col-span-2 space-y-6">
                         <div className="flex items-center gap-2">
                             {site_settings.site_logo ? (
-                                <img src={site_settings.site_logo} alt={site_settings.site_name} className="h-10 w-auto object-contain" />
+                                <img src={site_settings.site_logo} alt={site_settings.site_name} className="h-16 w-auto object-contain" loading="lazy" />
                             ) : (
-                                <div className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center text-xl">
-                                    🥥
-                                </div>
+                                <img src="/images/logo.png" alt={site_settings.site_name || 'EWWON COCO'} className="h-16 w-auto object-contain" loading="lazy" />
                             )}
-                            <span className="font-heading font-black text-2xl tracking-tighter uppercase">{site_settings.site_name || 'EWWON COCO'}</span>
                         </div>
                         <p className="text-gray-500 text-sm max-w-sm leading-relaxed font-medium">
                             {site_settings.footer_text || 'Nikmati kesegaran es kelapa muda asli dan dessert premium kami. Pesan online sekarang, kami antar sampai ke depan pintu Anda.'}

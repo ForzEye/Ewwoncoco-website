@@ -19,10 +19,9 @@ class WhatsAppService
      */
     public function sendMessage(string $phone, string $message): bool
     {
-        // Global WA Notification Toggle Check
-        $waEnabled = \App\Models\SystemSetting::getVal('wa_notifications_enabled', '1') === '1';
-        if (!$waEnabled) {
-            Log::info("WhatsApp Send Bypassed (WhatsApp Notifications are globally disabled in settings). Target: {$phone}");
+        // Bypass sending in testing environment to prevent real external API calls
+        if (app()->environment('testing')) {
+            Log::info("WhatsApp message send simulated for testing: Target: {$phone}");
             return true;
         }
 
@@ -33,12 +32,19 @@ class WhatsAppService
 
         $target = $this->formatPhoneNumber($phone);
 
+        // 1. Simulasikan jeda alami manusia (Random Human Delay) antara 1.5 s/d 3 detik
+        // Agar pengiriman tidak seketika/instan seperti bot mesin otomatis yang kaku.
+        usleep(random_int(1500000, 3000000));
+
         try {
+            // 2. Kirim API ke Fonnte dengan parameter simulasi "Sedang Mengetik" (typing indicator)
             $response = Http::withHeaders([
                 'Authorization' => $this->token
             ])->post('https://api.fonnte.com/send', [
                 'target' => $target,
                 'message' => $message,
+                'typing' => true,      // Mengaktifkan status "Sedang mengetik..." di WhatsApp penerima
+                'delay'  => '2',       // Menambahkan jeda pengiriman dari server Fonnte
             ]);
 
             if ($response->successful()) {
@@ -55,15 +61,69 @@ class WhatsAppService
     }
 
     /**
-     * Format WhatsApp OTP message.
+     * Format WhatsApp OTP message with randomized humanized variations
+     * to prevent carrier/WhatsApp spam detection filters.
      */
     public function sendOtp(string $phone, string $code): bool
     {
+        // 1. Time-aware Greeting
+        $hour = (int) date('G');
+        if ($hour >= 4 && $hour < 11) {
+            $timeGreeting = "Selamat pagi";
+        } elseif ($hour >= 11 && $hour < 15) {
+            $timeGreeting = "Selamat siang";
+        } elseif ($hour >= 15 && $hour < 18) {
+            $timeGreeting = "Selamat sore";
+        } else {
+            $timeGreeting = "Selamat malam";
+        }
+
+        $greetings = [
+            "Halo Kak, {$timeGreeting}! 😊",
+            "Hai Kak, {$timeGreeting}! 👋",
+            "{$timeGreeting} Kak! Semoga sehat selalu ya. 🥥",
+            "Halo Pelanggan Setia Ewwon Coco, {$timeGreeting}! 🌴",
+        ];
+        $greeting = $greetings[array_rand($greetings)];
+
+        // 2. Humanized Intros
+        $intros = [
+            "Untuk melanjutkan verifikasi di aplikasi Ewwon Coco, berikut adalah kode OTP keamanan Kakak:",
+            "Ini adalah kode OTP verifikasi keamanan untuk masuk ke akun Ewwon Coco Anda:",
+            "Gunakan kode verifikasi berikut untuk mengakses akun Ewwon Coco Kakak ya:",
+            "Berikut adalah kode keamanan OTP Anda untuk aplikasi Ewwon Coco:",
+        ];
+        $intro = $intros[array_rand($intros)];
+
+        // 3. Security Warning
+        $warnings = [
+            "Demi keamanan, mohon jangan berikan kode ini kepada siapapun (termasuk staf EWWON COCO). Kode ini hanya aktif selama 5 menit.",
+            "Harap jaga kerahasiaan kode ini ya Kak. Pihak Ewwon Coco tidak pernah meminta kode OTP Anda. Kode akan kedaluwarsa dalam 5 menit.",
+            "Jangan bagikan kode verifikasi ini demi keamanan akun Kakak. Kode ini bersifat rahasia dan hanya berlaku selama 5 menit saja.",
+        ];
+        $warning = $warnings[array_rand($warnings)];
+
+        // 4. Randomized Closings
+        $closings = [
+            "Terima kasih banyak dan semoga hari Kakak menyenangkan! ✨🙏",
+            "Salam hangat dan sehat selalu dari seluruh tim Ewwon Coco! 🌴🥥",
+            "Terima kasih ya Kak, selamat menikmati kesegaran kelapa asli kami! 🥥💚",
+            "Terima kasih atas kepercayaannya bersama Ewwon Coco! 😊",
+        ];
+        $closing = $closings[array_rand($closings)];
+
+        // 5. Unique Cryptographic Reference/Fingerprint
+        // This ensures NO two messages sent are ever byte-identical, preventing structural spam detection!
+        $uniqueId = strtoupper(bin2hex(random_bytes(3)));
+
+        // Construct message
         $message = "🥥 *EWWON COCO* 🥥\n\n" .
-                   "Halo! Kode OTP keamanan Anda adalah:\n\n" .
+                   "{$greeting}\n\n" .
+                   "{$intro}\n\n" .
                    "👉 *{$code}* 👈\n\n" .
-                   "Kode ini berlaku selama 5 menit. Harap rahasiakan kode ini dan jangan berikan kepada siapapun, termasuk pihak EWWON COCO.\n\n" .
-                   "Terima kasih! 🙏";
+                   "{$warning}\n\n" .
+                   "{$closing}\n\n" .
+                   "_Ref ID: EW-{$uniqueId}_";
 
         return $this->sendMessage($phone, $message);
     }
@@ -79,6 +139,13 @@ class WhatsAppService
         if (empty($phone)) {
             Log::info("Online receipt WA not sent: customer has no phone number.");
             return false;
+        }
+
+        // Global WA Notification Toggle Check (Specific for Receipts)
+        $waEnabled = \App\Models\SystemSetting::getVal('wa_notifications_enabled', '1') === '1';
+        if (!$waEnabled) {
+            Log::info("WhatsApp Receipt Bypassed (WhatsApp Notifications are globally disabled in settings). Target: {$phone}");
+            return true;
         }
 
         $itemsText = "";
@@ -120,6 +187,13 @@ class WhatsAppService
         if (empty($phone)) {
             Log::info("POS receipt WA not sent: transaction has no customer tied or customer has no phone number.");
             return false;
+        }
+
+        // Global WA Notification Toggle Check (Specific for Receipts)
+        $waEnabled = \App\Models\SystemSetting::getVal('wa_notifications_enabled', '1') === '1';
+        if (!$waEnabled) {
+            Log::info("WhatsApp Receipt Bypassed (WhatsApp Notifications are globally disabled in settings). Target: {$phone}");
+            return true;
         }
 
         $itemsText = "";

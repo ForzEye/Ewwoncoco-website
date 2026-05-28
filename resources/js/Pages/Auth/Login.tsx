@@ -17,6 +17,8 @@ export default function Login() {
         email: '',
         password: '',
         remember: false,
+        username_full: '', // Honeypot field for bot prevention
+        page_load_time: Date.now(), // Page load timestamp for bot detection
     });
 
     const handleLogin: FormEventHandler = (e) => {
@@ -54,6 +56,25 @@ export default function Login() {
             )}
 
             <form onSubmit={handleLogin} className="space-y-4">
+                {/* Honeypot field to block automated bot submissions */}
+                <div style={{ display: 'none' }} className="hidden" aria-hidden="true">
+                    <label htmlFor="username_full">Leave this field blank</label>
+                    <input
+                        id="username_full"
+                        type="text"
+                        name="username_full"
+                        value={data.username_full}
+                        onChange={(e) => setData('username_full', e.target.value)}
+                        autoComplete="off"
+                        tabIndex={-1}
+                    />
+                    <input 
+                        type="hidden" 
+                        name="page_load_time" 
+                        value={data.page_load_time} 
+                    />
+                </div>
+
                 <div>
                     <label htmlFor="email" className="block text-sm font-medium text-charcoal mb-1">
                         Alamat Email

@@ -19,7 +19,7 @@ class MerchantOrderController extends Controller
             return redirect()->route('admin.dashboard')->with('error', 'Anda tidak memiliki toko yang terdaftar.');
         }
 
-        $orders = Order::where('merchant_id', $merchant->id)->with('customer')->latest()->get();
+        $orders = Order::where('merchant_id', $merchant->id)->with(['customer', 'branch'])->latest()->get();
         return Inertia::render('Admin/Orders/Index', [
             'orders' => $orders
         ]);

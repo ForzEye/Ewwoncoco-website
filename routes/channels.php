@@ -26,10 +26,19 @@ Broadcast::channel('delivery.{deliveryId}', function ($user, $deliveryId) {
 
 // Channel notifikasi admin (pesanan masuk)
 Broadcast::channel('merchant.{merchantId}.orders', function ($user, $merchantId) {
-    return in_array($user->role, ['admin', 'super_admin']) &&
-        ($user->role === 'super_admin' || \App\Models\Merchant::where('id', $merchantId)
+    // Super admin can access all
+    if ($user->role === 'super_admin') {
+        return true;
+    }
+    
+    // Admin or Kasir can access their own merchant's orders
+    if (in_array($user->role, ['admin', 'kasir'])) {
+        return $user->merchant_id == $merchantId || \App\Models\Merchant::where('id', $merchantId)
             ->where('owner_id', $user->id)
-            ->exists());
+            ->exists();
+    }
+    
+    return false;
 });
 
 // Channel Chat

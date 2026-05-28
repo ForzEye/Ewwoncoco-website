@@ -59,7 +59,7 @@ export default function Screen({ products, categories, activeShift }: POSScreenP
         if (!customerQuery) return;
         setIsSearchingCustomer(true);
         try {
-            const response = await axios.get(route('api.points.find-customer'), {
+            const response = await axios.get(route('pos.find-customer'), {
                 params: { query: customerQuery }
             });
             if (response.data.success) {
@@ -73,7 +73,16 @@ export default function Screen({ products, categories, activeShift }: POSScreenP
         }
     };
 
-    const grandTotal = getTotal();
+    const pointsDiscount = useMemo(() => {
+        if (!selectedCustomer || !usePoints) return 0;
+        const balance = selectedCustomer.balance || 0;
+        if (balance < 10) return 0;
+        return Math.min(balance, Math.floor(getTotal() / 1000)) * 1000;
+    }, [selectedCustomer, usePoints, items]);
+
+    const grandTotal = useMemo(() => {
+        return Math.max(0, getTotal() - pointsDiscount);
+    }, [items, pointsDiscount]);
 
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
@@ -399,13 +408,19 @@ export default function Screen({ products, categories, activeShift }: POSScreenP
                                 <span className="text-[10px] font-bold text-[#B5AFA6] uppercase tracking-[0.12em]">Subtotal</span>
                                 <span className="text-sm font-black text-[#8A8379]">{rupiah(getTotal())}</span>
                             </div>
+                            {pointsDiscount > 0 && (
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-[#D97706] uppercase tracking-[0.12em]">Potongan Poin</span>
+                                    <span className="text-sm font-black text-[#D97706] animate-pulse">-{rupiah(pointsDiscount)}</span>
+                                </div>
+                            )}
                         </div>
                         
                         <div className="pt-4 border-t-2 border-dashed border-[#E8E4DD]">
                             <div className="flex justify-between items-end">
                                 <div>
                                     <span className="text-[9px] font-bold text-[#2D6A4F] uppercase tracking-[0.2em] block mb-1">Grand Total</span>
-                                    <span className="text-[28px] font-black text-[#1A1A1A] tracking-tighter font-poppins leading-none">{rupiah(getTotal())}</span>
+                                    <span className="text-[28px] font-black text-[#1A1A1A] tracking-tighter font-poppins leading-none">{rupiah(grandTotal)}</span>
                                 </div>
                             </div>
                         </div>
@@ -436,7 +451,7 @@ export default function Screen({ products, categories, activeShift }: POSScreenP
             <PaymentModal 
                 isOpen={isPaymentOpen}
                 onClose={() => setIsPaymentOpen(false)}
-                total={getTotal()}
+                total={grandTotal}
                 onConfirm={handleProcessPayment}
                 processing={isProcessing}
             />

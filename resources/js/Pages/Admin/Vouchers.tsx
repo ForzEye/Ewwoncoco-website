@@ -17,6 +17,8 @@ interface Voucher {
     expires_at: string | null;
     is_active: boolean;
     is_online_only: boolean;
+    points_cost: number | null;
+    user_id: number | null;
 }
 
 interface VouchersProps {
@@ -37,6 +39,7 @@ export default function Vouchers({ vouchers }: VouchersProps) {
         usage_limit: '',
         expires_at: '',
         is_online_only: true,
+        points_cost: '',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -135,6 +138,12 @@ export default function Vouchers({ vouchers }: VouchersProps) {
                                         </span>
                                         {v.is_online_only && (
                                             <span className="px-2.5 py-1 bg-blue-50 text-blue-500 rounded-lg text-[9px] font-black uppercase tracking-wider">Online Only</span>
+                                        )}
+                                        {v.points_cost && (
+                                            <span className="px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 border border-amber-200 shadow-sm">
+                                                <Sparkles size={10} className="text-amber-500 fill-amber-500" />
+                                                <span>{v.points_cost} Poin</span>
+                                            </span>
                                         )}
                                     </div>
                                 </div>
@@ -305,6 +314,20 @@ export default function Vouchers({ vouchers }: VouchersProps) {
                                         value={data.expires_at}
                                         onChange={e => setData('expires_at', e.target.value)}
                                     />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Biaya Poin Penukaran (Optional)</label>
+                                    <input 
+                                        type="number"
+                                        className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-[#2D6A4F]/5"
+                                        placeholder="Contoh: 25 (kosongkan jika publik/biasa)"
+                                        value={data.points_cost}
+                                        onChange={e => setData('points_cost', e.target.value)}
+                                    />
+                                    {errors.points_cost && <p className="text-red-500 text-xs font-bold">{errors.points_cost}</p>}
                                 </div>
                             </div>
 

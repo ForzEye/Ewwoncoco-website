@@ -333,4 +333,337 @@ class BugBountyRemediationTest extends TestCase
         $branchIngredient->refresh();
         $this->assertEquals(50, $branchIngredient->stock);
     }
+
+    /** @test */
+    public function it_sends_otp_when_globally_enabled()
+    {
+        Mail::fake();
+        \App\Models\SystemSetting::setVal('otp_enabled', '1');
+
+        $otpService = new OtpService();
+        $identifier = 'enabled_test@example.com';
+
+        $success = $otpService->sendOtp($identifier, 'register', 'email');
+        $this->assertTrue($success);
+
+        // Fetch the generated OTP
+        $otp = OtpCode::where('identifier', $identifier)->where('is_used', false)->first();
+        $this->assertNotNull($otp);
+        $this->assertEquals('sent', $otp->status);
+
+        // Mail should have been sent
+        Mail::assertSent(\App\Mail\OtpMail::class);
+    }
+
+    /** @test */
+    public function it_bypasses_otp_sending_when_globally_disabled_but_saves_code_in_db_and_allows_verification()
+    {
+        Mail::fake();
+        \App\Models\SystemSetting::setVal('otp_enabled', '0');
+
+        $otpService = new OtpService();
+        $identifier = 'disabled_test@example.com';
+
+        $success = $otpService->sendOtp($identifier, 'register', 'email');
+        $this->assertTrue($success);
+
+        // Fetch the generated OTP
+        $otp = OtpCode::where('identifier', $identifier)->where('is_used', false)->first();
+        $this->assertNotNull($otp);
+        $this->assertEquals('sent', $otp->status);
+
+        // Mail should NOT have been sent
+        Mail::assertNotSent(\App\Mail\OtpMail::class);
+
+        // Standard verification with the stored code should still succeed!
+        $verifyResult = $otpService->verifyOtp($identifier, $otp->code);
+        $this->assertTrue($verifyResult);
+    }
+
+    /** @test */
+    public function it_bypasses_adaptive_security_check_during_login_when_globally_disabled()
+    {
+        Mail::fake();
+        \App\Models\SystemSetting::setVal('otp_enabled', '0');
+
+        $user = User::factory()->create([
+            'email' => 'customer_otp_bypass@example.com',
+            'password' => bcrypt('Customer@123'),
+            'phone' => '081234567890',
+        ]);
+
+        // Send login request with device_id (representing a new device)
+        $response = $this->postJson('/api/v1/login', [
+            'email' => 'customer_otp_bypass@example.com',
+            'password' => 'Customer@123',
+            'device_id' => 'device_999',
+            'device_name' => 'Redmi Note 10',
+        ]);
+
+        // Should return HTTP 200 instead of HTTP 202 (otp_required)
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'success',
+            'token',
+            'user' => [
+                'id',
+                'name',
+                'email',
+                'phone',
+            ]
+        ]);
+
+        $this->assertTrue($response['success']);
+        
+        // Assert device record exists and is marked is_trusted = true
+        $device = \App\Models\UserDevice::where('user_id', $user->id)
+            ->where('device_id', 'device_999')
+            ->first();
+        
+        $this->assertNotNull($device);
+        $this->assertTrue((bool)$device->is_trusted);
+    }
+
+    /** @test */
+    public function it_requires_otp_during_login_on_new_device_when_globally_enabled()
+    {
+        Mail::fake();
+        \App\Models\SystemSetting::setVal('otp_enabled', '1');
+
+        $user = User::factory()->create([
+            'email' => 'customer_otp_required@example.com',
+            'password' => bcrypt('Customer@123'),
+            'phone' => '081234567890',
+        ]);
+
+        // Send login request with device_id (representing a new device)
+        $response = $this->postJson('/api/v1/login', [
+            'email' => 'customer_otp_required@example.com',
+            'password' => 'Customer@123',
+            'device_id' => 'device_888',
+            'device_name' => 'Redmi Note 10',
+        ]);
+
+        // Should return HTTP 202 (otp_required)
+        $response->assertStatus(202);
+        $response->assertJson([
+            'success' => false,
+            'otp_required' => true,
+            'identifier' => '081234567890',
+            'channel' => 'whatsapp'
+        ]);
+    }
+
+    /** @test */
+    public function it_accepts_online_order_successfully_and_records_notification()
+    {
+        $cashier = User::factory()->create(['role' => 'kasir', 'is_active' => true, 'merchant_id' => null]);
+        $customer = User::factory()->create(['role' => 'customer', 'is_active' => true]);
+
+        $merchant = Merchant::create([
+            'id' => 1,
+            'owner_id' => $cashier->id,
+            'name' => 'EWWON COCO Test',
+            'slug' => 'ewwon-coco-test',
+            'category' => 'F&B',
+            'address' => 'Test Address',
+            'phone' => '0215551234',
+            'operational_hours' => [],
+            'is_active' => true,
+        ]);
+
+        $cashier->update(['merchant_id' => $merchant->id]);
+
+        $branch = Branch::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Cabang Test',
+            'address' => 'Test Cabang Address',
+            'phone' => '0215551234',
+            'lat' => -6.2088,
+            'lng' => 106.8456,
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Signature Coco',
+            'slug' => 'signature-coco',
+            'price' => 25000,
+            'is_available' => true,
+        ]);
+
+        $ingredient = Ingredient::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Kelapa Organik',
+            'unit' => 'gram',
+        ]);
+
+        Recipe::create([
+            'product_id' => $product->id,
+            'ingredient_id' => $ingredient->id,
+            'quantity' => 10,
+        ]);
+
+        BranchIngredient::create([
+            'branch_id' => $branch->id,
+            'ingredient_id' => $ingredient->id,
+            'stock' => 100,
+        ]);
+
+        $order = Order::create([
+            'customer_id' => $customer->id,
+            'merchant_id' => $merchant->id,
+            'branch_id' => $branch->id,
+            'order_number' => 'ORD-ACCEPT-TEST',
+            'total' => 25000,
+            'subtotal' => 25000,
+            'discount' => 0,
+            'status' => 'pending',
+            'payment_method' => 'qris',
+        ]);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'unit_price' => 25000,
+            'subtotal' => 25000,
+        ]);
+
+        $response = $this->actingAs($cashier)
+            ->postJson("/pos/online-orders/{$order->id}/accept");
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        $order->refresh();
+        $this->assertEquals('confirmed', $order->status);
+        $this->assertEquals($cashier->id, $order->cashier_id);
+
+        // Assert notification record was created in the database
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $customer->id,
+            'title' => 'Pesanan Diterima',
+            'type' => 'order_update',
+        ]);
+    }
+
+    /** @test */
+    public function it_rejects_online_order_successfully_and_records_notification()
+    {
+        $cashier = User::factory()->create(['role' => 'kasir', 'is_active' => true, 'merchant_id' => null]);
+        $customer = User::factory()->create(['role' => 'customer', 'is_active' => true]);
+
+        $merchant = Merchant::create([
+            'id' => 1,
+            'owner_id' => $cashier->id,
+            'name' => 'EWWON COCO Test',
+            'slug' => 'ewwon-coco-test',
+            'category' => 'F&B',
+            'address' => 'Test Address',
+            'phone' => '0215551234',
+            'operational_hours' => [],
+            'is_active' => true,
+        ]);
+
+        $cashier->update(['merchant_id' => $merchant->id]);
+
+        $branch = Branch::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Cabang Test',
+            'address' => 'Test Cabang Address',
+            'phone' => '0215551234',
+            'lat' => -6.2088,
+            'lng' => 106.8456,
+            'is_active' => true,
+        ]);
+
+        $order = Order::create([
+            'customer_id' => $customer->id,
+            'merchant_id' => $merchant->id,
+            'branch_id' => $branch->id,
+            'order_number' => 'ORD-REJECT-TEST',
+            'total' => 25000,
+            'subtotal' => 25000,
+            'discount' => 0,
+            'status' => 'pending',
+            'payment_method' => 'qris',
+        ]);
+
+        $response = $this->actingAs($cashier)
+            ->postJson("/pos/online-orders/{$order->id}/reject", [
+                'reason' => 'Bukti pembayaran tidak valid.'
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        $order->refresh();
+        $this->assertEquals('cancelled', $order->status);
+        $this->assertEquals('Bukti pembayaran tidak valid.', $order->rejection_reason);
+
+        // Assert notification record was created in the database
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $customer->id,
+            'title' => 'Pesanan Dibatalkan',
+            'type' => 'order_update',
+        ]);
+    }
+
+    /** @test */
+    public function it_triggers_fcm_notification_on_notification_model_created()
+    {
+        $user = User::factory()->create([
+            'fcm_token' => 'mocked-fcm-token'
+        ]);
+
+        $mockFCM = $this->mock(\App\Services\Notification\FCMService::class);
+        $mockFCM->shouldReceive('sendToToken')
+            ->once()
+            ->with(
+                'mocked-fcm-token',
+                'Test Notification Title',
+                'Test Notification Body',
+                [
+                    'type' => 'test_type',
+                    'key1' => 'val1',
+                    'key2' => 'val2',
+                ]
+            )
+            ->andReturn(true);
+
+        \App\Models\Notification::create([
+            'user_id' => $user->id,
+            'title' => 'Test Notification Title',
+            'body' => 'Test Notification Body',
+            'type' => 'test_type',
+            'data' => [
+                'key1' => 'val1',
+                'key2' => 'val2',
+            ]
+        ]);
+    }
+
+    /** @test */
+    public function it_updates_fcm_token_for_authenticated_mobile_user()
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/notifications/token', [
+                'fcm_token' => 'new-device-token'
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'message' => 'FCM Token updated successfully'
+        ]);
+
+        $user->refresh();
+        $this->assertEquals('new-device-token', $user->fcm_token);
+    }
 }
+
+
+

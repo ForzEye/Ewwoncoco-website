@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
 use App\Models\Promotion;
+use App\Models\Voucher;
 use Illuminate\Http\Request;
 use App\Services\OtpService;
 use Illuminate\Support\Facades\Validator;
@@ -48,11 +49,24 @@ class MobileApiController extends Controller
             $isNewDevice = !$device;
             $isLongInactive = $device && $device->last_login_at && $device->last_login_at->diffInDays(now()) >= 2;
 
-            if ($isNewDevice || $isLongInactive) {
+            // Per-channel OTP toggles
+            $waOtpEnabled    = \App\Models\SystemSetting::getVal('otp_enabled', '1') === '1';
+            $emailOtpEnabled = \App\Models\SystemSetting::getVal('otp_email_enabled', '1') === '1';
+            $anyOtpEnabled   = $waOtpEnabled || $emailOtpEnabled;
+
+            if ($anyOtpEnabled && ($isNewDevice || $isLongInactive)) {
                 // Auto-send OTP for security verification
                 $otpService = app(OtpService::class);
-                $identifier = $user->phone ?? $user->email;
-                $channel = $user->phone ? 'whatsapp' : 'email';
+
+                // Prefer WA channel if phone exists AND WA OTP is enabled,
+                // otherwise fall back to email OTP.
+                if ($user->phone && $waOtpEnabled) {
+                    $identifier = $user->phone;
+                    $channel    = 'whatsapp';
+                } else {
+                    $identifier = $user->email;
+                    $channel    = 'email';
+                }
                 
                 // Track this as a login type OTP
                 $otpService->sendOtp($identifier, 'login', $channel);
@@ -75,7 +89,7 @@ class MobileApiController extends Controller
                     'device_id' => $deviceId,
                     'device_name' => $request->device_name,
                     'last_login_at' => now(),
-                    'is_trusted' => false
+                    'is_trusted' => !$anyOtpEnabled
                 ]);
             }
         }
@@ -352,7 +366,6 @@ class MobileApiController extends Controller
         $heroImages = [];
 
         if ($heroImagesRaw) {
-            // AppSetting::getVal() already returns full S3 URLs for image type
             if (is_array($heroImagesRaw)) {
                 $heroImages = $heroImagesRaw;
             } else {
@@ -360,16 +373,37 @@ class MobileApiController extends Controller
             }
         }
 
+        // Get merchant payment info (first active merchant)
+        $merchant = \App\Models\Merchant::where('is_active', true)->first();
+
+        // Build QRIS image public URL
+        $qrisImageUrl = null;
+        if ($merchant && $merchant->qris_image_url) {
+            if (str_starts_with($merchant->qris_image_url, 'http')) {
+                $qrisImageUrl = $merchant->qris_image_url;
+            } else {
+                $qrisImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($merchant->qris_image_url);
+            }
+        }
+
         $settings = [
-            'hero_images' => $heroImages,
-            'hero_image' => !empty($heroImages) ? $heroImages[0] : null,
-            'promo_text' => \App\Models\AppSetting::getVal('app_landing_promo_text'),
-            'support_whatsapp' => \App\Models\AppSetting::getVal('app_support_whatsapp'),
+            'hero_images'          => $heroImages,
+            'hero_image'           => !empty($heroImages) ? $heroImages[0] : null,
+            'promo_text'           => \App\Models\AppSetting::getVal('app_landing_promo_text'),
+            'support_whatsapp'     => \App\Models\AppSetting::getVal('app_support_whatsapp'),
+            // Payment info
+            'qris_image_url'       => $qrisImageUrl,
+            'bank_name'            => $merchant?->bank_name,
+            'bank_account_number'  => $merchant?->bank_account_number,
+            'bank_account_name'    => $merchant?->bank_account_name,
+            // OTP Toggles
+            'otp_enabled'       => \App\Models\SystemSetting::getVal('otp_enabled', '1') === '1',
+            'otp_email_enabled' => \App\Models\SystemSetting::getVal('otp_email_enabled', '1') === '1',
         ];
 
         return response()->json([
             'success' => true,
-            'data' => $settings
+            'data'    => $settings
         ]);
     }
 
@@ -387,6 +421,12 @@ class MobileApiController extends Controller
                 'error' => 'Database connection failed'
             ], 500);
         }
+
+        // Update app last connected at status
+        \App\Models\AppSetting::updateOrCreate(
+            ['key' => 'app_last_connected_at'],
+            ['value' => now()->toIso8601String(), 'type' => 'text', 'group' => 'system']
+        );
 
         return response()->json([
             'success' => true,
@@ -789,4 +829,71 @@ class MobileApiController extends Controller
             'message' => 'Kode OTP tidak valid atau sudah kadaluarsa.'
         ], 400);
     }
+
+    /**
+     * Get available standard public vouchers and point-redeemable templates
+     */
+    public function getVouchers(Request $request)
+    {
+        $vouchers = Voucher::where('is_active', true)
+            ->whereNull('user_id')
+            ->where(function($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>=', now());
+            })
+            ->where(function($q) {
+                $q->whereNull('usage_limit')
+                  ->orWhereColumn('used_count', '<', 'usage_limit');
+            })
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $vouchers
+        ]);
+    }
+
+    /**
+     * Redeem a point-redeemable voucher template
+     */
+    public function redeemVoucher(Request $request)
+    {
+        $request->validate([
+            'voucher_id' => 'required|integer|exists:vouchers,id',
+        ]);
+
+        $userId = $request->user()->id;
+        $result = \App\Services\VoucherService::redeemVoucher($request->voucher_id, $userId);
+
+        if (!$result['success']) {
+            return response()->json($result, 400);
+        }
+
+        return response()->json($result, 200);
+    }
+
+    /**
+     * Get owned claimed vouchers of the authenticated user
+     */
+    public function getMyVouchers(Request $request)
+    {
+        $userId = $request->user()->id;
+        $vouchers = Voucher::where('user_id', $userId)
+            ->where('is_active', true)
+            ->where(function($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>=', now());
+            })
+            ->where(function($q) {
+                $q->whereNull('usage_limit')
+                  ->orWhereColumn('used_count', '<', 'usage_limit');
+            })
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $vouchers
+        ]);
+    }
 }
+

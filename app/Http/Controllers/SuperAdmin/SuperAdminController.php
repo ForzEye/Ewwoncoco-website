@@ -255,14 +255,20 @@ class SuperAdminController extends Controller
     {
         // Handle Logo Upload
         if ($request->hasFile('site_logo')) {
-            $path = $request->file('site_logo')->store('settings');
-            SystemSetting::setVal('site_logo', Storage::url($path), 'branding');
+            $path = $request->file('site_logo')->store('settings', 's3');
+            SystemSetting::setVal('site_logo', Storage::disk('s3')->url($path), 'branding');
         }
 
         // Handle Favicon Upload
         if ($request->hasFile('site_favicon')) {
-            $path = $request->file('site_favicon')->store('settings');
-            SystemSetting::setVal('site_favicon', Storage::url($path), 'branding');
+            $path = $request->file('site_favicon')->store('settings', 's3');
+            SystemSetting::setVal('site_favicon', Storage::disk('s3')->url($path), 'branding');
+        }
+
+        // Handle App Screenshot Upload
+        if ($request->hasFile('app_screenshot')) {
+            $path = $request->file('app_screenshot')->store('settings', 's3');
+            SystemSetting::setVal('app_screenshot', Storage::disk('s3')->url($path), 'branding');
         }
 
         // Handle App Hero Image Upload (Support Multiple)
@@ -295,7 +301,7 @@ class SuperAdminController extends Controller
         $textSettings = [
             'site_name', 'site_title', 'hero_title', 'hero_subtitle', 
             'footer_text', 'contact_whatsapp', 'contact_email', 'instagram_url',
-            'otp_enabled', 'wa_notifications_enabled'
+            'otp_enabled', 'otp_email_enabled', 'wa_notifications_enabled', 'android_download_url'
         ];
 
         foreach ($textSettings as $key) {

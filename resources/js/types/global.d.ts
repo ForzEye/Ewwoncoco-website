@@ -5,3 +5,8 @@ declare function route(
     params?: any,
     absolute?: boolean
 ): string;
+
+interface Window {
+    Echo: any;
+    Pusher: any;
+}

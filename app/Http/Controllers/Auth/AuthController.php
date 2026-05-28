@@ -20,6 +20,7 @@ class AuthController extends Controller
      */
     public function showLogin(): Response
     {
+        session(['login_page_loaded_at' => microtime(true)]);
         return Inertia::render('Auth/Login');
     }
 
@@ -63,6 +64,26 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
+        // 1. Honeypot Anti-Bot Check
+        if ($request->filled('username_full')) {
+            // Silently log the attempt or throw error (looks normal to confuse bot scripts)
+            throw ValidationException::withMessages([
+                'email' => 'Deteksi Keamanan: Akses ditolak karena terindikasi lalu lintas bot otomatis.',
+            ]);
+        }
+
+        // 2. Server-Side Page Load Speed Anti-Bot Check
+        $loadedAt = session('login_page_loaded_at');
+        if ($loadedAt) {
+            $secondsDiff = microtime(true) - $loadedAt;
+            // If submitted in under 1.0 second, it is highly likely a script submission
+            if ($secondsDiff < 1.0) {
+                throw ValidationException::withMessages([
+                    'email' => 'Deteksi Keamanan: Pengisian formulir terdeteksi terlalu cepat. Silakan mencoba kembali.',
+                ]);
+            }
+        }
+
         $credentials = $request->validate([
             'email'    => 'required|email',
             'password' => 'required',

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { rupiah, tanggalWaktu } from '@/lib/format';
 import { 
@@ -24,7 +24,28 @@ interface OnlineOrdersProps {
 import { confirmAction, toastSuccess } from '@/lib/swal';
 
 export default function OnlineOrders({ orders }: OnlineOrdersProps) {
+    const { auth } = usePage<any>().props;
     const [processing, setProcessing] = useState<number | null>(null);
+
+    useEffect(() => {
+        // Fallback to merchant ID 1 if not defined to match backend default
+        const merchantId = auth?.user?.merchant_id || 1;
+        
+        if (window.Echo) {
+            const channel = window.Echo.private(`merchant.${merchantId}.orders`);
+            
+            channel.listen('.OrderPlaced', (e: any) => {
+                console.log("New order placed:", e);
+                toastSuccess('Ada Pesanan Online Baru Masuk!');
+                router.reload({ only: ['orders'] });
+            });
+
+            return () => {
+                channel.stopListening('.OrderPlaced');
+                window.Echo.leave(`merchant.${merchantId}.orders`);
+            };
+        }
+    }, [auth]);
 
     const handleAccept = (id: number) => {
         confirmAction(
@@ -123,20 +144,38 @@ export default function OnlineOrders({ orders }: OnlineOrdersProps) {
                                                 <p className="text-[12px] text-[#4B5563] font-medium leading-relaxed">{order.delivery_address || 'Ambil di Toko'}</p>
                                             </div>
                                         </div>
+                                        {order.notes && (
+                                            <div className="flex items-start gap-3 bg-amber-50/50 border border-amber-100/80 p-4 rounded-2xl mt-4">
+                                                <div className="w-5 h-5 rounded-md bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">
+                                                    ✍️
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest mb-1">Catatan Pemesan</p>
+                                                    <p className="text-[12px] text-amber-900 font-bold leading-relaxed">{order.notes}</p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="space-y-4">
                                         <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em]">Item Pesanan ({order.items.length})</p>
                                         <div className="space-y-3">
                                             {order.items.map((item: any) => (
-                                                <div key={item.id} className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 bg-[#F5F3EF] rounded-lg flex items-center justify-center text-[11px] font-black text-[#2D6A4F]">
+                                                <div key={item.id} className="flex items-start justify-between gap-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-8 h-8 bg-[#F5F3EF] rounded-lg flex items-center justify-center text-[11px] font-black text-[#2D6A4F] flex-shrink-0 mt-0.5">
                                                             {item.quantity}x
                                                         </div>
-                                                        <span className="text-[13px] font-bold text-[#1A1A1A]">{item.product?.name}</span>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[13px] font-bold text-[#1A1A1A]">{item.product?.name}</span>
+                                                            {item.notes && (
+                                                                <span className="text-[11px] text-[#8C5E3C] bg-[#FAF3EC] border border-[#F0E2D3] px-2 py-0.5 rounded-lg mt-1 font-semibold inline-block w-fit">
+                                                                    Catatan: {item.notes}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <span className="text-[13px] font-mono font-bold text-[#1A1A1A]">{rupiah(item.subtotal)}</span>
+                                                    <span className="text-[13px] font-mono font-bold text-[#1A1A1A] flex-shrink-0 mt-1">{rupiah(item.subtotal)}</span>
                                                 </div>
                                             ))}
                                         </div>

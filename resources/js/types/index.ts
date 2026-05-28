@@ -32,6 +32,10 @@ export interface Merchant {
     updated_at: string;
     receipt_header?: string | null;
     receipt_footer?: string | null;
+    receipt_font_size?: number;
+    receipt_paper_width?: '58mm' | '80mm';
+    receipt_extra_bold?: boolean;
+    receipt_left_margin?: number;
     instagram_handle?: string | null;
     whatsapp_number?: string | null;
     tiktok_handle?: string | null;
@@ -73,6 +77,16 @@ export interface Product {
     is_available: boolean;
     category?: ProductCategory;
     merchant?: Merchant;
+    recipes?: Recipe[];
+}
+
+export interface Recipe {
+    id: number;
+    product_id: number;
+    ingredient_id: number;
+    quantity: number;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export type OrderStatus =

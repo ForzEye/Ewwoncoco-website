@@ -1,8 +1,9 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import { Product } from '../../../types';
 import { rupiah, qty, angka } from '../../../lib/format';
+import { confirmAction, toastSuccess } from '../../../lib/swal';
 import { Plus, Edit2, Trash2, Search, Filter, ArrowUpRight, Package, AlertTriangle, ChefHat } from 'lucide-react';
 
 interface ProductsIndexProps {
@@ -10,6 +11,22 @@ interface ProductsIndexProps {
 }
 
 export default function Index({ products = [] }: ProductsIndexProps) {
+    const deleteProduct = (id: number) => {
+        confirmAction(
+            'Hapus Menu?',
+            'Apakah Anda yakin ingin menghapus menu ini dari katalog?',
+            'Ya, Hapus'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(route('admin.products.destroy', id), {
+                    onSuccess: () => {
+                        toastSuccess('Menu berhasil dihapus!');
+                    }
+                });
+            }
+        });
+    };
+
     return (
         <AdminLayout title="Katalog Menu">
             <Head title="Katalog Produk - EWWON COCO" />
@@ -114,10 +131,17 @@ export default function Index({ products = [] }: ProductsIndexProps) {
                                             >
                                                 <ChefHat size={16} />
                                             </Link>
-                                            <button className="w-10 h-10 flex items-center justify-center bg-white border border-[#F0F0F0] text-[#A0A0A0] hover:text-[#2D6A4F] hover:border-[#2D6A4F] rounded-xl shadow-sm transition-all">
+                                            <Link 
+                                                href={route('admin.products.edit', product.id)}
+                                                className="w-10 h-10 flex items-center justify-center bg-white border border-[#F0F0F0] text-[#A0A0A0] hover:text-[#2D6A4F] hover:border-[#2D6A4F] rounded-xl shadow-sm transition-all"
+                                                title="Edit Menu"
+                                            >
                                                 <Edit2 size={16} />
-                                            </button>
-                                            <button className="w-10 h-10 flex items-center justify-center bg-white border border-[#F0F0F0] text-[#A0A0A0] hover:text-red-500 hover:border-red-500 rounded-xl shadow-sm transition-all">
+                                            </Link>
+                                            <button 
+                                                onClick={() => deleteProduct(product.id)}
+                                                className="w-10 h-10 flex items-center justify-center bg-white border border-[#F0F0F0] text-[#A0A0A0] hover:text-red-500 hover:border-red-500 rounded-xl shadow-sm transition-all"
+                                            >
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>

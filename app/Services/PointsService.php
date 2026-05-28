@@ -18,10 +18,10 @@ class PointsService
     public static function getSettings(): array
     {
         return [
-            'point_per_rupiah' => (int) AppSetting::getVal('point_per_rupiah', 25000),
+            'point_per_rupiah' => (int) AppSetting::getVal('point_per_rupiah', 20000),
             'referral_reward_points' => (int) AppSetting::getVal('referral_reward_points', 20),
             'minimum_redeem_points' => (int) AppSetting::getVal('minimum_redeem_points', 10),
-            'point_to_discount_ratio' => (int) AppSetting::getVal('point_to_discount_ratio', 1),
+            'point_to_discount_ratio' => (int) AppSetting::getVal('point_to_discount_ratio', 1000),
         ];
     }
 

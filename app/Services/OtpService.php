@@ -31,17 +31,26 @@ class OtpService
             'code'       => $code,
             'type'       => $type,
             'channel'    => $channel,
-            'expires_at' => Carbon::now()->addMinutes(5),
+            // expires_at: force UTC so the stored value is consistent with
+            // Eloquent's automatic created_at/updated_at (which are always UTC).
+            'expires_at' => Carbon::now('UTC')->addMinutes(5),
             'is_used'    => false,
             'status'     => 'pending',
         ]);
 
         // 4. Send via channel
         try {
-            // Global OTP Toggle Check
-            $otpEnabled = \App\Models\SystemSetting::getVal('otp_enabled', '1') === '1';
-            if (!$otpEnabled) {
-                Log::info("OTP BYPASSED (OTP is globally disabled in settings). Code for {$identifier}: {$code}");
+            // --- Per-channel OTP toggles ---
+            // otp_enabled       = WhatsApp OTP on/off
+            // otp_email_enabled = Email OTP on/off (also acts as master switch)
+            $waOtpEnabled    = \App\Models\SystemSetting::getVal('otp_enabled', '1') === '1';
+            $emailOtpEnabled = \App\Models\SystemSetting::getVal('otp_email_enabled', '1') === '1';
+
+            $channelBypassed = ($channel === 'whatsapp' && !$waOtpEnabled)
+                            || ($channel === 'email'    && !$emailOtpEnabled);
+
+            if ($channelBypassed) {
+                Log::info("OTP BYPASSED ({$channel} OTP disabled in settings). Code for {$identifier}: {$code}");
                 $otp->update(['status' => 'sent']);
                 return true;
             }
@@ -71,11 +80,39 @@ class OtpService
      */
     public function verifyOtp(string $identifier, string $code, string $type = 'register'): bool
     {
+        // --- Per-channel OTP toggles ---
+        $waOtpEnabled    = \App\Models\SystemSetting::getVal('otp_enabled', '1') === '1';
+        $emailOtpEnabled = \App\Models\SystemSetting::getVal('otp_email_enabled', '1') === '1';
+
+        // If BOTH channels are disabled, auto-approve (no OTP required at all)
+        if (!$waOtpEnabled && !$emailOtpEnabled) {
+            Log::info("OTP Auto-Approved for {$identifier} (all OTP channels disabled).");
+            return true;
+        }
+
+        // Find the active OTP record (not yet used, not expired)
         $otp = OtpCode::where('identifier', $identifier)
             ->where('type', $type)
             ->where('is_used', false)
-            ->where('expires_at', '>', Carbon::now())
+            ->where('expires_at', '>', Carbon::now('UTC'))
+            ->latest()
             ->first();
+
+        // If the OTP record's own channel is currently disabled → auto-approve.
+        // This handles the case where WA is off but email is on: a WA-channel OTP
+        // is auto-approved so the user isn't blocked.
+        if ($otp) {
+            if ($otp->channel === 'whatsapp' && !$waOtpEnabled) {
+                Log::info("OTP Auto-Approved for {$identifier} (WA OTP channel disabled).");
+                $otp->update(['is_used' => true]);
+                return true;
+            }
+            if ($otp->channel === 'email' && !$emailOtpEnabled) {
+                Log::info("OTP Auto-Approved for {$identifier} (Email OTP channel disabled).");
+                $otp->update(['is_used' => true]);
+                return true;
+            }
+        }
 
         if (!$otp) {
             return false;
