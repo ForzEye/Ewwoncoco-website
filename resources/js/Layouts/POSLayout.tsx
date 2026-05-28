@@ -93,14 +93,14 @@ export default function POSLayout({ children }: POSLayoutProps) {
     return (
         <div className="h-screen bg-[#F5F3EF] flex flex-col overflow-hidden select-none">
             {/* Header — Warm Cream Premium */}
-            <header className="h-[64px] bg-white border-b border-[#E8E4DD] flex items-center justify-between px-6 flex-shrink-0 z-10 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
-                <div className="flex items-center gap-7">
+            <header className="h-[64px] bg-white border-b border-[#E8E4DD] flex items-center justify-between px-4 lg:px-6 flex-shrink-0 z-10 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
+                <div className="flex items-center gap-3 lg:gap-7">
                     {/* Brand */}
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-[#2D6A4F] to-[#40916C] rounded-2xl flex items-center justify-center shadow-md shadow-[#2D6A4F]/15">
                             <Sparkles className="w-5 h-5 text-white" />
                         </div>
-                        <div className="flex flex-col">
+                        <div className="hidden lg:flex flex-col">
                             <span className="font-poppins font-black text-[#1A1A1A] tracking-tight text-[16px] leading-none">EWWON POS</span>
                             <span className="text-[9px] font-bold text-[#B5AFA6] uppercase tracking-[0.2em] mt-0.5">Smart Terminal</span>
                         </div>
@@ -117,14 +117,14 @@ export default function POSLayout({ children }: POSLayoutProps) {
                                     key={item.label}
                                     href={item.href !== '#' ? item.href : undefined}
                                     onClick={item.onClick}
-                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 relative ${
+                                    className={`flex items-center gap-2 px-3 lg:px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 relative ${
                                         isActive 
                                             ? 'bg-white text-[#2D6A4F] shadow-sm border border-[#E8E4DD]' 
                                             : 'text-[#B5AFA6] hover:text-[#1A1A1A]'
                                     }`}
                                 >
                                     <item.icon size={15} />
-                                    {item.label}
+                                    <span className="hidden lg:inline">{item.label}</span>
                                     {(item.badge ?? 0) > 0 && (
                                         <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white animate-bounce">
                                             {item.badge}
@@ -136,9 +136,9 @@ export default function POSLayout({ children }: POSLayoutProps) {
                     </nav>
                 </div>
 
-                <div className="flex items-center gap-5">
+                <div className="flex items-center gap-2 lg:gap-5">
                     {/* Live Clock */}
-                    <div className="text-right">
+                    <div className="hidden lg:block text-right">
                         <p className="text-[9px] font-bold text-[#B5AFA6] uppercase tracking-[0.12em]">
                             {currentTime.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}
                         </p>
@@ -147,24 +147,24 @@ export default function POSLayout({ children }: POSLayoutProps) {
                         </p>
                     </div>
 
-                    <div className="w-px h-8 bg-[#E8E4DD]"></div>
+                    <div className="hidden lg:block w-px h-8 bg-[#E8E4DD]"></div>
 
                     {/* Online Status */}
-                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${isOnline ? 'bg-[#E8F5E9]' : 'bg-red-50'}`}>
+                    <div className={`flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1.5 rounded-full ${isOnline ? 'bg-[#E8F5E9]' : 'bg-red-50'}`}>
                         <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-[#2D6A4F] animate-pulse' : 'bg-red-500'}`}></div>
-                        <span className={`text-[9px] font-black uppercase tracking-[0.1em] ${isOnline ? 'text-[#2D6A4F]' : 'text-red-500'}`}>
+                        <span className={`hidden lg:inline text-[9px] font-black uppercase tracking-[0.1em] ${isOnline ? 'text-[#2D6A4F]' : 'text-red-500'}`}>
                             {isOnline ? 'Online' : 'Offline'}
                         </span>
                     </div>
 
-                    <div className="w-px h-8 bg-[#E8E4DD]"></div>
+                    <div className="hidden lg:block w-px h-8 bg-[#E8E4DD]"></div>
 
                     {/* User */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 lg:gap-3">
                         <div className="w-9 h-9 rounded-xl bg-[#F5F3EF] border border-[#E8E4DD] flex items-center justify-center font-poppins font-black text-[#2D6A4F] text-sm">
                             {auth.user?.name?.charAt(0).toUpperCase()}
                         </div>
-                        <div className="text-right">
+                        <div className="hidden xl:block text-right">
                             <p className="text-xs font-bold text-[#1A1A1A] leading-none">{auth.user?.name}</p>
                             <p className="text-[9px] text-[#2D6A4F] font-bold mt-1 uppercase tracking-[0.1em]">Kasir</p>
                         </div>
