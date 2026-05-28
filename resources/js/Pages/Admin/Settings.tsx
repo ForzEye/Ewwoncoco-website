@@ -18,7 +18,8 @@ import {
     Building2,
     User,
     Upload,
-    Hash
+    Hash,
+    Printer
 } from 'lucide-react';
 import { Merchant } from '@/types';
 
@@ -82,6 +83,23 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
         post(route('admin.settings.update'), {
             forceFormData: true,
         });
+    };
+
+    const handleTestPrint = () => {
+        const receiptEl = document.getElementById('receipt-thermal-test');
+        if (!receiptEl) return;
+
+        // 1. Create temporary container at body root
+        const printContainer = document.createElement('div');
+        printContainer.id = 'print-receipt-root';
+        printContainer.innerHTML = receiptEl.outerHTML;
+        document.body.appendChild(printContainer);
+
+        // 2. Trigger printing
+        window.print();
+
+        // 3. Clean up after printing
+        document.body.removeChild(printContainer);
     };
 
     const handleLoyaltyChange = (key: string, value: any) => {
@@ -617,6 +635,7 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                         <div className="bg-[#F5F3EF] rounded-3xl p-6 border border-[#E8E4DD] flex items-center justify-center min-h-[300px] overflow-hidden">
                             {/* Receipt Container */}
                             <div 
+                                id="receipt-thermal-test"
                                 style={{
                                     fontSize: `${data.receipt_font_size}px`,
                                     fontWeight: data.receipt_font_weight,
@@ -680,9 +699,94 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                                 </div>
                             </div>
                         </div>
+
+                        <button
+                            type="button"
+                            onClick={handleTestPrint}
+                            className="w-full mt-4 bg-gradient-to-r from-[#2D6A4F] to-[#40916C] hover:from-[#1B4332] hover:to-[#2D6A4F] text-white font-black py-4 rounded-2xl shadow-lg shadow-[#2D6A4F]/15 transition-all flex items-center justify-center space-x-2"
+                        >
+                            <Printer size={16} />
+                            <span>Test Cetak Struk</span>
+                        </button>
                     </div>
                 </div>
             </div>
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                :root {
+                    --receipt-width: ${data.receipt_paper_width};
+                    --receipt-font: ${data.receipt_font_size}px;
+                }
+
+                /* --- Tampilan Cetak (Print Stylesheet) --- */
+                @media print {
+                    @page {
+                        margin: 0;
+                        size: var(--receipt-width, 58mm) auto;
+                    }
+                    
+                    html, body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: var(--receipt-width, 58mm) !important;
+                        background: #fff !important;
+                        height: auto !important;
+                        min-height: 0 !important;
+                        overflow: visible !important;
+                    }
+                    
+                    body > *:not(#print-receipt-root) {
+                        display: none !important;
+                    }
+                    
+                    #print-receipt-root {
+                        display: block !important;
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #fff !important;
+                    }
+
+                    #receipt-thermal-test {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        box-sizing: border-box !important;
+                        margin: 0 !important;
+                        padding: 2mm 4mm 2mm ${data.receipt_left_margin ? data.receipt_left_margin + 3 : 3}mm !important;
+                        background: #fff !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        font-size: var(--receipt-font, 12px) !important;
+                    }
+
+                    #receipt-thermal-test,
+                    #receipt-thermal-test * {
+                        color: #000 !important;
+                        opacity: 1 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        font-family: 'Courier New', 'Consolas', monospace !important;
+                        line-height: 1.45 !important;
+                        font-weight: ${data.receipt_font_weight} !important;
+                        -webkit-text-stroke: 0.15px black !important;
+                        text-shadow: 0.15px 0px 0px #000, 0px 0.15px 0px #000 !important;
+                        border-color: #000 !important;
+                    }
+
+                    #receipt-thermal-test h4,
+                    #receipt-thermal-test h4 * {
+                        font-weight: ${Math.max(100, data.receipt_font_weight - 40)} !important;
+                    }
+
+                    .no-print {
+                        display: none !important;
+                    }
+                }
+            `}} />
         </AdminLayout>
     );
 }
