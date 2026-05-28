@@ -1,4 +1,4 @@
-name: Deploy — Production
+name: Deploy - Production
 
 on:
   push:
@@ -10,8 +10,6 @@ jobs:
   deploy:
     name: 🚀 Deploy ke Server
     runs-on: ubuntu-latest
-    # Hanya jalan setelah CI berhasil
-    needs: []
 
     steps:
       - name: Checkout kode
