@@ -23,3 +23,6 @@ yarn-error.log
 /.zed
 *.zip
 /bootstrap/cache/*.php
+
+# Firebase / Google Cloud Credentials
+/app/firebase/service-account.json
