@@ -2,7 +2,7 @@ name: Deploy — Production
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   # Bisa juga trigger manual dari tab Actions di GitHub
   workflow_dispatch:
 
@@ -46,7 +46,7 @@ jobs:
             cd ${{ secrets.DEPLOY_PATH }}
 
             # Pull kode terbaru
-            git pull origin master
+            git pull origin main
 
             # Install/update Composer dependencies (tanpa dev)
             composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
