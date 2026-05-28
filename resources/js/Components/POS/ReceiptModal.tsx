@@ -105,6 +105,10 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                                 <span className="opacity-60">KASIR:</span>
                                 <span>{displayCashier}</span>
                             </div>
+                            <div className="flex justify-between">
+                                <span className="opacity-60">BAYAR:</span>
+                                <span>{displayPayment}</span>
+                            </div>
                         </div>
 
                         <div className="space-y-4 mb-5 w-full">

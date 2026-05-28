@@ -657,6 +657,7 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                                 <div className="border-t border-b border-dashed border-gray-400 py-2.5 mb-3 space-y-1 w-full" style={{ fontSize: `${data.receipt_font_size - 1.5}px` }}>
                                     <div className="flex justify-between"><span className="opacity-60">WAKTU:</span><span>25-05-2026 17:30</span></div>
                                     <div className="flex justify-between"><span className="opacity-60">KASIR:</span><span>ADMIN</span></div>
+                                    <div className="flex justify-between"><span className="opacity-60">BAYAR:</span><span>TUNAI</span></div>
                                 </div>
 
                                 <div className="space-y-3 mb-4 w-full">
