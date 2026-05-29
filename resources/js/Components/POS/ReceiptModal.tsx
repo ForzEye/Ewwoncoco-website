@@ -112,15 +112,43 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                         </div>
 
                         <div className="space-y-4 mb-5 w-full">
-                            {order.items?.map((item: any, idx: number) => (
-                                <div key={idx} className="space-y-1">
-                                    <p className="font-bold uppercase" style={{ fontSize: `${baseFontSize - 0.5}px` }}>{item.product?.name || 'Produk'}</p>
-                                    <div className="flex justify-between items-end" style={{ fontSize: `${baseFontSize}px` }}>
-                                        <span className="opacity-70">{item.quantity} x {rupiah(item.unit_price || item.price || 0).replace('Rp ', '')}</span>
-                                        <span className="font-bold">{rupiah(item.subtotal || ((item.price || 0) * (item.quantity || 0)) || 0).replace('Rp ', '')}</span>
+                            {order.items?.map((item: any, idx: number) => {
+                                let custs: any[] = [];
+                                if (item.customizations) {
+                                    if (typeof item.customizations === 'string') {
+                                        try {
+                                            custs = JSON.parse(item.customizations);
+                                        } catch (_) {}
+                                    } else if (Array.isArray(item.customizations)) {
+                                        custs = item.customizations;
+                                    }
+                                }
+                                return (
+                                    <div key={idx} className="space-y-1">
+                                        <p className="font-bold uppercase" style={{ fontSize: `${baseFontSize - 0.5}px` }}>{item.product?.name || 'Produk'}</p>
+                                        {custs.length > 0 && (
+                                            <p className="italic opacity-80 pl-2 text-[8px] leading-tight" style={{ fontSize: `${baseFontSize - 1.5}px` }}>
+                                                * {custs.map((c: any) => c.name).join(', ')}
+                                            </p>
+                                        )}
+                                        {item.notes && (
+                                            <p className="italic opacity-80 pl-2 text-[8px] leading-tight" style={{ fontSize: `${baseFontSize - 1.5}px` }}>
+                                                * CATATAN: {item.notes.toUpperCase()}
+                                            </p>
+                                        )}
+                                        <div className="flex justify-between items-end" style={{ fontSize: `${baseFontSize}px` }}>
+                                            <span className="opacity-70">{item.quantity} x {rupiah(item.unit_price || item.price || 0).replace('Rp ', '')}</span>
+                                            <span className="font-bold">{rupiah(item.subtotal || ((item.price || 0) * (item.quantity || 0)) || 0).replace('Rp ', '')}</span>
+                                        </div>
                                     </div>
+                                );
+                            })}
+                            {order.notes && (
+                                <div className="border-t border-dotted border-gray-400 pt-2 mt-2" style={{ fontSize: `${baseFontSize - 0.5}px` }}>
+                                    <p className="font-bold uppercase">CATATAN PESANAN:</p>
+                                    <p className="leading-tight">"{order.notes.toUpperCase()}"</p>
                                 </div>
-                            ))}
+                            )}
                         </div>
 
                         <div className="border-t border-dashed border-gray-400 pt-3 space-y-1.5 w-full">

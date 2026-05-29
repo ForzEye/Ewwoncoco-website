@@ -134,15 +134,53 @@ export default function OnlineOrdersModal({ isOpen, onClose, orders, onUpdate }:
                                                     <MapPin size={14} className="text-[#B5AFA6]" />
                                                     <span className="truncate max-w-[300px]">{order.delivery_address || 'Take Away'}</span>
                                                 </div>
+                                                {order.notes && (
+                                                    <div className="bg-amber-50 text-amber-800 border border-amber-200/50 px-3 py-2 rounded-xl text-[10px] font-bold mt-2 inline-block">
+                                                        CATATAN: "{order.notes}"
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            <div className="pt-2 flex flex-wrap gap-2">
-                                                {order.items?.map((item: any) => (
-                                                    <span key={item.id} className="text-[10px] font-bold bg-[#F5F3EF] px-2 py-1 rounded-md text-[#1A1A1A]">
-                                                        {item.quantity}x {item.product?.name}
-                                                    </span>
-                                                ))}
-                                            </div>
+                                             <div className="pt-2 flex flex-col gap-1.5 w-full">
+                                                 {order.items?.map((item: any) => {
+                                                     let custs: any[] = [];
+                                                     if (item.customizations) {
+                                                         if (typeof item.customizations === 'string') {
+                                                             try {
+                                                                 custs = JSON.parse(item.customizations);
+                                                             } catch (_) {}
+                                                         } else if (Array.isArray(item.customizations)) {
+                                                             custs = item.customizations;
+                                                         }
+                                                     }
+                                                     return (
+                                                         <div key={item.id} className="flex flex-col text-[11px] text-[#1A1A1A] bg-[#F5F3EF]/60 p-2.5 rounded-xl border border-[#E8E4DD]/40">
+                                                             <div className="flex items-center gap-2">
+                                                                 <span className="font-black text-[#2D6A4F] bg-[#E8F5E9] px-2 py-0.5 rounded-md text-[10px]">
+                                                                     {item.quantity}x
+                                                                 </span>
+                                                                 <span className="font-bold">
+                                                                     {item.product?.name}
+                                                                 </span>
+                                                             </div>
+                                                             {custs.length > 0 && (
+                                                                 <div className="text-[9px] text-[#8A8379] font-bold pl-8 mt-1.5 flex flex-wrap gap-1">
+                                                                     {custs.map((c: any, cidx: number) => (
+                                                                         <span key={cidx} className="bg-white border border-[#E8E4DD] px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wide">
+                                                                             {c.name} {Number(c.price) > 0 ? `(+${rupiah(c.price)})` : ''}
+                                                                         </span>
+                                                                     ))}
+                                                                 </div>
+                                                             )}
+                                                             {item.notes && (
+                                                                 <span className="text-[9px] text-[#D97706] font-bold pl-8 mt-1.5 italic">
+                                                                     Catatan: "{item.notes}"
+                                                                 </span>
+                                                             )}
+                                                         </div>
+                                                     );
+                                                 })}
+                                             </div>
                                         </div>
 
                                         <div className="flex flex-col justify-between items-end gap-4 min-w-[180px]">
