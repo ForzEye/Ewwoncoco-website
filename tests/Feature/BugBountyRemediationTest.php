@@ -2,17 +2,22 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Merchant;
+use App\Mail\OtpMail;
 use App\Models\Branch;
-use App\Models\Product;
-use App\Models\Ingredient;
 use App\Models\BranchIngredient;
-use App\Models\Recipe;
+use App\Models\Ingredient;
+use App\Models\Merchant;
+use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OtpCode;
+use App\Models\Product;
+use App\Models\Recipe;
 use App\Models\Referral;
+use App\Models\SystemSetting;
+use App\Models\User;
+use App\Models\UserDevice;
+use App\Services\Notification\FCMService;
 use App\Services\OtpService;
 use App\Services\PointsService;
 use App\Services\StockService;
@@ -32,9 +37,9 @@ class BugBountyRemediationTest extends TestCase
     {
         Mail::fake();
 
-        $otpService = new OtpService();
+        $otpService = new OtpService;
         $identifier = 'testuser@example.com';
-        
+
         // Send OTP
         $success = $otpService->sendOtp($identifier, 'register', 'email');
         $this->assertTrue($success);
@@ -96,7 +101,7 @@ class BugBountyRemediationTest extends TestCase
         // 1. Get referral code for referrer (should generate and store on users table)
         $result = PointsService::getReferralCode($referrer->id);
         $code = $result['code'];
-        
+
         $this->assertNotEmpty($code);
         $referrer->refresh();
         $this->assertEquals($code, $referrer->referral_code);
@@ -171,13 +176,13 @@ class BugBountyRemediationTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')
             ->postJson("/api/v1/orders/{$order->id}/payment-proof", [
-                'payment_proof' => $maliciousFile
+                'payment_proof' => $maliciousFile,
             ]);
 
         $response->assertStatus(422);
         $response->assertJson([
             'success' => false,
-            'message' => 'Format file tidak valid atau berbahaya.'
+            'message' => 'Format file tidak valid atau berbahaya.',
         ]);
     }
 
@@ -223,13 +228,13 @@ class BugBountyRemediationTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')
             ->postJson("/api/v1/orders/{$order->id}/payment-proof", [
-                'payment_proof' => $validImageFile
+                'payment_proof' => $validImageFile,
             ]);
 
         $response->assertStatus(200);
         $response->assertJson([
             'success' => true,
-            'message' => 'Bukti pembayaran berhasil diunggah.'
+            'message' => 'Bukti pembayaran berhasil diunggah.',
         ]);
 
         $order->refresh();
@@ -262,7 +267,7 @@ class BugBountyRemediationTest extends TestCase
             'lng' => 106.8456,
             'is_active' => true,
         ]);
-        
+
         $product = Product::create([
             'merchant_id' => $merchant->id,
             'name' => 'Signature Coco',
@@ -315,10 +320,10 @@ class BugBountyRemediationTest extends TestCase
         try {
             DB::transaction(function () use ($product, $branch, $order) {
                 StockService::deductFromRecipe(
-                    $product->id, 
-                    $branch->id, 
-                    1, 
-                    $order->id, 
+                    $product->id,
+                    $branch->id,
+                    1,
+                    $order->id,
                     'OnlineOrder'
                 );
             });
@@ -338,9 +343,9 @@ class BugBountyRemediationTest extends TestCase
     public function it_sends_otp_when_globally_enabled()
     {
         Mail::fake();
-        \App\Models\SystemSetting::setVal('otp_enabled', '1');
+        SystemSetting::setVal('otp_enabled', '1');
 
-        $otpService = new OtpService();
+        $otpService = new OtpService;
         $identifier = 'enabled_test@example.com';
 
         $success = $otpService->sendOtp($identifier, 'register', 'email');
@@ -352,16 +357,16 @@ class BugBountyRemediationTest extends TestCase
         $this->assertEquals('sent', $otp->status);
 
         // Mail should have been sent
-        Mail::assertSent(\App\Mail\OtpMail::class);
+        Mail::assertSent(OtpMail::class);
     }
 
     /** @test */
     public function it_bypasses_otp_sending_when_globally_disabled_but_saves_code_in_db_and_allows_verification()
     {
         Mail::fake();
-        \App\Models\SystemSetting::setVal('otp_enabled', '0');
+        SystemSetting::setVal('otp_enabled', '0');
 
-        $otpService = new OtpService();
+        $otpService = new OtpService;
         $identifier = 'disabled_test@example.com';
 
         $success = $otpService->sendOtp($identifier, 'register', 'email');
@@ -373,7 +378,7 @@ class BugBountyRemediationTest extends TestCase
         $this->assertEquals('sent', $otp->status);
 
         // Mail should NOT have been sent
-        Mail::assertNotSent(\App\Mail\OtpMail::class);
+        Mail::assertNotSent(OtpMail::class);
 
         // Standard verification with the stored code should still succeed!
         $verifyResult = $otpService->verifyOtp($identifier, $otp->code);
@@ -384,7 +389,7 @@ class BugBountyRemediationTest extends TestCase
     public function it_bypasses_adaptive_security_check_during_login_when_globally_disabled()
     {
         Mail::fake();
-        \App\Models\SystemSetting::setVal('otp_enabled', '0');
+        SystemSetting::setVal('otp_enabled', '0');
 
         $user = User::factory()->create([
             'email' => 'customer_otp_bypass@example.com',
@@ -410,25 +415,25 @@ class BugBountyRemediationTest extends TestCase
                 'name',
                 'email',
                 'phone',
-            ]
+            ],
         ]);
 
         $this->assertTrue($response['success']);
-        
+
         // Assert device record exists and is marked is_trusted = true
-        $device = \App\Models\UserDevice::where('user_id', $user->id)
+        $device = UserDevice::where('user_id', $user->id)
             ->where('device_id', 'device_999')
             ->first();
-        
+
         $this->assertNotNull($device);
-        $this->assertTrue((bool)$device->is_trusted);
+        $this->assertTrue((bool) $device->is_trusted);
     }
 
     /** @test */
     public function it_requires_otp_during_login_on_new_device_when_globally_enabled()
     {
         Mail::fake();
-        \App\Models\SystemSetting::setVal('otp_enabled', '1');
+        SystemSetting::setVal('otp_enabled', '1');
 
         $user = User::factory()->create([
             'email' => 'customer_otp_required@example.com',
@@ -450,7 +455,7 @@ class BugBountyRemediationTest extends TestCase
             'success' => false,
             'otp_required' => true,
             'identifier' => '081234567890',
-            'channel' => 'whatsapp'
+            'channel' => 'whatsapp',
         ]);
     }
 
@@ -592,7 +597,7 @@ class BugBountyRemediationTest extends TestCase
 
         $response = $this->actingAs($cashier)
             ->postJson("/pos/online-orders/{$order->id}/reject", [
-                'reason' => 'Bukti pembayaran tidak valid.'
+                'reason' => 'Bukti pembayaran tidak valid.',
             ]);
 
         $response->assertStatus(200);
@@ -614,10 +619,10 @@ class BugBountyRemediationTest extends TestCase
     public function it_triggers_fcm_notification_on_notification_model_created()
     {
         $user = User::factory()->create([
-            'fcm_token' => 'mocked-fcm-token'
+            'fcm_token' => 'mocked-fcm-token',
         ]);
 
-        $mockFCM = $this->mock(\App\Services\Notification\FCMService::class);
+        $mockFCM = $this->mock(FCMService::class);
         $mockFCM->shouldReceive('sendToToken')
             ->once()
             ->with(
@@ -632,7 +637,7 @@ class BugBountyRemediationTest extends TestCase
             )
             ->andReturn(true);
 
-        \App\Models\Notification::create([
+        Notification::create([
             'user_id' => $user->id,
             'title' => 'Test Notification Title',
             'body' => 'Test Notification Body',
@@ -640,7 +645,7 @@ class BugBountyRemediationTest extends TestCase
             'data' => [
                 'key1' => 'val1',
                 'key2' => 'val2',
-            ]
+            ],
         ]);
     }
 
@@ -651,19 +656,16 @@ class BugBountyRemediationTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/v1/notifications/token', [
-                'fcm_token' => 'new-device-token'
+                'fcm_token' => 'new-device-token',
             ]);
 
         $response->assertStatus(200);
         $response->assertJson([
             'success' => true,
-            'message' => 'FCM Token updated successfully'
+            'message' => 'FCM Token updated successfully',
         ]);
 
         $user->refresh();
         $this->assertEquals('new-device-token', $user->fcm_token);
     }
 }
-
-
-

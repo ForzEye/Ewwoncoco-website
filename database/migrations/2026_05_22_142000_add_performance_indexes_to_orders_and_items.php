@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::table('orders', function (Blueprint $table) {
             // Indeks komposit untuk mempercepat pencarian riwayat pesanan (where customer_id order by created_at desc)
             $table->index(['customer_id', 'created_at'], 'orders_customer_created_idx');
-            
+
             // Indeks pada branch_id untuk menyaring pesanan per cabang dengan cepat di sistem kasir/POS
             $table->index('branch_id', 'orders_branch_id_idx');
-            
+
             // Indeks pada status untuk memfasilitasi pelacakan status pesanan real-time di dasbor
             $table->index('status', 'orders_status_idx');
         });

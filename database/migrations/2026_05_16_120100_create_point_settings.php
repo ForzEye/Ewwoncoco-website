@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -13,7 +11,7 @@ return new class extends Migration
     {
         // Point settings - using app_settings table with group='point'
         // Insert default settings
-        
+
         DB::table('app_settings')->insert([
             [
                 'key' => 'point_per_rupiah',

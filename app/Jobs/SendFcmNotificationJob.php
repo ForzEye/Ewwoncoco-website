@@ -2,12 +2,12 @@
 
 namespace App\Jobs;
 
+use App\Services\Notification\FCMService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use App\Services\Notification\FCMService;
 
 class SendFcmNotificationJob implements ShouldQueue
 {
@@ -15,7 +15,7 @@ class SendFcmNotificationJob implements ShouldQueue
 
     // Batasi pengulangan jika gagal (maksimal 3 kali percobaan)
     public int $tries = 3;
-    
+
     // Waktu tunggu maksimum eksekusi job ini adalah 30 detik
     public int $timeout = 30;
 

@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ChatRoom;
-use App\Models\ChatMessage;
-use App\Models\Merchant;
 use App\Events\MessageSent;
+use App\Models\ChatMessage;
+use App\Models\ChatRoom;
+use App\Models\Merchant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -17,7 +17,7 @@ class ChatController extends Controller
      */
     public function index()
     {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
         $rooms = [];
 
         if ($user->role === 'customer') {
@@ -28,7 +28,7 @@ class ChatController extends Controller
         } else {
             // Admin/Merchant sees rooms for their merchant
             $merchant = $user->merchant ?? $user->ownedMerchant;
-            if (!$merchant) {
+            if (! $merchant) {
                 return Inertia::render('Chat/Index', ['rooms' => []]);
             }
             $rooms = ChatRoom::with('customer')
@@ -38,7 +38,7 @@ class ChatController extends Controller
         }
 
         return Inertia::render('Chat/Index', [
-            'rooms' => $rooms
+            'rooms' => $rooms,
         ]);
     }
 
@@ -48,11 +48,11 @@ class ChatController extends Controller
     public function openRoom(Request $request, $merchantId)
     {
         $merchant = Merchant::findOrFail($merchantId);
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
 
         $room = ChatRoom::firstOrCreate([
             'customer_id' => $user->id,
-            'merchant_id' => $merchant->id
+            'merchant_id' => $merchant->id,
         ]);
 
         return redirect()->route('chat.show', $room->id);
@@ -64,13 +64,17 @@ class ChatController extends Controller
     public function show($id)
     {
         $room = ChatRoom::with(['customer', 'merchant'])->findOrFail($id);
-        
+
         // Security Check
-        $user = \Illuminate\Support\Facades\Auth::user();
-        if ($user->role === 'customer' && $room->customer_id !== $user->id) abort(403);
+        $user = Auth::user();
+        if ($user->role === 'customer' && $room->customer_id !== $user->id) {
+            abort(403);
+        }
         if ($user->role !== 'customer') {
             $merchant = $user->merchant ?? $user->ownedMerchant;
-            if (!$merchant || $room->merchant_id !== $merchant->id) abort(403);
+            if (! $merchant || $room->merchant_id !== $merchant->id) {
+                abort(403);
+            }
         }
 
         $messages = ChatMessage::with('sender:id,name,avatar_url')
@@ -80,7 +84,7 @@ class ChatController extends Controller
 
         return Inertia::render('Chat/ChatRoom', [
             'room' => $room,
-            'messages' => $messages
+            'messages' => $messages,
         ]);
     }
 
@@ -90,13 +94,13 @@ class ChatController extends Controller
     public function sendMessage(Request $request, $id)
     {
         $request->validate(['message' => 'required|string']);
-        
+
         $room = ChatRoom::findOrFail($id);
-        
+
         $message = ChatMessage::create([
             'chat_room_id' => $room->id,
-            'sender_id' => \Illuminate\Support\Facades\Auth::id(),
-            'message' => $request->message
+            'sender_id' => Auth::id(),
+            'message' => $request->message,
         ]);
 
         $room->update(['last_message_at' => now()]);

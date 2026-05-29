@@ -20,16 +20,16 @@ class StockManagementController extends Controller
         $selectedBranchId = $request->input('branch_id', $branches->first()?->id);
 
         $ingredients = Ingredient::where('merchant_id', $merchantId)->get();
-        
+
         $stockData = BranchIngredient::where('branch_id', $selectedBranchId)
             ->with('ingredient')
             ->get();
 
         return Inertia::render('Admin/Inventory/Stock', [
             'branches' => $branches,
-            'selectedBranchId' => (int)$selectedBranchId,
+            'selectedBranchId' => (int) $selectedBranchId,
             'ingredients' => $ingredients,
-            'stockData' => $stockData
+            'stockData' => $stockData,
         ]);
     }
 
@@ -49,10 +49,10 @@ class StockManagementController extends Controller
                 'ingredient_id' => $request->ingredient_id,
             ]);
 
-            $oldStock = (float)$branchIngredient->stock;
-            $oldAvgCost = (float)$branchIngredient->average_cost;
-            $newQty = (float)$request->quantity;
-            $newCost = (float)$request->cost_per_unit;
+            $oldStock = (float) $branchIngredient->stock;
+            $oldAvgCost = (float) $branchIngredient->average_cost;
+            $newQty = (float) $request->quantity;
+            $newCost = (float) $request->cost_per_unit;
 
             // Calculate new average cost
             // New_Avg_Cost = ((Old_Qty * Old_Avg_Cost) + (New_Qty * New_Price)) / (Old_Qty + New_Qty)
@@ -95,8 +95,8 @@ class StockManagementController extends Controller
                 ->where('ingredient_id', $request->ingredient_id)
                 ->firstOrFail();
 
-            $oldStock = (float)$branchIngredient->stock;
-            $newStock = (float)$request->actual_stock;
+            $oldStock = (float) $branchIngredient->stock;
+            $newStock = (float) $request->actual_stock;
             $diff = $newStock - $oldStock;
 
             $branchIngredient->update(['stock' => $newStock]);

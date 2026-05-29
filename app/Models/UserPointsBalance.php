@@ -39,6 +39,7 @@ class UserPointsBalance extends Model
                 $record->save();
                 $this->balance = $record->balance;
             }
+
             return $this->balance;
         });
     }
@@ -55,6 +56,7 @@ class UserPointsBalance extends Model
                 $record->save();
                 $this->balance = $record->balance;
             }
+
             return $this->balance;
         });
     }

@@ -35,23 +35,23 @@ return [
         ],
     ],
 
-        'gosend' => [
-            'webhook_secret' => env('GOSEND_WEBHOOK_SECRET', 'gosend_default_dummy_secret'),
-        ],
+    'gosend' => [
+        'webhook_secret' => env('GOSEND_WEBHOOK_SECRET', 'gosend_default_dummy_secret'),
+    ],
 
-        'grab' => [
-            'webhook_secret' => env('GRAB_WEBHOOK_SECRET', 'grab_default_dummy_secret'),
-        ],
+    'grab' => [
+        'webhook_secret' => env('GRAB_WEBHOOK_SECRET', 'grab_default_dummy_secret'),
+    ],
 
-        'firebase' => [
-            'project_id' => env('FIREBASE_PROJECT_ID', 'ewwon-coco'),
-            'server_key' => env('FIREBASE_SERVER_KEY'),
-            'client_email' => env('FIREBASE_CLIENT_EMAIL'),
-            'private_key' => env('FIREBASE_PRIVATE_KEY'),
-        ],
+    'firebase' => [
+        'project_id' => env('FIREBASE_PROJECT_ID', 'ewwon-coco'),
+        'server_key' => env('FIREBASE_SERVER_KEY'),
+        'client_email' => env('FIREBASE_CLIENT_EMAIL'),
+        'private_key' => env('FIREBASE_PRIVATE_KEY'),
+    ],
 
-        'fonnte' => [
-            'token' => env('FONNTE_TOKEN'),
-        ],
+    'fonnte' => [
+        'token' => env('FONNTE_TOKEN'),
+    ],
 
 ];

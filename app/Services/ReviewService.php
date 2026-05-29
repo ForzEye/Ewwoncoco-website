@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Review;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ReviewService
 {
@@ -27,7 +27,7 @@ class ReviewService
         $imageUrl = null;
         if ($image && $image->isValid()) {
             $path = $image->store('reviews');
-            $imageUrl = \Illuminate\Support\Facades\Storage::url($path);
+            $imageUrl = Storage::url($path);
         }
 
         $review = Review::create([

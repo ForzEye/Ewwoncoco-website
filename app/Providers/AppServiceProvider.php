@@ -2,10 +2,13 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Services\Delivery\DeliveryServiceInterface;
+use App\Services\Delivery\MockDeliveryService;
 use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,8 +18,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(
-            \App\Services\Delivery\DeliveryServiceInterface::class,
-            \App\Services\Delivery\MockDeliveryService::class
+            DeliveryServiceInterface::class,
+            MockDeliveryService::class
         );
     }
 
@@ -26,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if (str_contains(config('app.url'), 'https://')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
+            URL::forceScheme('https');
         }
 
         // Configured Throttlers from Audit recommendation
@@ -43,11 +46,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('otp-send', function (Request $request) {
-            return Limit::perMinute(3)->by($request->ip() . '|' . $request->input('identifier'));
+            return Limit::perMinute(3)->by($request->ip().'|'.$request->input('identifier'));
         });
 
         RateLimiter::for('otp-verify', function (Request $request) {
-            return Limit::perMinute(6)->by($request->ip() . '|' . $request->input('identifier'));
+            return Limit::perMinute(6)->by($request->ip().'|'.$request->input('identifier'));
         });
     }
 }

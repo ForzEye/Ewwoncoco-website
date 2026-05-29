@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\Voucher;
+use App\Models\LoyaltyPoint;
 use App\Models\Order;
+use App\Models\UserPointsBalance;
+use App\Models\Voucher;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class VoucherService
 {
@@ -17,7 +20,7 @@ class VoucherService
             ->where('is_active', true)
             ->first();
 
-        if (!$voucher) {
+        if (! $voucher) {
             return ['success' => false, 'message' => 'Kode voucher tidak valid.'];
         }
 
@@ -36,7 +39,7 @@ class VoucherService
         // Batas penggunaan voucher per-user
         if ($userId && $voucher->limit_per_user) {
             $userUsageCount = Order::where('customer_id', $userId)
-                ->where('notes', 'like', "%Voucher: " . $voucher->code . "%")
+                ->where('notes', 'like', '%Voucher: '.$voucher->code.'%')
                 ->count();
 
             if ($userUsageCount >= $voucher->limit_per_user) {
@@ -46,12 +49,12 @@ class VoucherService
 
         if ($subtotal < $voucher->min_purchase) {
             return [
-                'success' => false, 
-                'message' => 'Minimal belanja untuk voucher ini adalah ' . number_format($voucher->min_purchase, 0, ',', '.')
+                'success' => false,
+                'message' => 'Minimal belanja untuk voucher ini adalah '.number_format($voucher->min_purchase, 0, ',', '.'),
             ];
         }
 
-        if ($voucher->is_online_only && !$isOnline) {
+        if ($voucher->is_online_only && ! $isOnline) {
             return ['success' => false, 'message' => 'Voucher ini hanya berlaku untuk pemesanan online.'];
         }
 
@@ -70,7 +73,7 @@ class VoucherService
             'success' => true,
             'voucher' => $voucher,
             'discount' => $discount,
-            'message' => 'Voucher berhasil digunakan!'
+            'message' => 'Voucher berhasil digunakan!',
         ];
     }
 
@@ -82,7 +85,7 @@ class VoucherService
         $order = Order::findOrFail($orderId);
         $validation = self::validate($voucherCode, $order->customer_id, $order->subtotal, true);
 
-        if (!$validation['success']) {
+        if (! $validation['success']) {
             return $validation;
         }
 
@@ -94,7 +97,7 @@ class VoucherService
             $order->update([
                 'discount' => $order->discount + $discount,
                 'total' => max(0, $order->total - $discount),
-                'notes' => ($order->notes ? $order->notes . "\n" : "") . "Voucher: " . $voucher->code
+                'notes' => ($order->notes ? $order->notes."\n" : '').'Voucher: '.$voucher->code,
             ]);
 
             // Increment usage count
@@ -115,7 +118,7 @@ class VoucherService
             ->whereNull('user_id')
             ->first();
 
-        if (!$template) {
+        if (! $template) {
             return ['success' => false, 'message' => 'Voucher template tidak valid atau tidak aktif.'];
         }
 
@@ -128,18 +131,18 @@ class VoucherService
         }
 
         $pointsCost = $template->points_cost;
-        $userBalance = \App\Services\PointsService::getBalance($userId);
+        $userBalance = PointsService::getBalance($userId);
 
         if ($userBalance < $pointsCost) {
             return [
                 'success' => false,
-                'message' => "Poin Anda tidak cukup. Dibutuhkan {$pointsCost} poin (Saldo Anda: {$userBalance} poin)."
+                'message' => "Poin Anda tidak cukup. Dibutuhkan {$pointsCost} poin (Saldo Anda: {$userBalance} poin).",
             ];
         }
 
         return DB::transaction(function () use ($template, $userId, $pointsCost) {
             // Deduct user's points
-            \App\Models\LoyaltyPoint::create([
+            LoyaltyPoint::create([
                 'customer_id' => $userId,
                 'merchant_id' => $template->merchant_id,
                 'points' => -$pointsCost,
@@ -150,7 +153,7 @@ class VoucherService
                 'created_at' => now(),
             ]);
 
-            $balanceRecord = \App\Models\UserPointsBalance::getOrCreateForUser($userId);
+            $balanceRecord = UserPointsBalance::getOrCreateForUser($userId);
             $balanceRecord->deductPoints($pointsCost);
 
             // Increment used_count on the template
@@ -158,7 +161,7 @@ class VoucherService
 
             // Generate unique user voucher code
             do {
-                $uniqueCode = 'RDM-' . strtoupper(substr(str_replace(' ', '', $template->code), 0, 8)) . '-' . strtoupper(\Illuminate\Support\Str::random(5));
+                $uniqueCode = 'RDM-'.strtoupper(substr(str_replace(' ', '', $template->code), 0, 8)).'-'.strtoupper(Str::random(5));
             } while (Voucher::where('code', $uniqueCode)->exists());
 
             // Clone voucher
@@ -183,7 +186,7 @@ class VoucherService
             return [
                 'success' => true,
                 'message' => 'Voucher berhasil ditukarkan!',
-                'data' => $userVoucher
+                'data' => $userVoucher,
             ];
         });
     }

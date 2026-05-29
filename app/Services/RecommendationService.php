@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
@@ -49,7 +48,7 @@ class RecommendationService
 
         // 4. Combine and fetch products
         $allIds = array_unique(array_merge($personalizedIds, $trendingIds));
-        
+
         $products = Product::whereIn('id', $allIds)
             ->where('is_available', true)
             ->with(['category', 'merchant'])

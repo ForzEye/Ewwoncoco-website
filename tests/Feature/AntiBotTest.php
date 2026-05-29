@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 
 class AntiBotTest extends TestCase
 {
@@ -15,7 +15,7 @@ class AntiBotTest extends TestCase
     public function it_sets_login_page_loaded_at_in_session_on_view_login()
     {
         $response = $this->get('/login');
-        
+
         $response->assertStatus(200);
         $this->assertTrue(session()->has('login_page_loaded_at'));
     }

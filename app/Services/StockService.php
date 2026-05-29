@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\BranchIngredient;
 use App\Models\Product;
 use App\Models\StockMovement;
-use Illuminate\Support\Facades\DB;
 
 class StockService
 {
@@ -28,9 +27,9 @@ class StockService
                 ->lockForUpdate()
                 ->first();
 
-            if (!$branchIngredient || $branchIngredient->stock < $totalNeeded) {
-                $ingredientName = $recipe->ingredient->name ?? ('Bahan #' . $recipe->ingredient_id);
-                throw new \Exception("Stok tidak mencukupi untuk bahan: {$ingredientName} (Dibutuhkan: {$totalNeeded}, Tersedia: " . ($branchIngredient->stock ?? 0) . ")");
+            if (! $branchIngredient || $branchIngredient->stock < $totalNeeded) {
+                $ingredientName = $recipe->ingredient->name ?? ('Bahan #'.$recipe->ingredient_id);
+                throw new \Exception("Stok tidak mencukupi untuk bahan: {$ingredientName} (Dibutuhkan: {$totalNeeded}, Tersedia: ".($branchIngredient->stock ?? 0).')');
             }
 
             $branchIngredient->decrement('stock', $totalNeeded);

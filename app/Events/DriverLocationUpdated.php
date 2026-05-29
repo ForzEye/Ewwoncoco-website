@@ -2,7 +2,6 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -14,7 +13,9 @@ class DriverLocationUpdated implements ShouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $orderId;
+
     public $lat;
+
     public $lng;
 
     public function __construct($orderId, $lat, $lng)
@@ -27,7 +28,7 @@ class DriverLocationUpdated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('order.' . $this->orderId),
+            new PrivateChannel('order.'.$this->orderId),
         ];
     }
 

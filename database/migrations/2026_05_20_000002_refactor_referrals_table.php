@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -16,10 +15,12 @@ return new class extends Migration
             // Drop index and unique constraint first to avoid SQLite issues
             try {
                 $table->dropIndex('referrals_referral_code_index');
-            } catch (\Exception $e) {}
+            } catch (Exception $e) {
+            }
             try {
                 $table->dropUnique('referrals_referral_code_unique');
-            } catch (\Exception $e) {}
+            } catch (Exception $e) {
+            }
         });
 
         Schema::table('referrals', function (Blueprint $table) {
@@ -38,4 +39,3 @@ return new class extends Migration
         });
     }
 };
-

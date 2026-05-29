@@ -1,10 +1,11 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MobileApiController;
 use App\Http\Controllers\Api\PointsController;
-use App\Http\Controllers\Api\AdminPointsController;
+use App\Http\Controllers\NotificationController;
+use App\Models\Product;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,11 +15,11 @@ use App\Http\Controllers\Api\AdminPointsController;
 
 // Products: top selling (public — landing page)
 Route::get('/products/top-selling', function () {
-    $products = \App\Models\Product::where('is_available', true)
+    $products = Product::where('is_available', true)
         ->latest()
         ->take(3)
         ->get();
-        
+
     return response()->json($products);
 });
 
@@ -78,8 +79,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/orders/{orderId}', [MobileApiController::class, 'getOrderDetail']);
         Route::post('/orders/{orderId}/payment-proof', [MobileApiController::class, 'uploadPaymentProof']);
         Route::get('/notifications', [MobileApiController::class, 'getNotifications']);
-        Route::post('/notifications/token', [\App\Http\Controllers\NotificationController::class, 'updateToken']);
-        
+        Route::post('/notifications/token', [NotificationController::class, 'updateToken']);
+
         // Chat
         Route::get('/chat/rooms', [MobileApiController::class, 'getChatRooms']);
         Route::post('/chat/merchants/{merchantId}/open', [MobileApiController::class, 'openChatRoom']);

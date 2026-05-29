@@ -14,7 +14,7 @@ return new class extends Migration
             $row->foreignId('user_id')->constrained()->onDelete('cascade');
             $row->foreignId('product_id')->constrained()->onDelete('cascade');
             $row->timestamps();
-            
+
             $row->unique(['user_id', 'product_id']);
         });
 

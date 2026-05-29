@@ -29,7 +29,7 @@ return new class extends Migration
                 'receipt_font_size',
                 'receipt_paper_width',
                 'receipt_extra_bold',
-                'receipt_left_margin'
+                'receipt_left_margin',
             ]);
         });
     }

@@ -5,15 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class VoucherController extends Controller
 {
     public function index()
     {
         $merchant = Auth::user()->merchant;
-        if (!$merchant) return redirect()->route('admin.dashboard');
+        if (! $merchant) {
+            return redirect()->route('admin.dashboard');
+        }
 
         $vouchers = Voucher::where('merchant_id', $merchant->id)
             ->whereNull('user_id')
@@ -21,7 +23,7 @@ class VoucherController extends Controller
             ->get();
 
         return Inertia::render('Admin/Vouchers', [
-            'vouchers' => $vouchers
+            'vouchers' => $vouchers,
         ]);
     }
 
@@ -66,7 +68,7 @@ class VoucherController extends Controller
     {
         $merchant = Auth::user()->merchant;
         $voucher = Voucher::where('merchant_id', $merchant->id)->whereNull('user_id')->findOrFail($id);
-        $voucher->update(['is_active' => !$voucher->is_active]);
+        $voucher->update(['is_active' => ! $voucher->is_active]);
 
         return back()->with('success', 'Status voucher diperbarui.');
     }

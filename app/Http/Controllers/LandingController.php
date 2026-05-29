@@ -16,7 +16,7 @@ class LandingController extends Controller
         return Inertia::render('Landing/Home', [
             // SEO meta
             'meta' => [
-                'title'       => 'EWWON COCO — Satu Platform. Kelola Semua Operasional.',
+                'title' => 'EWWON COCO — Satu Platform. Kelola Semua Operasional.',
                 'description' => 'Platform digital commerce internal yang menggabungkan online ordering dan POS kasir dalam satu ekosistem terpadu.',
             ],
         ]);
@@ -35,12 +35,12 @@ class LandingController extends Controller
     public function info(string $type): Response
     {
         $titles = [
-            'faq'      => 'Frequently Asked Questions (FAQ)',
-            'terms'    => 'Syarat & Ketentuan',
-            'privacy'  => 'Kebijakan Privasi',
-            'contact'  => 'Hubungi Kami',
+            'faq' => 'Frequently Asked Questions (FAQ)',
+            'terms' => 'Syarat & Ketentuan',
+            'privacy' => 'Kebijakan Privasi',
+            'contact' => 'Hubungi Kami',
             'delivery' => 'Informasi Pengiriman',
-            'pickup'   => 'Informasi Ambil Sendiri (Pickup)',
+            'pickup' => 'Informasi Ambil Sendiri (Pickup)',
         ];
 
         return Inertia::render('Landing/InfoPage', [

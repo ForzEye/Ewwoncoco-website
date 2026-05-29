@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Events\OrderPlaced;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\Branch;
 use App\Services\Delivery\DeliveryServiceInterface;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class OrderController extends Controller
 {
@@ -20,6 +20,7 @@ class OrderController extends Controller
     {
         $this->deliveryService = $deliveryService;
     }
+
     public function index(Request $request)
     {
         $orders = Order::where('customer_id', $request->user()->id)
@@ -28,7 +29,7 @@ class OrderController extends Controller
             ->get();
 
         return Inertia::render('Customer/Orders', [
-            'orders' => $orders
+            'orders' => $orders,
         ]);
     }
 
@@ -39,7 +40,7 @@ class OrderController extends Controller
             ->findOrFail($id);
 
         return Inertia::render('Customer/OrderDetail', [
-            'order' => $order
+            'order' => $order,
         ]);
     }
 
@@ -58,7 +59,7 @@ class OrderController extends Controller
         ]);
 
         $branch = Branch::findOrFail($request->branch_id);
-        
+
         $origin = ['lat' => $branch->lat ?? -6.2, 'lng' => $branch->lng ?? 106.8]; // Fallback if lat/lng not set
         $destination = ['lat' => $request->destination_lat, 'lng' => $request->destination_lng];
 
@@ -81,12 +82,12 @@ class OrderController extends Controller
 
         $subtotal = 0;
         $orderItemsData = [];
-        
+
         foreach ($request->items as $item) {
             $product = Product::findOrFail($item['product_id']);
             $itemSubtotal = $product->price * $item['quantity'];
             $subtotal += $itemSubtotal;
-            
+
             $orderItemsData[] = [
                 'product_id' => $product->id,
                 'quantity' => $item['quantity'],
@@ -105,14 +106,14 @@ class OrderController extends Controller
             $deliveryQuote = $this->getDeliveryQuoteData($branchId, $request->lat, $request->lng, $request->delivery_provider);
             $deliveryFee = $deliveryQuote['fee'];
         }
-        
+
         $total = $subtotal + $deliveryFee;
 
         $order = Order::create([
             'customer_id' => $request->user()->id,
             'merchant_id' => $firstProduct->merchant_id,
             'branch_id' => $branchId,
-            'order_number' => 'EC-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3))),
+            'order_number' => 'EC-'.date('Ymd').'-'.strtoupper(bin2hex(random_bytes(3))),
             'delivery_type' => $request->delivery_type,
             'status' => 'pending',
             'payment_method' => $request->payment_method,
@@ -131,8 +132,8 @@ class OrderController extends Controller
         }
 
         // Dispatch Event for Real-time POS notification
-        event(new \App\Events\OrderPlaced($order));
-        
+        event(new OrderPlaced($order));
+
         return redirect()->route('orders.detail', $order->id);
     }
 
@@ -155,7 +156,7 @@ class OrderController extends Controller
         ]);
 
         $order = Order::where('customer_id', $request->user()->id)->findOrFail($id);
-        
+
         if ($request->hasFile('payment_proof')) {
             $file = $request->file('payment_proof');
 
@@ -169,16 +170,16 @@ class OrderController extends Controller
                 '89504e', // PNG
             ];
 
-            if (!in_array($hex, $validSignatures)) {
+            if (! in_array($hex, $validSignatures)) {
                 return back()->with('error', 'Format file tidak valid atau berbahaya.');
             }
 
             // 2. Upload file securely as private to S3 (SEC-002)
-            $filename = 'proof_' . $order->order_number . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $filename = 'proof_'.$order->order_number.'_'.time().'.'.$file->getClientOriginalExtension();
             $path = Storage::disk('s3')->putFileAs('payment_proofs', $file, $filename, 'private');
-            
+
             $order->update([
-                'payment_proof_url' => $path
+                'payment_proof_url' => $path,
             ]);
         }
 

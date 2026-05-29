@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Models\Branch;
+use App\Models\Merchant;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +20,7 @@ class OrderSanitizationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $merchant = \App\Models\Merchant::create([
+        $merchant = Merchant::create([
             'owner_id' => $user->id,
             'name' => 'EWWON COCO Test App',
             'slug' => 'ewwon-coco-test-app',
@@ -27,7 +31,7 @@ class OrderSanitizationTest extends TestCase
             'is_active' => true,
         ]);
 
-        $branch = \App\Models\Branch::create([
+        $branch = Branch::create([
             'merchant_id' => $merchant->id,
             'name' => 'Cabang Test App',
             'address' => 'Test Cabang App Address',
@@ -37,7 +41,7 @@ class OrderSanitizationTest extends TestCase
             'is_active' => true,
         ]);
 
-        $product = \App\Models\Product::create([
+        $product = Product::create([
             'merchant_id' => $merchant->id,
             'name' => 'Es Kelapa Test',
             'slug' => 'es-kelapa-test',
@@ -49,11 +53,11 @@ class OrderSanitizationTest extends TestCase
 
         // Force Order::create to throw a QueryException during insertion to simulate a DB/SQL exception
         Order::creating(function ($order) {
-            throw new \Illuminate\Database\QueryException(
+            throw new QueryException(
                 'sqlite',
                 'insert into "orders" ("customer_id", "merchant_id", "branch_id", "order_number", "subtotal", "total") values (?, ?, ?, ?, ?, ?)',
                 [1, 1, 1, 'ORD-X', 15000.00, 15000.00],
-                new \Exception("Simulated SQLSTATE[HY000]: General error: database is locked")
+                new \Exception('Simulated SQLSTATE[HY000]: General error: database is locked')
             );
         });
 
@@ -64,7 +68,7 @@ class OrderSanitizationTest extends TestCase
                     'product_id' => $product->id,
                     'quantity' => 1,
                     'unit_price' => 15000,
-                ]
+                ],
             ],
             'subtotal' => 15000.00,
             'delivery_fee' => 0,

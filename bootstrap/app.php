@@ -1,12 +1,16 @@
 <?php
 
+use App\Http\Middleware\ApiMonitoringMiddleware;
+use App\Http\Middleware\ForceHttps;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RoleMiddleware;
+use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\VerifyWebhookSignature;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\SecurityHeaders;
-use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Http\Middleware\HandleCors;
+use Illuminate\Support\Facades\Http;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,42 +22,42 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
-        
+
         // Force HTTPS & Security headers & Inertia middleware
         $middleware->web(append: [
-            \App\Http\Middleware\ForceHttps::class,
+            ForceHttps::class,
             SecurityHeaders::class,
             HandleInertiaRequests::class,
-            \App\Http\Middleware\ApiMonitoringMiddleware::class,
+            ApiMonitoringMiddleware::class,
         ]);
 
         // Force HTTPS & Security headers & CORS for API routes
         $middleware->api(append: [
-            \App\Http\Middleware\ForceHttps::class,
+            ForceHttps::class,
             SecurityHeaders::class,
             HandleCors::class,
-            \App\Http\Middleware\ApiMonitoringMiddleware::class,
+            ApiMonitoringMiddleware::class,
         ]);
 
         // Role-based access middleware alias
         $middleware->alias([
             'role' => RoleMiddleware::class,
-            'verify.webhook' => \App\Http\Middleware\VerifyWebhookSignature::class,
+            'verify.webhook' => VerifyWebhookSignature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->reportable(function (Throwable $e) {
             try {
                 $userAgent = request()->header('User-Agent', '');
-                $isMobile = str_contains(strtolower($userAgent), 'dart') || 
-                            str_contains(strtolower($userAgent), 'flutter') || 
+                $isMobile = str_contains(strtolower($userAgent), 'dart') ||
+                            str_contains(strtolower($userAgent), 'flutter') ||
                             request()->hasHeader('X-Platform') ||
                             request()->is('api/*');
-                
+
                 $projectName = $isMobile ? 'ewwoncoco-apps' : 'ewwoncoco-website';
 
                 $sentryUrl = rtrim(env('EWWONCOCO_SENTRY_URL', 'http://127.0.0.1:9000'), '/');
-                \Illuminate\Support\Facades\Http::timeout(3)->post($sentryUrl . '/api/store-log', [
+                Http::timeout(3)->post($sentryUrl.'/api/store-log', [
                     'project_name' => $projectName,
                     'environment' => app()->environment(),
                     'level' => 'error',
@@ -62,7 +66,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     'url' => request()->fullUrl(),
                     'user_data' => request()->user() ? request()->user()->toArray() : null,
                 ]);
-            } catch (\Throwable $err) {
+            } catch (Throwable $err) {
                 // Ignore if logging server is down
             }
         });

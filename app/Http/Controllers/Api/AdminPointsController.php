@@ -42,7 +42,7 @@ class AdminPointsController extends Controller
         $orderId = $request->order_id ?? null;
 
         // If no order_id, calculate based on provided total
-        if (!$orderId) {
+        if (! $orderId) {
             return response()->json([
                 'success' => false,
                 'message' => 'order_id diperlukan untuk redeem point',
@@ -70,7 +70,7 @@ class AdminPointsController extends Controller
 
         // Check if user is super_admin
         $admin = $request->user();
-        if (!$admin->isSuperAdmin()) {
+        if (! $admin->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -97,14 +97,14 @@ class AdminPointsController extends Controller
 
         $query = $request->input('query');
 
-        $user = User::where(function($q) use ($query) {
-                $q->where('phone', 'like', '%' . $query . '%')
-                  ->orWhere('email', 'like', '%' . $query . '%');
-            })
+        $user = User::where(function ($q) use ($query) {
+            $q->where('phone', 'like', '%'.$query.'%')
+                ->orWhere('email', 'like', '%'.$query.'%');
+        })
             ->where('role', 'customer')
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Customer tidak ditemukan',

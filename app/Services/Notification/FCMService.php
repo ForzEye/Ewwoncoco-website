@@ -2,14 +2,16 @@
 
 namespace App\Services\Notification;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class FCMService
 {
     protected $endpoint = 'https://fcm.googleapis.com/v1/projects/%s/messages:send';
+
     protected $projectId;
+
     protected $accessToken;
 
     public function __construct()
@@ -24,12 +26,13 @@ class FCMService
      */
     public function sendToToken(string $token, string $title, string $body, array $data = [])
     {
-        if (!$this->accessToken) {
+        if (! $this->accessToken) {
             $this->accessToken = $this->getAccessToken();
         }
 
-        if (!$this->projectId || !$token || !$this->accessToken) {
+        if (! $this->projectId || ! $token || ! $this->accessToken) {
             Log::warning('FCM Send skipped: missing projectId, token, or accessToken');
+
             return false;
         }
 
@@ -37,7 +40,7 @@ class FCMService
 
         $formattedData = [];
         foreach ($data as $key => $value) {
-            $formattedData[(string)$key] = (string)$value;
+            $formattedData[(string) $key] = (string) $value;
         }
 
         $link = $formattedData['link'] ?? '/';
@@ -53,7 +56,7 @@ class FCMService
                             'title' => $title,
                             'body' => $body,
                         ],
-                        'data' => empty($formattedData) ? new \stdClass() : $formattedData,
+                        'data' => empty($formattedData) ? new \stdClass : $formattedData,
                         'android' => [
                             'priority' => 'high',
                             'notification' => [
@@ -71,13 +74,15 @@ class FCMService
                 ]);
 
             if ($response->failed()) {
-                Log::error('FCM Send Failed: ' . $response->body());
+                Log::error('FCM Send Failed: '.$response->body());
+
                 return false;
             }
 
             return true;
         } catch (\Exception $e) {
-            Log::error('FCM Exception: ' . $e->getMessage());
+            Log::error('FCM Exception: '.$e->getMessage());
+
             return false;
         }
     }
@@ -103,17 +108,19 @@ class FCMService
         $privateKey = config('services.firebase.private_key');
         $clientEmail = config('services.firebase.client_email');
 
-        if (!$privateKey || !$clientEmail) {
+        if (! $privateKey || ! $clientEmail) {
             $credentialsPath = base_path('app/firebase/service-account.json');
 
-            if (!file_exists($credentialsPath)) {
+            if (! file_exists($credentialsPath)) {
                 Log::error('FCM Service Account file not found and Env variables are not set.');
+
                 return null;
             }
 
             $credentials = json_decode(file_get_contents($credentialsPath), true);
-            if (!$credentials) {
+            if (! $credentials) {
                 Log::error('FCM Service Account JSON invalid');
+
                 return null;
             }
 
@@ -121,27 +128,29 @@ class FCMService
             $clientEmail = $credentials['client_email'] ?? null;
         }
 
-        if (!$privateKey || !$clientEmail) {
+        if (! $privateKey || ! $clientEmail) {
             Log::error('FCM credentials (private_key or client_email) are missing.');
+
             return null;
         }
 
         $header = $this->base64UrlEncode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
-        
+
         $now = time();
         $payload = $this->base64UrlEncode(json_encode([
             'iss' => $clientEmail,
             'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
             'aud' => 'https://oauth2.googleapis.com/token',
             'exp' => $now + 3600,
-            'iat' => $now
+            'iat' => $now,
         ]));
 
         $signatureInput = "$header.$payload";
         $signature = '';
-        
-        if (!openssl_sign($signatureInput, $signature, $privateKey, 'SHA256')) {
+
+        if (! openssl_sign($signatureInput, $signature, $privateKey, 'SHA256')) {
             Log::error('FCM Failed to sign JWT via OpenSSL');
+
             return null;
         }
 
@@ -154,11 +163,12 @@ class FCMService
                 ->connectTimeout(2) // Timeout jabat tangan koneksi 2 detik
                 ->post('https://oauth2.googleapis.com/token', [
                     'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                    'assertion' => $jwt
+                    'assertion' => $jwt,
                 ]);
 
             if ($response->failed()) {
-                Log::error('FCM Token Generation Failed: ' . $response->body());
+                Log::error('FCM Token Generation Failed: '.$response->body());
+
                 return null;
             }
 
@@ -171,9 +181,9 @@ class FCMService
 
             return $accessToken;
         } catch (\Exception $e) {
-            Log::error('FCM Token Exchange Exception: ' . $e->getMessage());
+            Log::error('FCM Token Exchange Exception: '.$e->getMessage());
+
             return null;
         }
     }
 }
-

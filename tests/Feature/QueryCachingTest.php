@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Branch;
+use App\Models\Merchant;
 use App\Models\ProductCategory;
 use App\Models\Promotion;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -20,7 +21,7 @@ class QueryCachingTest extends TestCase
         $user = User::factory()->create();
 
         // Setup mock data
-        $merchant = \App\Models\Merchant::create([
+        $merchant = Merchant::create([
             'owner_id' => $user->id,
             'name' => 'EWWON COCO Pusat',
             'slug' => 'ewwon-coco-pusat',
@@ -43,7 +44,7 @@ class QueryCachingTest extends TestCase
 
         ProductCategory::create([
             'merchant_id' => $merchant->id,
-            'name' => 'Kategori 1'
+            'name' => 'Kategori 1',
         ]);
 
         Promotion::create([

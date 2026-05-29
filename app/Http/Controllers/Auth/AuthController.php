@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\OtpCode;
-use App\Jobs\SendOTPJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -21,6 +19,7 @@ class AuthController extends Controller
     public function showLogin(): Response
     {
         session(['login_page_loaded_at' => microtime(true)]);
+
         return Inertia::render('Auth/Login');
     }
 
@@ -38,19 +37,19 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name'     => 'required|string|max:100',
-            'email'    => 'required|email|unique:users,email',
-            'phone'    => 'required|string|max:20|unique:users,phone',
+            'name' => 'required|string|max:100',
+            'email' => 'required|email|unique:users,email',
+            'phone' => 'required|string|max:20|unique:users,phone',
             'password' => 'required|min:8|confirmed',
         ]);
 
         $user = User::create([
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
-            'phone'    => $validated['phone'] ?? null,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
             'password' => Hash::make($validated['password']),
-            'role'     => 'customer',
-            'is_active'=> true,
+            'role' => 'customer',
+            'is_active' => true,
         ]);
 
         Auth::login($user);
@@ -85,7 +84,7 @@ class AuthController extends Controller
         }
 
         $credentials = $request->validate([
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
 
@@ -102,11 +101,11 @@ class AuthController extends Controller
             }
 
             // Redirect berdasarkan role
-            return match($user->role) {
+            return match ($user->role) {
                 'super_admin' => redirect()->route('superadmin.dashboard'),
-                'admin'       => redirect()->route('admin.dashboard'),
-                'kasir'       => redirect()->route('pos.dashboard'),
-                default       => redirect()->route('shop'),
+                'admin' => redirect()->route('admin.dashboard'),
+                'kasir' => redirect()->route('pos.dashboard'),
+                default => redirect()->route('shop'),
             };
         }
 

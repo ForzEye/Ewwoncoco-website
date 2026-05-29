@@ -15,8 +15,8 @@ class MidtransSignatureTest extends TestCase
         $orderId = 'ORD-12345';
         $statusCode = '200';
         $grossAmount = '150000.00';
-        
-        $inputStr = $orderId . $statusCode . $grossAmount . $serverKey;
+
+        $inputStr = $orderId.$statusCode.$grossAmount.$serverKey;
         $expectedSignature = hash('sha512', $inputStr);
 
         $this->assertEquals(128, strlen($expectedSignature)); // SHA-512 is 128 hex chars

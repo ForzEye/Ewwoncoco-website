@@ -3,21 +3,22 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\PosTransaction;
-use App\Models\PosShift;
 use App\Models\Branch;
-use Illuminate\Http\Request;
+use App\Models\Order;
+use App\Models\PosShift;
+use App\Models\PosTransaction;
+use App\Models\Product;
+use App\Services\InsightService;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
-        
-        if (!$merchant) {
+        $merchant = Auth::user()->merchant;
+
+        if (! $merchant) {
             return redirect()->route('home')->with('error', 'Akses ditolak.');
         }
 
@@ -25,9 +26,9 @@ class DashboardController extends Controller
 
         // Statistics for current merchant
         $stats = [
-            'total_revenue' => Order::where('merchant_id', $merchantId)->where('payment_status', 'confirmed')->sum('total') + 
+            'total_revenue' => Order::where('merchant_id', $merchantId)->where('payment_status', 'confirmed')->sum('total') +
                               PosTransaction::where('merchant_id', $merchantId)->sum('total'),
-            'total_orders' => Order::where('merchant_id', $merchantId)->count() + 
+            'total_orders' => Order::where('merchant_id', $merchantId)->count() +
                              PosTransaction::where('merchant_id', $merchantId)->count(),
             'pending_orders' => Order::where('merchant_id', $merchantId)->where('status', 'pending')->count(),
             'total_products' => Product::where('merchant_id', $merchantId)->count(),
@@ -35,13 +36,13 @@ class DashboardController extends Controller
 
         // Today's specific stats (Resets every day)
         $todayStats = [
-            'revenue' => Order::where('merchant_id', $merchantId)->where('payment_status', 'confirmed')->whereDate('created_at', now())->sum('total') + 
+            'revenue' => Order::where('merchant_id', $merchantId)->where('payment_status', 'confirmed')->whereDate('created_at', now())->sum('total') +
                          PosTransaction::where('merchant_id', $merchantId)->whereDate('transaction_at', now())->sum('total'),
-            'orders' => Order::where('merchant_id', $merchantId)->whereDate('created_at', now())->count() + 
+            'orders' => Order::where('merchant_id', $merchantId)->whereDate('created_at', now())->count() +
                         PosTransaction::where('merchant_id', $merchantId)->whereDate('transaction_at', now())->count(),
-            'voids' => \App\Models\PosShift::whereHas('branch', function($q) use ($merchantId) {
-                            $q->where('merchant_id', $merchantId);
-                        })->whereDate('opened_at', now())->sum('void_count'),
+            'voids' => PosShift::whereHas('branch', function ($q) use ($merchantId) {
+                $q->where('merchant_id', $merchantId);
+            })->whereDate('opened_at', now())->sum('void_count'),
         ];
 
         // Chart Data: Last 7 Days
@@ -49,48 +50,48 @@ class DashboardController extends Controller
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->format('Y-m-d');
             $label = now()->subDays($i)->isoFormat('ddd');
-            
+
             $onlineSales = Order::where('merchant_id', $merchantId)
                 ->where('payment_status', 'confirmed')
                 ->whereDate('created_at', $date)
                 ->sum('total');
-                
+
             $posSales = PosTransaction::where('merchant_id', $merchantId)
                 ->whereDate('transaction_at', $date)
                 ->sum('total');
-                
+
             $chartData[] = [
                 'name' => $label,
-                'sales' => (float)($onlineSales + $posSales),
-                'orders' => Order::where('merchant_id', $merchantId)->whereDate('created_at', $date)->count() + 
+                'sales' => (float) ($onlineSales + $posSales),
+                'orders' => Order::where('merchant_id', $merchantId)->whereDate('created_at', $date)->count() +
                            PosTransaction::where('merchant_id', $merchantId)->whereDate('transaction_at', $date)->count(),
             ];
         }
 
         // Branch Status
         $branches = Branch::where('merchant_id', $merchantId)
-            ->withCount(['orders as orders' => function($q) {
+            ->withCount(['orders as orders' => function ($q) {
                 $q->whereIn('status', ['pending', 'confirmed', 'preparing']);
             }])
             ->get()
-            ->map(function($branch) {
+            ->map(function ($branch) {
                 return [
                     'name' => $branch->name,
                     'status' => 'Online', // Simplified
-                    'orders' => $branch->orders
+                    'orders' => $branch->orders,
                 ];
             });
 
         // Active Shifts for Monitoring
-        $activeShifts = PosShift::whereHas('branch', function($q) use ($merchantId) {
-                $q->where('merchant_id', $merchantId);
-            })
+        $activeShifts = PosShift::whereHas('branch', function ($q) use ($merchantId) {
+            $q->where('merchant_id', $merchantId);
+        })
             ->whereNull('closed_at')
             ->with(['cashier', 'branch'])
             ->latest()
             ->get();
 
-        $insights = \App\Services\InsightService::generateAdminInsights($stats, $todayStats, $chartData);
+        $insights = InsightService::generateAdminInsights($stats, $todayStats, $chartData);
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
@@ -98,19 +99,19 @@ class DashboardController extends Controller
             'chartData' => $chartData,
             'branches' => $branches,
             'activeShifts' => $activeShifts,
-            'insights' => $insights
+            'insights' => $insights,
         ]);
     }
 
     public function cashierIndex()
     {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
         $merchant = $user->merchant;
-        
-        // Find branch assigned to this cashier (simple logic for now: first branch or matching)
-        $branch = \App\Models\Branch::where('merchant_id', $merchant->id)->first(); // In real app, cashier is tied to specific branch
 
-        if (!$branch) {
+        // Find branch assigned to this cashier (simple logic for now: first branch or matching)
+        $branch = Branch::where('merchant_id', $merchant->id)->first(); // In real app, cashier is tied to specific branch
+
+        if (! $branch) {
             return redirect()->route('home')->with('error', 'Cabang tidak ditemukan.');
         }
 

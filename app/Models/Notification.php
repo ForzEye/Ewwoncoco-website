@@ -2,14 +2,20 @@
 
 namespace App\Models;
 
+use App\Jobs\SendFcmNotificationJob;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class Notification extends Model
 {
     protected $fillable = ['user_id', 'title', 'body', 'type', 'data', 'read_at'];
+
     protected $casts = ['data' => 'array', 'read_at' => 'datetime'];
-    
-    public function user() { return $this->belongsTo(User::class); }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     protected static function booted()
     {
@@ -20,15 +26,15 @@ class Notification extends Model
                     $fcmData = [
                         'type' => $notification->type ?? 'info',
                     ];
-                    
+
                     if (is_array($notification->data)) {
                         foreach ($notification->data as $key => $val) {
-                            $fcmData[$key] = (string)$val;
+                            $fcmData[$key] = (string) $val;
                         }
                     }
 
                     // Dispatch job secara sinkronus agar langsung terkirim tanpa tergantung queue worker
-                    \App\Jobs\SendFcmNotificationJob::dispatchSync(
+                    SendFcmNotificationJob::dispatchSync(
                         $user->fcm_token,
                         $notification->title,
                         $notification->body,
@@ -36,7 +42,7 @@ class Notification extends Model
                     );
                 }
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('FCM trigger on notification created failed: ' . $e->getMessage());
+                Log::error('FCM trigger on notification created failed: '.$e->getMessage());
             }
         });
     }

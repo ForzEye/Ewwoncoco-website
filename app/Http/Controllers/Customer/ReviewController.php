@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Models\Review;
 use App\Models\Product;
+use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,10 +17,10 @@ class ReviewController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'order_id'   => 'required|exists:orders,id',
+            'order_id' => 'required|exists:orders,id',
             'product_id' => 'required|exists:products,id',
-            'rating'     => 'required|integer|min:1|max:5',
-            'comment'    => 'nullable|string|max:1000',
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:1000',
         ]);
 
         $order = Order::findOrFail($request->order_id);
@@ -46,12 +46,12 @@ class ReviewController extends Controller
 
         Review::create([
             'customer_id' => Auth::id(),
-            'order_id'    => $request->order_id,
-            'product_id'  => $request->product_id,
+            'order_id' => $request->order_id,
+            'product_id' => $request->product_id,
             'merchant_id' => $order->merchant_id,
-            'rating'      => $request->rating,
-            'comment'     => $request->comment,
-            'created_at'  => now(),
+            'rating' => $request->rating,
+            'comment' => $request->comment,
+            'created_at' => now(),
         ]);
 
         return back()->with('success', 'Ulasan Anda berhasil dikirim. Terima kasih!');

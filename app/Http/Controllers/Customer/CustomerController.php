@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Merchant;
 use App\Models\Product;
+use App\Models\Review;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class CustomerController extends Controller
@@ -19,7 +20,7 @@ class CustomerController extends Controller
 
         return Inertia::render('Customer/Shop', [
             'merchants' => $merchants,
-            'products' => $products
+            'products' => $products,
         ]);
     }
 
@@ -30,35 +31,35 @@ class CustomerController extends Controller
 
         return Inertia::render('Customer/MerchantDetail', [
             'merchant' => $merchant,
-            'products' => $products
+            'products' => $products,
         ]);
     }
 
     public function product(Request $request, $slug)
     {
         $product = Product::where('slug', $slug)->with(['merchant', 'category'])->firstOrFail();
-        
-        $reviews = \App\Models\Review::with('customer:id,name,avatar_url')
+
+        $reviews = Review::with('customer:id,name,avatar_url')
             ->where('product_id', $product->id)
             ->latest()
             ->limit(5)
             ->get();
 
-        $avgRating = \App\Models\Review::where('product_id', $product->id)->avg('rating') ?: 0;
-        $reviewCount = \App\Models\Review::where('product_id', $product->id)->count();
+        $avgRating = Review::where('product_id', $product->id)->avg('rating') ?: 0;
+        $reviewCount = Review::where('product_id', $product->id)->count();
 
         return Inertia::render('Customer/ProductDetail', [
             'product' => $product,
             'reviews' => $reviews,
             'avgRating' => round($avgRating, 1),
-            'reviewCount' => $reviewCount
+            'reviewCount' => $reviewCount,
         ]);
     }
 
     public function profile(Request $request)
     {
         return Inertia::render('Customer/Profile', [
-            'user' => $request->user()
+            'user' => $request->user(),
         ]);
     }
 }

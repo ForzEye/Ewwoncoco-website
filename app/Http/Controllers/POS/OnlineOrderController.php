@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers\POS;
 
-use App\Http\Controllers\Controller;
-use App\Models\Order;
 use App\Events\OrderStatusUpdated;
+use App\Http\Controllers\Controller;
+use App\Models\Notification;
+use App\Models\Order;
+use App\Models\PosShift;
+use App\Services\Notification\WhatsAppService;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class OnlineOrderController extends Controller
@@ -30,7 +35,7 @@ class OnlineOrderController extends Controller
         }
 
         return Inertia::render('POS/OnlineOrders', [
-            'orders' => $orders
+            'orders' => $orders,
         ]);
     }
 
@@ -43,12 +48,12 @@ class OnlineOrderController extends Controller
         $merchantId = $user->merchant_id ?? 1;
 
         $order = Order::where('merchant_id', $merchantId)->findOrFail($id);
-        
+
         if ($order->status !== 'pending') {
             return response()->json(['success' => false, 'message' => 'Pesanan sudah di-ACC sebelumnya.'], 422);
         }
 
-        $activeShift = \App\Models\PosShift::where('cashier_id', $user->id)
+        $activeShift = PosShift::where('cashier_id', $user->id)
             ->whereNull('closed_at')
             ->first();
 
@@ -62,11 +67,11 @@ class OnlineOrderController extends Controller
             // Deduct Stock for all items in order
             $order->load('items.product');
             foreach ($order->items as $item) {
-                \App\Services\StockService::deductFromRecipe(
-                    $item->product_id, 
-                    $order->branch_id, 
-                    $item->quantity, 
-                    $order->id, 
+                StockService::deductFromRecipe(
+                    $item->product_id,
+                    $order->branch_id,
+                    $item->quantity,
+                    $order->id,
                     'OnlineOrder'
                 );
             }
@@ -74,20 +79,20 @@ class OnlineOrderController extends Controller
 
         // Create notification for customer
         if ($order->customer_id) {
-            \App\Models\Notification::create([
+            Notification::create([
                 'user_id' => $order->customer_id,
                 'title' => 'Pesanan Diterima',
-                'body' => 'Pesanan #' . $order->order_number . ' telah dikonfirmasi dan mulai disiapkan.',
+                'body' => 'Pesanan #'.$order->order_number.' telah dikonfirmasi dan mulai disiapkan.',
                 'type' => 'order_update',
-                'data' => ['order_id' => $order->id]
+                'data' => ['order_id' => $order->id],
             ]);
 
             // Send premium WhatsApp receipt
             try {
-                $waService = app(\App\Services\Notification\WhatsAppService::class);
+                $waService = app(WhatsAppService::class);
                 $waService->sendOnlineReceipt($order);
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Failed to send WA online receipt: " . $e->getMessage());
+                Log::error('Failed to send WA online receipt: '.$e->getMessage());
             }
         }
 
@@ -97,7 +102,7 @@ class OnlineOrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Pesanan berhasil diterima.',
-            'order' => $order->load(['customer', 'items.product', 'branch'])
+            'order' => $order->load(['customer', 'items.product', 'branch']),
         ]);
     }
 
@@ -107,21 +112,21 @@ class OnlineOrderController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:preparing,ready_for_pickup,delivered,cancelled'
+            'status' => 'required|in:preparing,ready_for_pickup,delivered,cancelled',
         ]);
 
         $user = $request->user();
         $merchantId = $user->merchant_id ?? 1;
 
         $order = Order::where('merchant_id', $merchantId)->findOrFail($id);
-        
+
         $updateData = ['status' => $request->status];
-        
+
         // If cashier_id is not set yet, set it now
-        if (!$order->cashier_id) {
+        if (! $order->cashier_id) {
             $updateData['cashier_id'] = $user->id;
-            
-            $activeShift = \App\Models\PosShift::where('cashier_id', $user->id)
+
+            $activeShift = PosShift::where('cashier_id', $user->id)
                 ->whereNull('closed_at')
                 ->first();
             if ($activeShift) {
@@ -133,12 +138,12 @@ class OnlineOrderController extends Controller
 
         // Create notification for customer
         if ($order->customer_id) {
-            \App\Models\Notification::create([
+            Notification::create([
                 'user_id' => $order->customer_id,
-                'title' => 'Pembaruan Pesanan #' . $order->order_number,
-                'body' => 'Status pesanan Anda sekarang: ' . strtoupper(str_replace('_', ' ', $order->status)),
+                'title' => 'Pembaruan Pesanan #'.$order->order_number,
+                'body' => 'Status pesanan Anda sekarang: '.strtoupper(str_replace('_', ' ', $order->status)),
                 'type' => 'order_update',
-                'data' => ['order_id' => $order->id]
+                'data' => ['order_id' => $order->id],
             ]);
         }
 
@@ -148,7 +153,7 @@ class OnlineOrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Status pesanan berhasil diperbarui.',
-            'order' => $order->load(['customer', 'items.product', 'branch'])
+            'order' => $order->load(['customer', 'items.product', 'branch']),
         ]);
     }
 
@@ -158,27 +163,27 @@ class OnlineOrderController extends Controller
     public function reject(Request $request, $id)
     {
         $request->validate([
-            'reason' => 'required|string|max:255'
+            'reason' => 'required|string|max:255',
         ]);
 
         $user = $request->user();
         $merchantId = $user->merchant_id ?? 1;
 
         $order = Order::where('merchant_id', $merchantId)->findOrFail($id);
-        
+
         $order->update([
             'status' => 'cancelled',
-            'rejection_reason' => $request->reason
+            'rejection_reason' => $request->reason,
         ]);
 
         // Create notification for customer
         if ($order->customer_id) {
-            \App\Models\Notification::create([
+            Notification::create([
                 'user_id' => $order->customer_id,
                 'title' => 'Pesanan Dibatalkan',
-                'body' => 'Maaf, pesanan #' . $order->order_number . ' dibatalkan. Alasan: ' . $request->reason,
+                'body' => 'Maaf, pesanan #'.$order->order_number.' dibatalkan. Alasan: '.$request->reason,
                 'type' => 'order_update',
-                'data' => ['order_id' => $order->id]
+                'data' => ['order_id' => $order->id],
             ]);
         }
 
@@ -188,7 +193,7 @@ class OnlineOrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Pesanan berhasil ditolak.',
-            'order' => $order->load(['customer', 'items.product', 'branch'])
+            'order' => $order->load(['customer', 'items.product', 'branch']),
         ]);
     }
 }

@@ -39,19 +39,38 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'is_active'         => 'boolean',
-            'birth_date'        => 'date',
+            'password' => 'hashed',
+            'is_active' => 'boolean',
+            'birth_date' => 'date',
         ];
     }
 
     // ─── Role helpers ───
 
-    public function isSuperAdmin(): bool { return $this->role === 'super_admin'; }
-    public function isAdmin(): bool      { return $this->role === 'admin'; }
-    public function isKasir(): bool      { return $this->role === 'kasir'; }
-    public function isCustomer(): bool   { return $this->role === 'customer'; }
-    public function isStaff(): bool      { return in_array($this->role, ['admin', 'kasir', 'super_admin']); }
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isKasir(): bool
+    {
+        return $this->role === 'kasir';
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->role === 'customer';
+    }
+
+    public function isStaff(): bool
+    {
+        return in_array($this->role, ['admin', 'kasir', 'super_admin']);
+    }
 
     // ─── Relationships ───
 

@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\OtpCode;
-use App\Models\User;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Mail;
 use App\Mail\OtpMail;
+use App\Models\OtpCode;
+use App\Models\SystemSetting;
+use App\Models\User;
+use App\Services\Notification\WhatsAppService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class OtpService
 {
@@ -28,14 +30,14 @@ class OtpService
         // 3. Save new code
         $otp = OtpCode::create([
             'identifier' => $identifier,
-            'code'       => $code,
-            'type'       => $type,
-            'channel'    => $channel,
+            'code' => $code,
+            'type' => $type,
+            'channel' => $channel,
             // expires_at: force UTC so the stored value is consistent with
             // Eloquent's automatic created_at/updated_at (which are always UTC).
             'expires_at' => Carbon::now('UTC')->addMinutes(5),
-            'is_used'    => false,
-            'status'     => 'pending',
+            'is_used' => false,
+            'status' => 'pending',
         ]);
 
         // 4. Send via channel
@@ -43,15 +45,17 @@ class OtpService
             // --- Per-channel OTP toggles ---
             // otp_enabled       = WhatsApp OTP on/off
             // otp_email_enabled = Email OTP on/off (also acts as master switch)
-            $waOtpEnabled    = \App\Models\SystemSetting::getVal('otp_enabled', '1') === '1';
-            $emailOtpEnabled = \App\Models\SystemSetting::getVal('otp_email_enabled', '1') === '1';
+            $globalOtpEnabled = SystemSetting::getVal('otp_enabled', '1') === '1';
+            $waOtpEnabled = $globalOtpEnabled;
+            $emailOtpEnabled = $globalOtpEnabled && (SystemSetting::getVal('otp_email_enabled', '1') === '1');
 
-            $channelBypassed = ($channel === 'whatsapp' && !$waOtpEnabled)
-                            || ($channel === 'email'    && !$emailOtpEnabled);
+            $channelBypassed = ($channel === 'whatsapp' && ! $waOtpEnabled)
+                            || ($channel === 'email' && ! $emailOtpEnabled);
 
             if ($channelBypassed) {
                 Log::info("OTP BYPASSED ({$channel} OTP disabled in settings). Code for {$identifier}: {$code}");
                 $otp->update(['status' => 'sent']);
+
                 return true;
             }
 
@@ -64,13 +68,16 @@ class OtpService
 
             if ($success) {
                 $otp->update(['status' => 'sent']);
+
                 return true;
             } else {
                 $otp->update(['status' => 'failed', 'error_message' => 'Provider rejection or unknown error.']);
+
                 return false;
             }
         } catch (\Exception $e) {
             $otp->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -81,12 +88,14 @@ class OtpService
     public function verifyOtp(string $identifier, string $code, string $type = 'register'): bool
     {
         // --- Per-channel OTP toggles ---
-        $waOtpEnabled    = \App\Models\SystemSetting::getVal('otp_enabled', '1') === '1';
-        $emailOtpEnabled = \App\Models\SystemSetting::getVal('otp_email_enabled', '1') === '1';
+        $globalOtpEnabled = SystemSetting::getVal('otp_enabled', '1') === '1';
+        $waOtpEnabled = $globalOtpEnabled;
+        $emailOtpEnabled = $globalOtpEnabled && (SystemSetting::getVal('otp_email_enabled', '1') === '1');
 
         // If BOTH channels are disabled, auto-approve (no OTP required at all)
-        if (!$waOtpEnabled && !$emailOtpEnabled) {
+        if (! $waOtpEnabled && ! $emailOtpEnabled) {
             Log::info("OTP Auto-Approved for {$identifier} (all OTP channels disabled).");
+
             return true;
         }
 
@@ -102,24 +111,27 @@ class OtpService
         // This handles the case where WA is off but email is on: a WA-channel OTP
         // is auto-approved so the user isn't blocked.
         if ($otp) {
-            if ($otp->channel === 'whatsapp' && !$waOtpEnabled) {
+            if ($otp->channel === 'whatsapp' && ! $waOtpEnabled) {
                 Log::info("OTP Auto-Approved for {$identifier} (WA OTP channel disabled).");
                 $otp->update(['is_used' => true]);
+
                 return true;
             }
-            if ($otp->channel === 'email' && !$emailOtpEnabled) {
+            if ($otp->channel === 'email' && ! $emailOtpEnabled) {
                 Log::info("OTP Auto-Approved for {$identifier} (Email OTP channel disabled).");
                 $otp->update(['is_used' => true]);
+
                 return true;
             }
         }
 
-        if (!$otp) {
+        if (! $otp) {
             return false;
         }
 
         if ($otp->code === $code) {
             $otp->update(['is_used' => true]);
+
             return true;
         }
 
@@ -136,16 +148,19 @@ class OtpService
     {
         try {
             Mail::to($email)->send(new OtpMail($code));
+
             return true;
         } catch (\Exception $e) {
-            Log::error('OTP Email Error: ' . $e->getMessage());
+            Log::error('OTP Email Error: '.$e->getMessage());
+
             return false;
         }
     }
 
     private function sendViaWhatsapp(string $phone, string $code): bool
     {
-        $waService = app(\App\Services\Notification\WhatsAppService::class);
+        $waService = app(WhatsAppService::class);
+
         return $waService->sendOtp($phone, $code);
     }
 }

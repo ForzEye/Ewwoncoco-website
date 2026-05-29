@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\LoyaltyPoint;
-use Illuminate\Http\Request;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -14,11 +13,11 @@ class ReferralController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
+
         // Ensure user has referral code
-        if (!$user->referral_code) {
+        if (! $user->referral_code) {
             $user->update([
-                'referral_code' => 'COCO-' . strtoupper(bin2hex(random_bytes(3)))
+                'referral_code' => 'COCO-'.strtoupper(bin2hex(random_bytes(3))),
             ]);
         }
 

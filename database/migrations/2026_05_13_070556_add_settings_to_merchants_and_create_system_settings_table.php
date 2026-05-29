@@ -34,7 +34,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('system_settings');
-        
+
         Schema::table('merchants', function (Blueprint $table) {
             $table->dropColumn(['receipt_header', 'receipt_footer', 'instagram_handle', 'whatsapp_number', 'tiktok_handle']);
         });

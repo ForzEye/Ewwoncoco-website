@@ -2,15 +2,15 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
+use App\Models\Branch;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\PosShift;
 use App\Models\PosTransaction;
 use App\Models\PosTransactionItem;
 use App\Models\Product;
-use App\Models\Branch;
 use App\Models\User;
-use App\Models\PosShift;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class SalesDataSeeder extends Seeder
@@ -19,27 +19,31 @@ class SalesDataSeeder extends Seeder
     {
         // Find merchant and branches
         $admin = User::where('role', 'admin')->first();
-        if (!$admin) {
+        if (! $admin) {
             echo "Admin user not found. Please run db:seed first.\n";
+
             return;
         }
 
         $merchant = $admin->merchant ?? $admin->ownedMerchant;
-        if (!$merchant) {
+        if (! $merchant) {
             echo "Merchant not found. Please run db:seed first.\n";
+
             return;
         }
 
         $merchantId = $merchant->id;
         $branch = Branch::where('merchant_id', $merchantId)->first();
-        if (!$branch) {
+        if (! $branch) {
             echo "Branch not found.\n";
+
             return;
         }
 
         $products = Product::where('merchant_id', $merchantId)->get();
         if ($products->isEmpty()) {
             echo "No products found.\n";
+
             return;
         }
 
@@ -60,18 +64,18 @@ class SalesDataSeeder extends Seeder
         // Generate sales over the last 7 days
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i);
-            
+
             // 1. Generate Online Orders (1-3 orders per day)
             $numOrders = rand(1, 3);
             for ($o = 0; $o < $numOrders; $o++) {
                 $orderProducts = $products->random(rand(1, min(3, $products->count())));
                 $subtotal = 0;
-                
+
                 $order = Order::create([
                     'customer_id' => $customer->id,
                     'merchant_id' => $merchantId,
                     'branch_id' => $branch->id,
-                    'order_number' => 'ORD-' . strtoupper(Str::random(8)),
+                    'order_number' => 'ORD-'.strtoupper(Str::random(8)),
                     'delivery_type' => rand(0, 1) ? 'pickup' : 'delivery',
                     'status' => 'delivered',
                     'payment_method' => rand(0, 1) ? 'qris' : 'manual_transfer',
@@ -116,7 +120,7 @@ class SalesDataSeeder extends Seeder
                     'cashier_id' => $cashier->id,
                     'customer_id' => null,
                     'shift_id' => $shift->id,
-                    'transaction_number' => 'TX-' . strtoupper(Str::random(8)),
+                    'transaction_number' => 'TX-'.strtoupper(Str::random(8)),
                     'payment_method' => rand(0, 1) ? 'cash' : 'qris',
                     'total' => 0,
                     'discount' => 0,

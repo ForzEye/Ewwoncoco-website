@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Migration to add detailed profile fields to users table
  */
@@ -15,10 +16,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'gender')) {
+            if (! Schema::hasColumn('users', 'gender')) {
                 $table->enum('gender', ['male', 'female', 'other'])->nullable()->after('phone');
             }
-            if (!Schema::hasColumn('users', 'birth_date')) {
+            if (! Schema::hasColumn('users', 'birth_date')) {
                 $table->date('birth_date')->nullable()->after('gender');
             }
         });

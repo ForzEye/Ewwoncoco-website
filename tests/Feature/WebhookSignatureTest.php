@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -29,7 +28,7 @@ class WebhookSignatureTest extends TestCase
         $signature = hash_hmac('sha256', $payload, $secret);
 
         $response = $this->postJson('/test-webhook/gosend', ['data' => 'test'], [
-            'X-Webhook-Signature' => $signature
+            'X-Webhook-Signature' => $signature,
         ]);
 
         $response->assertStatus(200);
@@ -39,7 +38,7 @@ class WebhookSignatureTest extends TestCase
     public function it_rejects_invalid_gosend_webhook_signature()
     {
         $response = $this->postJson('/test-webhook/gosend', ['data' => 'test'], [
-            'X-Webhook-Signature' => 'invalid_signature'
+            'X-Webhook-Signature' => 'invalid_signature',
         ]);
 
         $response->assertStatus(403);
@@ -53,7 +52,7 @@ class WebhookSignatureTest extends TestCase
         $signature = hash_hmac('sha256', $payload, $secret);
 
         $response = $this->postJson('/test-webhook/grabexpress', ['data' => 'test_grab'], [
-            'X-Webhook-Signature' => $signature
+            'X-Webhook-Signature' => $signature,
         ]);
 
         $response->assertStatus(200);

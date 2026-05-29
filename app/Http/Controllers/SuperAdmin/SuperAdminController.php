@@ -3,17 +3,18 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\AppSetting;
 use App\Models\Merchant;
 use App\Models\Order;
 use App\Models\PosTransaction;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
-
 use App\Models\SystemSetting;
+use App\Models\User;
+use App\Services\InsightService;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\File;
+use Inertia\Inertia;
 
 class SuperAdminController extends Controller
 {
@@ -26,26 +27,27 @@ class SuperAdminController extends Controller
             'total_pos' => PosTransaction::count(),
             'total_revenue' => Order::where('payment_status', 'confirmed')->sum('total') + PosTransaction::sum('total'),
             'today_orders' => Order::whereDate('created_at', now()->today())->count(),
-            'today_revenue' => Order::whereDate('created_at', now()->today())->where('payment_status', 'confirmed')->sum('total') + 
+            'today_revenue' => Order::whereDate('created_at', now()->today())->where('payment_status', 'confirmed')->sum('total') +
                                PosTransaction::whereDate('transaction_at', now()->today())->sum('total'),
         ];
 
         // Chart data (simulated for now, 7 days)
         $chartData = collect(range(6, 0))->map(function ($days) {
             $date = now()->subDays($days)->format('Y-m-d');
+
             return [
                 'name' => now()->subDays($days)->format('D'),
-                'revenue' => Order::whereDate('created_at', $date)->where('payment_status', 'confirmed')->sum('total') + 
-                             PosTransaction::whereDate('transaction_at', $date)->sum('total')
+                'revenue' => Order::whereDate('created_at', $date)->where('payment_status', 'confirmed')->sum('total') +
+                             PosTransaction::whereDate('transaction_at', $date)->sum('total'),
             ];
         });
 
-        $insights = \App\Services\InsightService::generateSuperAdminInsights($stats);
+        $insights = InsightService::generateSuperAdminInsights($stats);
 
         return Inertia::render('SuperAdmin/Dashboard', [
             'stats' => $stats,
             'chartData' => $chartData,
-            'insights' => $insights
+            'insights' => $insights,
         ]);
     }
 
@@ -56,7 +58,7 @@ class SuperAdminController extends Controller
             ->paginate(20);
 
         return Inertia::render('SuperAdmin/Orders', [
-            'orders' => $orders
+            'orders' => $orders,
         ]);
     }
 
@@ -65,7 +67,7 @@ class SuperAdminController extends Controller
         $users = User::query()
             ->when($request->search, function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             })
             ->when($request->role, function ($query, $role) {
                 $query->where('role', $role);
@@ -77,7 +79,7 @@ class SuperAdminController extends Controller
         return Inertia::render('SuperAdmin/Users', [
             'users' => $users,
             'filters' => $request->only(['search', 'role']),
-            'merchants' => Merchant::select('id', 'name')->get()
+            'merchants' => Merchant::select('id', 'name')->get(),
         ]);
     }
 
@@ -89,7 +91,7 @@ class SuperAdminController extends Controller
         ]);
 
         $user = User::findOrFail($id);
-        
+
         // Prevent super admin from deactivating themselves or changing their own role
         if ($user->id === $request->user()->id) {
             return back()->with('error', 'Anda tidak bisa mengubah role atau status akun Anda sendiri.');
@@ -137,7 +139,7 @@ class SuperAdminController extends Controller
 
         return Inertia::render('SuperAdmin/Merchants', [
             'merchants' => $merchants,
-            'filters' => $request->only(['search'])
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -146,25 +148,26 @@ class SuperAdminController extends Controller
         $merchant = Merchant::with(['owner', 'branches', 'products'])->findOrFail($id);
 
         return Inertia::render('SuperAdmin/MerchantDetail', [
-            'merchant' => $merchant
+            'merchant' => $merchant,
         ]);
     }
 
     public function toggleMerchantStatus($id)
     {
         $merchant = Merchant::findOrFail($id);
-        $merchant->update(['is_active' => !$merchant->is_active]);
+        $merchant->update(['is_active' => ! $merchant->is_active]);
 
         return back()->with('success', 'Status merchant berhasil diperbarui.');
     }
+
     public function settings()
     {
         $settings = SystemSetting::all()->pluck('value', 'key');
-        $appSettings = \App\Models\AppSetting::all();
-        
+        $appSettings = AppSetting::all();
+
         // Transform app settings for easy frontend use
         $appSettingsMap = $appSettings->pluck('value', 'key');
-        
+
         // Also provide full URLs for images
         $appImages = [];
         foreach ($appSettings->where('type', 'image') as $s) {
@@ -175,7 +178,7 @@ class SuperAdminController extends Controller
             'settings' => $settings,
             'appSettings' => $appSettingsMap,
             'appImages' => $appImages,
-            'appLastConnected' => \App\Models\AppSetting::getVal('app_last_connected_at')
+            'appLastConnected' => AppSetting::getVal('app_last_connected_at'),
         ]);
     }
 
@@ -185,11 +188,11 @@ class SuperAdminController extends Controller
         $monthlyStats = collect(range(5, 0))->map(function ($months) {
             $start = now()->subMonths($months)->startOfMonth();
             $end = now()->subMonths($months)->endOfMonth();
-            
+
             $onlineRevenue = Order::whereBetween('created_at', [$start, $end])
                 ->whereIn('payment_status', ['confirmed', 'completed'])
                 ->sum('total');
-            
+
             $posRevenue = PosTransaction::whereBetween('transaction_at', [$start, $end])
                 ->sum('total');
 
@@ -203,7 +206,7 @@ class SuperAdminController extends Controller
                 'revenue' => $onlineRevenue + $posRevenue,
                 'orders' => $onlineOrders + $posOrders,
                 'online' => $onlineRevenue,
-                'pos' => $posRevenue
+                'pos' => $posRevenue,
             ];
         });
 
@@ -247,7 +250,7 @@ class SuperAdminController extends Controller
             'monthlyStats' => $monthlyStats,
             'topMerchants' => $topMerchants,
             'topProducts' => $topProducts,
-            'paymentDistribution' => $paymentDistribution
+            'paymentDistribution' => $paymentDistribution,
         ]);
     }
 
@@ -278,7 +281,7 @@ class SuperAdminController extends Controller
 
             if (is_array($images)) {
                 foreach ($images as $img) {
-                    if ($img instanceof \Illuminate\Http\UploadedFile) {
+                    if ($img instanceof UploadedFile) {
                         $paths[] = $img->store('app', 's3');
                     } elseif (is_string($img)) {
                         // Keep existing S3 path (remove the full URL part if it's there)
@@ -286,12 +289,12 @@ class SuperAdminController extends Controller
                         $paths[] = str_replace($s3Url, '', $img);
                     }
                 }
-            } elseif ($images instanceof \Illuminate\Http\UploadedFile) {
+            } elseif ($images instanceof UploadedFile) {
                 $paths[] = $images->store('app', 's3');
             }
 
-            if (!empty($paths)) {
-                \App\Models\AppSetting::updateOrCreate(
+            if (! empty($paths)) {
+                AppSetting::updateOrCreate(
                     ['key' => 'app_landing_hero_image'],
                     ['value' => json_encode($paths), 'type' => 'image', 'group' => 'landing']
                 );
@@ -299,9 +302,9 @@ class SuperAdminController extends Controller
         }
         // Handle System Text Settings
         $textSettings = [
-            'site_name', 'site_title', 'hero_title', 'hero_subtitle', 
+            'site_name', 'site_title', 'hero_title', 'hero_subtitle',
             'footer_text', 'contact_whatsapp', 'contact_email', 'instagram_url',
-            'otp_enabled', 'otp_email_enabled', 'wa_notifications_enabled', 'android_download_url'
+            'otp_enabled', 'otp_email_enabled', 'wa_notifications_enabled', 'android_download_url',
         ];
 
         foreach ($textSettings as $key) {
@@ -314,7 +317,7 @@ class SuperAdminController extends Controller
         $appTextSettings = ['app_landing_promo_text', 'app_support_whatsapp'];
         foreach ($appTextSettings as $key) {
             if ($request->has($key)) {
-                \App\Models\AppSetting::updateOrCreate(
+                AppSetting::updateOrCreate(
                     ['key' => $key],
                     ['value' => $request->input($key), 'type' => 'text', 'group' => 'landing']
                 );

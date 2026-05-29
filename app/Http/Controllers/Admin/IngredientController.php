@@ -15,7 +15,7 @@ class IngredientController extends Controller
         $ingredients = Ingredient::where('merchant_id', $merchantId)->get();
 
         return Inertia::render('Admin/Inventory/Ingredients', [
-            'ingredients' => $ingredients
+            'ingredients' => $ingredients,
         ]);
     }
 

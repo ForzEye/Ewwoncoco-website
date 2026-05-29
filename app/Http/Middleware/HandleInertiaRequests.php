@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
-use App\Models\SystemSetting;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -30,28 +30,28 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $request->user() ? [
-                    'id'         => $request->user()->id,
-                    'name'       => $request->user()->name,
-                    'email'      => $request->user()->email,
-                    'phone'      => $request->user()->phone,
-                    'role'       => $request->user()->role,
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'phone' => $request->user()->phone,
+                    'role' => $request->user()->role,
                     'avatar_url' => $request->user()->avatar_url,
-                    'is_active'  => $request->user()->is_active,
+                    'is_active' => $request->user()->is_active,
                 ] : null,
             ],
 
             // Flash messages — tersedia di semua halaman
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
+                'error' => fn () => $request->session()->get('error'),
                 'warning' => fn () => $request->session()->get('warning'),
-                'info'    => fn () => $request->session()->get('info'),
+                'info' => fn () => $request->session()->get('info'),
             ],
 
             // App config yang aman untuk di-share ke frontend
             'app' => [
-                'name'    => config('app.name'),
-                'locale'  => app()->getLocale(),
+                'name' => config('app.name'),
+                'locale' => app()->getLocale(),
                 'version' => config('app.version', '3.1'),
             ],
 

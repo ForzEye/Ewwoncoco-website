@@ -14,7 +14,7 @@ class SuperAdminSettingsController extends Controller
         $settings = SystemSetting::all()->pluck('value', 'key');
 
         return Inertia::render('SuperAdmin/Settings', [
-            'settings' => $settings
+            'settings' => $settings,
         ]);
     }
 

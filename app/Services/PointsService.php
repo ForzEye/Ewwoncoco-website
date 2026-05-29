@@ -5,10 +5,12 @@ namespace App\Services;
 use App\Models\AppSetting;
 use App\Models\LoyaltyPoint;
 use App\Models\Order;
+use App\Models\PosTransaction;
 use App\Models\Referral;
 use App\Models\User;
 use App\Models\UserPointsBalance;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PointsService
 {
@@ -31,6 +33,7 @@ class PointsService
     public static function getBalance(int $userId): int
     {
         $balance = UserPointsBalance::where('user_id', $userId)->first();
+
         return $balance ? $balance->balance : 0;
     }
 
@@ -54,10 +57,10 @@ class PointsService
      */
     public static function earnPoints(int $userId, int $referenceId, string $type = 'order'): int
     {
-        $reference = $type === 'order' 
-            ? Order::findOrFail($referenceId) 
-            : \App\Models\PosTransaction::findOrFail($referenceId);
-            
+        $reference = $type === 'order'
+            ? Order::findOrFail($referenceId)
+            : PosTransaction::findOrFail($referenceId);
+
         $settings = self::getSettings();
 
         // Calculate points: floor(total / point_per_rupiah)
@@ -67,7 +70,7 @@ class PointsService
             return 0;
         }
 
-        DB::transaction(function () use ($userId, $referenceId, $reference, $points, $settings, $type) {
+        DB::transaction(function () use ($userId, $referenceId, $reference, $points, $type) {
             // Create ledger entry
             LoyaltyPoint::create([
                 'customer_id' => $userId,
@@ -76,7 +79,7 @@ class PointsService
                 'transaction_type' => 'earn',
                 'reference_type' => $type === 'order' ? 'order' : 'pos_transaction',
                 'reference_id' => $referenceId,
-                'description' => "Earned {$points} points from " . ($type === 'order' ? "order #{$reference->order_number}" : "POS #{$reference->transaction_number}"),
+                'description' => "Earned {$points} points from ".($type === 'order' ? "order #{$reference->order_number}" : "POS #{$reference->transaction_number}"),
                 'created_at' => now(),
             ]);
 
@@ -94,17 +97,17 @@ class PointsService
     public static function redeemPoints(int $userId, int $referenceId, string $type = 'order'): array
     {
         return DB::transaction(function () use ($userId, $referenceId, $type) {
-            $reference = $type === 'order' 
-                ? Order::findOrFail($referenceId) 
-                : \App\Models\PosTransaction::findOrFail($referenceId);
-                
+            $reference = $type === 'order'
+                ? Order::findOrFail($referenceId)
+                : PosTransaction::findOrFail($referenceId);
+
             $settings = self::getSettings();
-            
+
             // 🔒 PESSIMISTIC LOCK: Mengunci baris saldo poin user agar tidak dibaca/ditulis request lain
             $balanceRecord = UserPointsBalance::where('user_id', $userId)
                 ->lockForUpdate()
                 ->first();
-                
+
             $balance = $balanceRecord ? $balanceRecord->balance : 0;
 
             // Check minimum threshold
@@ -139,7 +142,7 @@ class PointsService
                 'transaction_type' => 'redeem',
                 'reference_type' => $type === 'order' ? 'order' : 'pos_transaction',
                 'reference_id' => $referenceId,
-                'description' => "Redeemed {$maxRedeem} points for Rp" . number_format($discountAmount, 0, ',', '.') . " discount",
+                'description' => "Redeemed {$maxRedeem} points for Rp".number_format($discountAmount, 0, ',', '.').' discount',
                 'created_at' => now(),
             ]);
 
@@ -166,7 +169,7 @@ class PointsService
         $referral = Referral::findOrFail($referralId);
         $referrer = User::findOrFail($referrerId);
 
-        DB::transaction(function () use ($referrerId, $referralId, $points, $referral) {
+        DB::transaction(function () use ($referrerId, $referralId, $points) {
             // Create ledger entry
             LoyaltyPoint::create([
                 'customer_id' => $referrerId,
@@ -228,7 +231,7 @@ class PointsService
 
         if (empty($user->referral_code)) {
             do {
-                $code = strtoupper(\Illuminate\Support\Str::random(6));
+                $code = strtoupper(Str::random(6));
             } while (User::where('referral_code', $code)->exists());
             $user->update(['referral_code' => $code]);
         }
@@ -248,7 +251,7 @@ class PointsService
     {
         $referrer = User::where('referral_code', $code)->first();
 
-        if (!$referrer || $referrer->id === $userId) {
+        if (! $referrer || $referrer->id === $userId) {
             return false; // Invalid or self-referral
         }
 

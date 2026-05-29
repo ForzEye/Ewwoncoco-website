@@ -4,9 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\OtpCode;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\File;
+use Inertia\Inertia;
 
 class MonitoringController extends Controller
 {
@@ -48,17 +47,17 @@ class MonitoringController extends Controller
     public function getErrorLogs()
     {
         $logPath = storage_path('logs/laravel.log');
-        if (!File::exists($logPath)) {
+        if (! File::exists($logPath)) {
             return response()->json([]);
         }
 
         $fileContent = File::get($logPath);
-        
+
         // Regex matching standard Laravel log lines e.g.: [2026-05-18 12:00:00] production.ERROR: ...
         $pattern = '/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]\s+([a-zA-Z0-9_-]+)\.([A-Z]+):\s+(.*?)(?=\n\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]|\z)/s';
-        
+
         preg_match_all($pattern, $fileContent, $matches, PREG_SET_ORDER);
-        
+
         $errors = [];
         $idIndex = 1;
 
@@ -70,7 +69,7 @@ class MonitoringController extends Controller
                 'level' => $match[3],
                 'message' => trim($match[4]),
             ];
-            
+
             // Limit response size to prevent UI lag (latest 100 errors)
             if ($idIndex > 100) {
                 break;
@@ -88,9 +87,10 @@ class MonitoringController extends Controller
         $logPath = storage_path('logs/laravel.log');
         if (File::exists($logPath)) {
             File::put($logPath, '');
+
             return response()->json(['success' => true, 'message' => 'Logs cleared successfully']);
         }
-        
+
         return response()->json(['success' => false, 'message' => 'Log file does not exist'], 404);
     }
 }

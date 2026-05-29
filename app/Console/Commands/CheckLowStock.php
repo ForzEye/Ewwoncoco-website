@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Notification\FCMService;
+use Illuminate\Console\Command;
 
 class CheckLowStock extends Command
 {
@@ -35,6 +35,7 @@ class CheckLowStock extends Command
 
         if ($lowStockProducts->isEmpty()) {
             $this->info('Semua stok aman.');
+
             return;
         }
 
@@ -43,7 +44,7 @@ class CheckLowStock extends Command
 
             // Cari Admin dari merchant ini
             $admins = User::where('role', 'admin')
-                ->whereHas('merchant', function($q) use ($product) {
+                ->whereHas('merchant', function ($q) use ($product) {
                     $q->where('id', $product->merchant_id);
                 })
                 ->whereNotNull('fcm_token')
@@ -56,8 +57,8 @@ class CheckLowStock extends Command
                     "Stok produk {$product->name} sisa {$product->stock}. Segera lakukan restock!",
                     [
                         'type' => 'low_stock_alert',
-                        'product_id' => (string)$product->id,
-                        'link' => '/admin/products'
+                        'product_id' => (string) $product->id,
+                        'link' => '/admin/products',
                     ]
                 );
             }

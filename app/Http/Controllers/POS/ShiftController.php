@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\POS;
 
 use App\Http\Controllers\Controller;
-use App\Models\PosShift;
 use App\Models\Branch;
+use App\Models\Order;
+use App\Models\PosShift;
+use App\Models\PosTransaction;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -25,16 +27,16 @@ class ShiftController extends Controller
         ];
 
         if ($activeShift) {
-            $breakdown['expected_cash'] = $activeShift->opening_cash + \App\Models\PosTransaction::where('shift_id', $activeShift->id)
+            $breakdown['expected_cash'] = $activeShift->opening_cash + PosTransaction::where('shift_id', $activeShift->id)
                 ->where('payment_method', 'cash')
                 ->sum('total');
 
-            $breakdown['expected_qris'] = \App\Models\PosTransaction::where('shift_id', $activeShift->id)
+            $breakdown['expected_qris'] = PosTransaction::where('shift_id', $activeShift->id)
                 ->where('payment_method', 'qris')
                 ->sum('total');
 
             // Online Orders from 'orders' table
-            $breakdown['expected_online'] = \App\Models\Order::where('merchant_id', $activeShift->merchant_id ?? 1)
+            $breakdown['expected_online'] = Order::where('merchant_id', $activeShift->merchant_id ?? 1)
                 ->where('branch_id', $activeShift->branch_id)
                 ->whereBetween('created_at', [$activeShift->opened_at, now()])
                 ->whereIn('status', ['completed', 'delivered', 'ready_for_pickup'])
@@ -46,7 +48,7 @@ class ShiftController extends Controller
         return Inertia::render('POS/Shifts', [
             'activeShift' => $activeShift,
             'branches' => $branches,
-            'breakdown' => array_map(fn($val) => (float)$val, $breakdown)
+            'breakdown' => array_map(fn ($val) => (float) $val, $breakdown),
         ]);
     }
 
@@ -65,7 +67,7 @@ class ShiftController extends Controller
 
         return Inertia::render('Admin/Shifts/Index', [
             'activeShifts' => $activeShifts,
-            'recentShifts' => $recentShifts
+            'recentShifts' => $recentShifts,
         ]);
     }
 
@@ -115,7 +117,7 @@ class ShiftController extends Controller
             ->whereNull('closed_at')
             ->first();
 
-        if (!$activeShift) {
+        if (! $activeShift) {
             return back()->with('error', 'Tidak ada shift aktif yang bisa ditutup.');
         }
 
@@ -126,7 +128,7 @@ class ShiftController extends Controller
             'closing_online' => $request->closing_online,
             'closing_grab' => $request->closing_grab,
             'closing_gojek' => $request->closing_gojek,
-            'notes' => $activeShift->notes . "\nClosed Notes: " . $request->notes,
+            'notes' => $activeShift->notes."\nClosed Notes: ".$request->notes,
         ]);
 
         return redirect()->route('pos.shifts')->with('success', 'Shift berhasil ditutup.');
@@ -137,14 +139,14 @@ class ShiftController extends Controller
      */
     public function unlock(Request $request, $id)
     {
-        if (!in_array($request->user()->role, ['admin', 'super_admin'])) {
+        if (! in_array($request->user()->role, ['admin', 'super_admin'])) {
             abort(403);
         }
 
         $shift = PosShift::findOrFail($id);
         $shift->update([
             'is_locked' => false,
-            'void_count' => 0 // Optional: reset count too
+            'void_count' => 0, // Optional: reset count too
         ]);
 
         return back()->with('success', 'Shift berhasil dibuka kuncinya.');
@@ -155,12 +157,12 @@ class ShiftController extends Controller
      */
     public function forceClose(Request $request, $id)
     {
-        if (!in_array($request->user()->role, ['admin', 'super_admin'])) {
+        if (! in_array($request->user()->role, ['admin', 'super_admin'])) {
             abort(403);
         }
 
         $shift = PosShift::findOrFail($id);
-        
+
         if ($shift->closed_at) {
             return back()->with('error', 'Shift sudah ditutup.');
         }
@@ -168,7 +170,7 @@ class ShiftController extends Controller
         $shift->update([
             'closed_at' => now(),
             'closing_cash' => $request->closing_cash ?? 0,
-            'notes' => $shift->notes . "\n[FORCE CLOSED BY ADMIN]",
+            'notes' => $shift->notes."\n[FORCE CLOSED BY ADMIN]",
         ]);
 
         return back()->with('success', 'Shift berhasil ditutup paksa.');

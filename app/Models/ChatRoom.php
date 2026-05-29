@@ -24,5 +24,5 @@ class ChatRoom extends Model
     }
 }
 
-// Separate file for ChatMessage or same file? I'll put it in separate for clarity later if needed, 
+// Separate file for ChatMessage or same file? I'll put it in separate for clarity later if needed,
 // but for now I'll write another file call.

@@ -20,7 +20,7 @@ class Format
             return 'Rp 0';
         }
 
-        return 'Rp ' . number_format((float) $amount, 0, ',', '.');
+        return 'Rp '.number_format((float) $amount, 0, ',', '.');
     }
 
     /**
@@ -36,15 +36,15 @@ class Format
         $amount = (float) $amount;
 
         if ($amount >= 1_000_000_000) {
-            return 'Rp ' . number_format($amount / 1_000_000_000, 1, ',', '.') . ' M';
+            return 'Rp '.number_format($amount / 1_000_000_000, 1, ',', '.').' M';
         }
 
         if ($amount >= 1_000_000) {
-            return 'Rp ' . number_format($amount / 1_000_000, 1, ',', '.') . ' jt';
+            return 'Rp '.number_format($amount / 1_000_000, 1, ',', '.').' jt';
         }
 
         if ($amount >= 1_000) {
-            return 'Rp ' . number_format($amount / 1_000, 0, ',', '.') . ' rb';
+            return 'Rp '.number_format($amount / 1_000, 0, ',', '.').' rb';
         }
 
         return static::rupiah($amount);
@@ -110,6 +110,6 @@ class Format
      */
     public static function persen(float|int|null $num, int $decimals = 0): string
     {
-        return number_format((float) ($num ?? 0), $decimals, ',', '.') . '%';
+        return number_format((float) ($num ?? 0), $decimals, ',', '.').'%';
     }
 }

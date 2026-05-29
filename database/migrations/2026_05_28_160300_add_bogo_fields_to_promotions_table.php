@@ -33,7 +33,7 @@ return new class extends Migration
             $table->dropForeign(['buy_product_id']);
             $table->dropForeign(['get_product_id']);
             $table->dropColumn(['buy_product_id', 'get_product_id', 'buy_quantity', 'get_quantity']);
-            
+
             // Revert type back to enum if needed, but keeping it as string is usually fine.
         });
     }

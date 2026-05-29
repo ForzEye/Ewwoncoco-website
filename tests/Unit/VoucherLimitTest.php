@@ -2,12 +2,14 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
-use App\Services\VoucherService;
+use App\Models\Branch;
+use App\Models\Merchant;
+use App\Models\Order;
 use App\Models\User;
 use App\Models\Voucher;
-use App\Models\Order;
+use App\Services\VoucherService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class VoucherLimitTest extends TestCase
 {
@@ -18,7 +20,7 @@ class VoucherLimitTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $merchant = \App\Models\Merchant::create([
+        $merchant = Merchant::create([
             'owner_id' => $user->id,
             'name' => 'EWWON COCO Test App',
             'slug' => 'ewwon-coco-test-app',
@@ -29,7 +31,7 @@ class VoucherLimitTest extends TestCase
             'is_active' => true,
         ]);
 
-        $branch = \App\Models\Branch::create([
+        $branch = Branch::create([
             'merchant_id' => $merchant->id,
             'name' => 'Cabang Test App',
             'address' => 'Test Cabang App Address',

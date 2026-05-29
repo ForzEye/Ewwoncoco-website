@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Merchant;
 use App\Models\User;
-use App\Models\Voucher;
 use App\Models\UserPointsBalance;
+use App\Models\Voucher;
 use App\Services\VoucherService;
-use App\Services\PointsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,6 +15,7 @@ class VoucherLoyaltyTest extends TestCase
     use RefreshDatabase;
 
     private $user;
+
     private $merchant;
 
     protected function setUp(): void
@@ -23,7 +24,7 @@ class VoucherLoyaltyTest extends TestCase
 
         $this->user = User::factory()->create();
 
-        $this->merchant = \App\Models\Merchant::create([
+        $this->merchant = Merchant::create([
             'owner_id' => $this->user->id,
             'name' => 'EWWON COCO Test',
             'slug' => 'ewwon-coco-test',
@@ -64,7 +65,7 @@ class VoucherLoyaltyTest extends TestCase
         $response = VoucherService::redeemVoucher($template->id, $this->user->id);
 
         $this->assertTrue($response['success']);
-        
+
         // Assert points deducted
         $balanceRecord->refresh();
         $this->assertEquals(50, $balanceRecord->balance);
@@ -72,7 +73,7 @@ class VoucherLoyaltyTest extends TestCase
         // Assert unique user voucher clone was created
         $userVouchers = Voucher::where('user_id', $this->user->id)->get();
         $this->assertCount(1, $userVouchers);
-        
+
         $clonedVoucher = $userVouchers->first();
         $this->assertEquals('Diskon 10 Ribu Eksklusif', $clonedVoucher->name);
         $this->assertStringStartsWith('RDM-COCO10K-', $clonedVoucher->code);

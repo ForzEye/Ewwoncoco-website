@@ -1,26 +1,36 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\AdminSettingsController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\IngredientController;
+use App\Http\Controllers\Admin\MarketingController;
+use App\Http\Controllers\Admin\MerchantOrderController;
+use App\Http\Controllers\Admin\MerchantProductController;
+use App\Http\Controllers\Admin\MonitoringController;
+use App\Http\Controllers\Admin\RecipeController;
+use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\StockManagementController;
+use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Api\AdminPointsController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleController;
-use App\Http\Controllers\LandingController;
-use App\Http\Controllers\Customer\CustomerController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Customer\CartController;
-use App\Http\Controllers\Customer\OrderController;
+use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\LoyaltyController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\MerchantProductController;
-use App\Http\Controllers\Admin\MerchantOrderController;
+use App\Http\Controllers\Customer\OrderController;
+use App\Http\Controllers\Customer\ReferralController;
+use App\Http\Controllers\Customer\ReviewController;
+use App\Http\Controllers\LandingController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\POS\OnlineOrderController;
 use App\Http\Controllers\POS\POSController;
 use App\Http\Controllers\POS\ShiftController;
 use App\Http\Controllers\POS\TransactionController;
-use App\Http\Controllers\Api\AdminPointsController;
-use App\Http\Controllers\SuperAdmin\SuperAdminController;
 use App\Http\Controllers\SuperAdmin\BranchManagementController;
-use App\Http\Controllers\Admin\AdminSettingsController;
-use App\Http\Controllers\SuperAdmin\SuperAdminSettingsController;
+use App\Http\Controllers\SuperAdmin\SuperAdminController;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\MonitoringController;
 
 /*
 |--------------------------------------------------------------------------
@@ -86,23 +96,23 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [CustomerController::class, 'profile'])->name('profile');
 
     Route::get('/loyalty', [LoyaltyController::class, 'index'])->name('loyalty');
-    Route::get('/referral', [\App\Http\Controllers\Customer\ReferralController::class, 'index'])->name('referral');
+    Route::get('/referral', [ReferralController::class, 'index'])->name('referral');
 
     // Reviews
-    Route::post('/reviews', [\App\Http\Controllers\Customer\ReviewController::class, 'store'])->name('reviews.store');
-    Route::get('/api/products/{id}/reviews', [\App\Http\Controllers\Customer\ReviewController::class, 'productReviews'])->name('api.product.reviews');
+    Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+    Route::get('/api/products/{id}/reviews', [ReviewController::class, 'productReviews'])->name('api.product.reviews');
 
     // Chat
-    Route::get('/chats', [\App\Http\Controllers\ChatController::class, 'index'])->name('chat.index');
-    Route::get('/chats/merchant/{merchantId}', [\App\Http\Controllers\ChatController::class, 'openRoom'])->name('chat.open');
-    Route::get('/chats/{id}', [\App\Http\Controllers\ChatController::class, 'show'])->name('chat.show');
-    Route::post('/chats/{id}/send', [\App\Http\Controllers\ChatController::class, 'sendMessage'])->name('chat.send');
+    Route::get('/chats', [ChatController::class, 'index'])->name('chat.index');
+    Route::get('/chats/merchant/{merchantId}', [ChatController::class, 'openRoom'])->name('chat.open');
+    Route::get('/chats/{id}', [ChatController::class, 'show'])->name('chat.show');
+    Route::post('/chats/{id}/send', [ChatController::class, 'sendMessage'])->name('chat.send');
 
     // Delivery API (Internal)
     Route::get('/api/delivery/quote', [OrderController::class, 'getDeliveryQuote'])->name('delivery.quote');
 
     // FCM Notification
-    Route::post('/api/notifications/token', [\App\Http\Controllers\NotificationController::class, 'updateToken'])->name('notifications.token');
+    Route::post('/api/notifications/token', [NotificationController::class, 'updateToken'])->name('notifications.token');
 });
 
 /*
@@ -113,7 +123,7 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // Products
     Route::get('/products', [MerchantProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [MerchantProductController::class, 'create'])->name('products.create');
@@ -128,44 +138,50 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     Route::post('/orders/{id}/status', [MerchantOrderController::class, 'updateStatus'])->name('orders.status');
 
     // Placeholders for other admin features
-    Route::get('/inventory', function () { return Inertia::render('Admin/Inventory'); })->name('inventory');
-    Route::get('/analytics', function () { return Inertia::render('Admin/Analytics'); })->name('analytics');
-    Route::get('/vouchers', [\App\Http\Controllers\Admin\VoucherController::class, 'index'])->name('vouchers');
-    Route::post('/vouchers', [\App\Http\Controllers\Admin\VoucherController::class, 'store'])->name('vouchers.store');
-    Route::post('/vouchers/{id}/toggle', [\App\Http\Controllers\Admin\VoucherController::class, 'toggle'])->name('vouchers.toggle');
-    Route::delete('/vouchers/{id}', [\App\Http\Controllers\Admin\VoucherController::class, 'destroy'])->name('vouchers.destroy');
+    Route::get('/inventory', function () {
+        return Inertia::render('Admin/Inventory');
+    })->name('inventory');
+    Route::get('/analytics', function () {
+        return Inertia::render('Admin/Analytics');
+    })->name('analytics');
+    Route::get('/vouchers', [VoucherController::class, 'index'])->name('vouchers');
+    Route::post('/vouchers', [VoucherController::class, 'store'])->name('vouchers.store');
+    Route::post('/vouchers/{id}/toggle', [VoucherController::class, 'toggle'])->name('vouchers.toggle');
+    Route::delete('/vouchers/{id}', [VoucherController::class, 'destroy'])->name('vouchers.destroy');
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
     Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
-    Route::get('/pos-history', function () { return Inertia::render('Admin/POSHistory'); })->name('pos-history');
+    Route::get('/pos-history', function () {
+        return Inertia::render('Admin/POSHistory');
+    })->name('pos-history');
 
     // Reports & Analytics
-    Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
-    Route::get('/reports/export', [\App\Http\Controllers\Admin\ReportController::class, 'exportCsv'])->name('reports.export');
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [ReportController::class, 'exportCsv'])->name('reports.export');
 
     // Marketing
-    Route::get('/marketing', [\App\Http\Controllers\Admin\MarketingController::class, 'index'])->name('marketing.index');
-    Route::post('/marketing', [\App\Http\Controllers\Admin\MarketingController::class, 'store'])->name('marketing.store');
-    Route::post('/marketing/{id}/toggle', [\App\Http\Controllers\Admin\MarketingController::class, 'toggle'])->name('marketing.toggle');
-    Route::delete('/marketing/{id}', [\App\Http\Controllers\Admin\MarketingController::class, 'destroy'])->name('marketing.destroy');
-    
+    Route::get('/marketing', [MarketingController::class, 'index'])->name('marketing.index');
+    Route::post('/marketing', [MarketingController::class, 'store'])->name('marketing.store');
+    Route::post('/marketing/{id}/toggle', [MarketingController::class, 'toggle'])->name('marketing.toggle');
+    Route::delete('/marketing/{id}', [MarketingController::class, 'destroy'])->name('marketing.destroy');
+
     // Inventory & Recipe Management
-    Route::get('/inventory/ingredients', [\App\Http\Controllers\Admin\IngredientController::class, 'index'])->name('inventory.ingredients.index');
-    Route::post('/inventory/ingredients', [\App\Http\Controllers\Admin\IngredientController::class, 'store'])->name('inventory.ingredients.store');
-    Route::post('/inventory/ingredients/{id}', [\App\Http\Controllers\Admin\IngredientController::class, 'update'])->name('inventory.ingredients.update');
-    Route::delete('/inventory/ingredients/{id}', [\App\Http\Controllers\Admin\IngredientController::class, 'destroy'])->name('inventory.ingredients.destroy');
+    Route::get('/inventory/ingredients', [IngredientController::class, 'index'])->name('inventory.ingredients.index');
+    Route::post('/inventory/ingredients', [IngredientController::class, 'store'])->name('inventory.ingredients.store');
+    Route::post('/inventory/ingredients/{id}', [IngredientController::class, 'update'])->name('inventory.ingredients.update');
+    Route::delete('/inventory/ingredients/{id}', [IngredientController::class, 'destroy'])->name('inventory.ingredients.destroy');
 
-    Route::get('/inventory/stock', [\App\Http\Controllers\Admin\StockManagementController::class, 'index'])->name('inventory.stock.index');
-    Route::post('/inventory/stock/in', [\App\Http\Controllers\Admin\StockManagementController::class, 'stockIn'])->name('inventory.stock.in');
-    Route::post('/inventory/stock/adjust', [\App\Http\Controllers\Admin\StockManagementController::class, 'stockAdjust'])->name('inventory.stock.adjust');
+    Route::get('/inventory/stock', [StockManagementController::class, 'index'])->name('inventory.stock.index');
+    Route::post('/inventory/stock/in', [StockManagementController::class, 'stockIn'])->name('inventory.stock.in');
+    Route::post('/inventory/stock/adjust', [StockManagementController::class, 'stockAdjust'])->name('inventory.stock.adjust');
 
-    Route::get('/inventory/recipes', [\App\Http\Controllers\Admin\RecipeController::class, 'index'])->name('inventory.recipes.index');
-    Route::post('/inventory/recipes', [\App\Http\Controllers\Admin\RecipeController::class, 'store'])->name('inventory.recipes.store');
-    Route::delete('/inventory/recipes/{id}', [\App\Http\Controllers\Admin\RecipeController::class, 'destroy'])->name('inventory.recipes.destroy');
+    Route::get('/inventory/recipes', [RecipeController::class, 'index'])->name('inventory.recipes.index');
+    Route::post('/inventory/recipes', [RecipeController::class, 'store'])->name('inventory.recipes.store');
+    Route::delete('/inventory/recipes/{id}', [RecipeController::class, 'destroy'])->name('inventory.recipes.destroy');
 
     // Shift Management (Admin)
-    Route::get('/shifts', [\App\Http\Controllers\POS\ShiftController::class, 'adminIndex'])->name('shifts.index');
-    Route::post('/shifts/{id}/unlock', [\App\Http\Controllers\POS\ShiftController::class, 'unlock'])->name('shifts.unlock');
-    Route::post('/shifts/{id}/force-close', [\App\Http\Controllers\POS\ShiftController::class, 'forceClose'])->name('shifts.force_close');
+    Route::get('/shifts', [ShiftController::class, 'adminIndex'])->name('shifts.index');
+    Route::post('/shifts/{id}/unlock', [ShiftController::class, 'unlock'])->name('shifts.unlock');
+    Route::post('/shifts/{id}/force-close', [ShiftController::class, 'forceClose'])->name('shifts.force_close');
 });
 
 /*
@@ -189,10 +205,10 @@ Route::middleware(['auth', 'role:kasir,super_admin'])->prefix('pos')->name('pos.
     Route::post('/history/{id}/void', [TransactionController::class, 'void'])->name('transactions.void');
 
     // Online Orders (POS)
-    Route::get('/online-orders', [\App\Http\Controllers\POS\OnlineOrderController::class, 'index'])->name('online_orders.index');
-    Route::post('/online-orders/{id}/accept', [\App\Http\Controllers\POS\OnlineOrderController::class, 'accept'])->name('online_orders.accept');
-    Route::post('/online-orders/{id}/reject', [\App\Http\Controllers\POS\OnlineOrderController::class, 'reject'])->name('online_orders.reject');
-    Route::post('/online-orders/{id}/status', [\App\Http\Controllers\POS\OnlineOrderController::class, 'updateStatus'])->name('online_orders.status');
+    Route::get('/online-orders', [OnlineOrderController::class, 'index'])->name('online_orders.index');
+    Route::post('/online-orders/{id}/accept', [OnlineOrderController::class, 'accept'])->name('online_orders.accept');
+    Route::post('/online-orders/{id}/reject', [OnlineOrderController::class, 'reject'])->name('online_orders.reject');
+    Route::post('/online-orders/{id}/status', [OnlineOrderController::class, 'updateStatus'])->name('online_orders.status');
 });
 
 /*
@@ -203,7 +219,7 @@ Route::middleware(['auth', 'role:kasir,super_admin'])->prefix('pos')->name('pos.
 
 Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('superadmin.')->group(function () {
     Route::get('/', [SuperAdminController::class, 'dashboard'])->name('dashboard');
-    
+
     // User Management
     Route::get('/users', [SuperAdminController::class, 'users'])->name('users');
     Route::post('/users', [SuperAdminController::class, 'storeUser'])->name('users.store');

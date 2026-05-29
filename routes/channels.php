@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\ChatRoom;
+use App\Models\DeliveryRequest;
+use App\Models\Merchant;
+use App\Models\Order;
 use Illuminate\Support\Facades\Broadcast;
 
 // Channel authorization untuk order tracking
@@ -9,7 +13,8 @@ Broadcast::channel('order.{orderId}', function ($user, $orderId) {
     if (in_array($user->role, ['admin', 'super_admin', 'kasir'])) {
         return true;
     }
-    return \App\Models\Order::where('id', $orderId)
+
+    return Order::where('id', $orderId)
         ->where('customer_id', $user->id)
         ->exists();
 });
@@ -19,7 +24,8 @@ Broadcast::channel('delivery.{deliveryId}', function ($user, $deliveryId) {
     if (in_array($user->role, ['admin', 'super_admin'])) {
         return true;
     }
-    return \App\Models\DeliveryRequest::whereHas('order', function ($q) use ($user) {
+
+    return DeliveryRequest::whereHas('order', function ($q) use ($user) {
         $q->where('customer_id', $user->id);
     })->where('id', $deliveryId)->exists();
 });
@@ -30,21 +36,23 @@ Broadcast::channel('merchant.{merchantId}.orders', function ($user, $merchantId)
     if ($user->role === 'super_admin') {
         return true;
     }
-    
+
     // Admin or Kasir can access their own merchant's orders
     if (in_array($user->role, ['admin', 'kasir'])) {
-        return $user->merchant_id == $merchantId || \App\Models\Merchant::where('id', $merchantId)
+        return $user->merchant_id == $merchantId || Merchant::where('id', $merchantId)
             ->where('owner_id', $user->id)
             ->exists();
     }
-    
+
     return false;
 });
 
 // Channel Chat
 Broadcast::channel('chat.{roomId}', function ($user, $roomId) {
-    $room = \App\Models\ChatRoom::find($roomId);
-    if (!$room) return false;
+    $room = ChatRoom::find($roomId);
+    if (! $room) {
+        return false;
+    }
 
     // Customer dapat mengakses jika ini room miliknya
     if ($user->role === 'customer') {
@@ -53,5 +61,6 @@ Broadcast::channel('chat.{roomId}', function ($user, $roomId) {
 
     // Admin/Merchant dapat mengakses jika room ini milik merchant-nya
     $merchant = $user->merchant;
+
     return $merchant && $merchant->id === $room->merchant_id;
 });

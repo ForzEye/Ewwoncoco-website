@@ -47,23 +47,23 @@ class GoogleController extends Controller
         } else {
             // Buat user baru (role: customer)
             $user = User::create([
-                'name'      => $googleUser->getName(),
-                'email'     => $googleUser->getEmail(),
+                'name' => $googleUser->getName(),
+                'email' => $googleUser->getEmail(),
                 'google_id' => $googleUser->getId(),
-                'avatar_url'=> $googleUser->getAvatar(),
-                'password'  => null,
-                'role'      => 'customer',
+                'avatar_url' => $googleUser->getAvatar(),
+                'password' => null,
+                'role' => 'customer',
                 'is_active' => true,
             ]);
         }
 
         Auth::login($user);
 
-        return match($user->role) {
+        return match ($user->role) {
             'super_admin' => redirect()->route('superadmin.dashboard'),
-            'admin'       => redirect()->route('admin.dashboard'),
-            'kasir'       => redirect()->route('pos.screen'),
-            default       => redirect()->route('shop'),
+            'admin' => redirect()->route('admin.dashboard'),
+            'kasir' => redirect()->route('pos.screen'),
+            default => redirect()->route('shop'),
         };
     }
 }

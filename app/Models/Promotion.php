@@ -14,9 +14,9 @@ class Promotion extends Model
 
     protected $casts = [
         'start_date' => 'datetime',
-        'end_date'   => 'datetime',
-        'is_active'  => 'boolean',
-        'value'      => 'decimal:2',
+        'end_date' => 'datetime',
+        'is_active' => 'boolean',
+        'value' => 'decimal:2',
         'min_purchase' => 'decimal:2',
         'max_reward' => 'decimal:2',
         'buy_quantity' => 'integer',

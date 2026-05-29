@@ -2,16 +2,16 @@
 
 namespace App\Jobs;
 
-use App\Models\Order;
-use App\Models\DeliveryRequest;
-use App\Events\OrderStatusUpdated;
 use App\Events\DriverLocationUpdated;
+use App\Events\OrderStatusUpdated;
+use App\Models\DeliveryRequest;
+use App\Models\Order;
+use App\Services\Delivery\DeliveryServiceInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use App\Services\Delivery\DeliveryServiceInterface;
 
 class SimulateDeliveryJob implements ShouldQueue
 {
@@ -27,11 +27,11 @@ class SimulateDeliveryJob implements ShouldQueue
     public function handle(DeliveryServiceInterface $deliveryService): void
     {
         $order = Order::with(['branch', 'delivery_request'])->findOrFail($this->orderId);
-        
+
         // 1. Book Courier (Mock)
         $origin = ['lat' => $order->branch->lat ?? -6.2, 'lng' => $order->branch->lng ?? 106.8];
         $destination = ['lat' => $order->delivery_lat, 'lng' => $order->delivery_lng];
-        
+
         $booking = $deliveryService->bookCourier($order->id, $origin, $destination, $order->payment_method); // payment_method used as provider here for simplicity in mock
 
         $deliveryRequest = DeliveryRequest::create([
@@ -47,7 +47,7 @@ class SimulateDeliveryJob implements ShouldQueue
         ]);
 
         // 2. Simulate Timeline
-        
+
         // Finding -> Pickup (5s)
         sleep(5);
         $deliveryRequest->update(['status' => 'on_pickup']);

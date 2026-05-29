@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Merchant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class BranchManagementController extends Controller
@@ -26,7 +27,7 @@ class BranchManagementController extends Controller
         return Inertia::render('SuperAdmin/Branches', [
             'branches' => $branches,
             'merchants' => $merchants,
-            'filters' => $request->only(['search'])
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -42,7 +43,7 @@ class BranchManagementController extends Controller
         ]);
 
         Branch::create($request->all());
-        \Illuminate\Support\Facades\Cache::forget('outlets_active');
+        Cache::forget('outlets_active');
 
         return back()->with('success', 'Cabang berhasil ditambahkan.');
     }
@@ -58,7 +59,7 @@ class BranchManagementController extends Controller
 
         $branch = Branch::findOrFail($id);
         $branch->update($request->all());
-        \Illuminate\Support\Facades\Cache::forget('outlets_active');
+        Cache::forget('outlets_active');
 
         return back()->with('success', 'Cabang berhasil diperbarui.');
     }
@@ -67,7 +68,7 @@ class BranchManagementController extends Controller
     {
         $branch = Branch::findOrFail($id);
         $branch->delete();
-        \Illuminate\Support\Facades\Cache::forget('outlets_active');
+        Cache::forget('outlets_active');
 
         return back()->with('success', 'Cabang berhasil dihapus.');
     }

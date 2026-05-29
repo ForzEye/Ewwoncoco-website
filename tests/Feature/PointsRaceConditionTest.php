@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Branch;
+use App\Models\Merchant;
+use App\Models\Order;
 use App\Models\User;
 use App\Models\UserPointsBalance;
-use App\Models\Order;
 use App\Services\PointsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -18,8 +20,8 @@ class PointsRaceConditionTest extends TestCase
     public function it_safeguards_against_double_spending_points_using_pessimistic_lock()
     {
         $user = User::factory()->create();
-        
-        $merchant = \App\Models\Merchant::create([
+
+        $merchant = Merchant::create([
             'owner_id' => $user->id,
             'name' => 'EWWON COCO Test',
             'slug' => 'ewwon-coco-test',
@@ -30,7 +32,7 @@ class PointsRaceConditionTest extends TestCase
             'is_active' => true,
         ]);
 
-        $branch = \App\Models\Branch::create([
+        $branch = Branch::create([
             'merchant_id' => $merchant->id,
             'name' => 'Cabang Test',
             'address' => 'Test Cabang Address',
@@ -39,7 +41,7 @@ class PointsRaceConditionTest extends TestCase
             'lng' => 106.8456,
             'is_active' => true,
         ]);
-        
+
         $balanceRecord = UserPointsBalance::create([
             'user_id' => $user->id,
             'balance' => 50,
@@ -74,14 +76,14 @@ class PointsRaceConditionTest extends TestCase
 
         // Simulating 2 concurrent processes in a transaction flow
         DB::beginTransaction();
-        
+
         // Process A locks balance of 50
         $resA = PointsService::redeemPoints($user->id, $order1->id);
 
         // Process B attempts to lock simultaneously but will see updated/locked output or block.
         // In local serial testing, after A commits or continues, B gets the remaining.
         // We will simulate their interaction on the locked model directly.
-        
+
         DB::commit();
 
         $balanceRecord->refresh();

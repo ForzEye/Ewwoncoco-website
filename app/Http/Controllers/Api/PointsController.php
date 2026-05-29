@@ -145,11 +145,11 @@ class PointsController extends Controller
             ];
             $fileContent = file_get_contents($file->getRealPath());
             $magicBytes = bin2hex(substr($fileContent, 0, 3));
-            
-            if (!isset($allowedMagicBytes[$magicBytes])) {
+
+            if (! isset($allowedMagicBytes[$magicBytes])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Format gambar tidak valid atau berbahaya.'
+                    'message' => 'Format gambar tidak valid atau berbahaya.',
                 ], 422);
             }
         }

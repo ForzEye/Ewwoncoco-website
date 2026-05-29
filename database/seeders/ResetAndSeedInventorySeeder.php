@@ -2,21 +2,21 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use App\Models\Branch;
+use App\Models\BranchIngredient;
+use App\Models\Ingredient;
+use App\Models\LoyaltyPoint;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\PosShift;
 use App\Models\PosTransaction;
 use App\Models\PosTransactionItem;
-use App\Models\PosShift;
-use App\Models\LoyaltyPoint;
-use App\Models\StockMovement;
-use App\Models\Review;
-use App\Models\Ingredient;
-use App\Models\Recipe;
-use App\Models\BranchIngredient;
 use App\Models\Product;
-use App\Models\Branch;
+use App\Models\Recipe;
+use App\Models\Review;
+use App\Models\StockMovement;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ResetAndSeedInventorySeeder extends Seeder
 {
@@ -24,7 +24,7 @@ class ResetAndSeedInventorySeeder extends Seeder
     {
         // 1. Reset Sales Data
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        
+
         Order::truncate();
         OrderItem::truncate();
         PosTransaction::truncate();
@@ -33,12 +33,12 @@ class ResetAndSeedInventorySeeder extends Seeder
         LoyaltyPoint::truncate();
         StockMovement::truncate();
         Review::truncate();
-        
+
         // Also clear inventory related to start fresh
         Ingredient::truncate();
         Recipe::truncate();
         BranchIngredient::truncate();
-        
+
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         $merchantId = 1; // Default merchant
@@ -81,7 +81,7 @@ class ResetAndSeedInventorySeeder extends Seeder
 
         foreach ($products as $product) {
             $name = strtolower($product->name);
-            
+
             // Default: Every product uses a Cup and a Straw
             Recipe::create(['product_id' => $product->id, 'ingredient_id' => $ingMap['Cup Ewwon 16oz'], 'quantity' => 1]);
             Recipe::create(['product_id' => $product->id, 'ingredient_id' => $ingMap['Sedotan Bambu'], 'quantity' => 1]);

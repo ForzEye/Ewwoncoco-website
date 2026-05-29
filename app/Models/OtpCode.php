@@ -22,7 +22,7 @@ class OtpCode extends Model
 
     protected $casts = [
         'expires_at' => 'datetime',
-        'is_used'    => 'boolean',
+        'is_used' => 'boolean',
     ];
 
     public $timestamps = true;

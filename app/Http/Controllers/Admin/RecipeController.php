@@ -14,7 +14,7 @@ class RecipeController extends Controller
     public function index()
     {
         $merchantId = auth()->user()->merchant_id;
-        
+
         $products = Product::where('merchant_id', $merchantId)
             ->with(['recipes.ingredient', 'category'])
             ->get();
@@ -23,7 +23,7 @@ class RecipeController extends Controller
 
         return Inertia::render('Admin/Inventory/Recipes', [
             'products' => $products,
-            'ingredients' => $ingredients
+            'ingredients' => $ingredients,
         ]);
     }
 

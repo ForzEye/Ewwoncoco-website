@@ -3,16 +3,19 @@
 namespace App\Http\Controllers\POS;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
-use App\Models\ProductCategory;
-use App\Models\Order;
+use App\Models\PosShift;
 use App\Models\PosTransaction;
 use App\Models\PosTransactionItem;
-use App\Models\PosShift;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
+use App\Models\Product;
+use App\Models\ProductCategory;
+use App\Models\Promotion;
+use App\Services\Notification\WhatsAppService;
+use App\Services\PointsService;
 use App\Services\StockService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class POSController extends Controller
 {
@@ -23,13 +26,13 @@ class POSController extends Controller
             ->whereNull('closed_at')
             ->first();
 
-        if (!$activeShift) {
+        if (! $activeShift) {
             return redirect()->route('pos.shifts')->with('warning', 'Silakan buka shift kasir terlebih dahulu.');
         }
 
         if ($activeShift->is_locked) {
             return Inertia::render('POS/Locked', [
-                'activeShift' => $activeShift->load('branch')
+                'activeShift' => $activeShift->load('branch'),
             ]);
         }
 
@@ -37,7 +40,7 @@ class POSController extends Controller
         $categories = ProductCategory::all();
 
         $merchantId = $user->merchant_id ?? 1;
-        $promotions = \App\Models\Promotion::active()
+        $promotions = Promotion::active()
             ->where('merchant_id', $merchantId)
             ->where('type', 'bogo')
             ->whereIn('applicable_on', ['offline', 'all'])
@@ -47,7 +50,7 @@ class POSController extends Controller
             'products' => $products,
             'categories' => $categories,
             'activeShift' => $activeShift->load('branch'),
-            'promotions' => $promotions
+            'promotions' => $promotions,
         ]);
     }
 
@@ -61,23 +64,23 @@ class POSController extends Controller
         ]);
 
         $user = $request->user();
-        
+
         // Cek shift aktif
         $activeShift = PosShift::where('cashier_id', $user->id)
             ->whereNull('closed_at')
             ->first();
 
-        if (!$activeShift) {
+        if (! $activeShift) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda harus membuka shift terlebih dahulu.'
+                'message' => 'Anda harus membuka shift terlebih dahulu.',
             ], 403);
         }
 
         if ($activeShift->is_locked) {
             return response()->json([
                 'success' => false,
-                'message' => 'POS Terkunci! Silakan hubungi admin.'
+                'message' => 'POS Terkunci! Silakan hubungi admin.',
             ], 403);
         }
 
@@ -91,7 +94,7 @@ class POSController extends Controller
             $branchId = $activeShift->branch_id;
 
             // Fetch active BOGO promotions for this merchant
-            $bogoPromosCollection = \App\Models\Promotion::active()
+            $bogoPromosCollection = Promotion::active()
                 ->where('merchant_id', $merchantId)
                 ->where('type', 'bogo')
                 ->whereIn('applicable_on', ['offline', 'all'])
@@ -109,7 +112,7 @@ class POSController extends Controller
                 'cashier_id' => $user->id,
                 'customer_id' => $request->customer_id, // Add customer support
                 'shift_id' => $activeShift->id,
-                'transaction_number' => 'POS-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3))),
+                'transaction_number' => 'POS-'.date('Ymd').'-'.strtoupper(bin2hex(random_bytes(3))),
                 'payment_method' => $request->payment_method,
                 'total' => $subtotal,
                 'discount' => 0,
@@ -120,7 +123,7 @@ class POSController extends Controller
 
             // Handle Point Redemption if customer is selected
             if ($request->customer_id && $request->boolean('use_points', false)) {
-                \App\Services\PointsService::redeemPoints($request->customer_id, $transaction->id, 'pos_transaction');
+                PointsService::redeemPoints($request->customer_id, $transaction->id, 'pos_transaction');
                 $transaction->refresh();
             }
 
@@ -143,10 +146,10 @@ class POSController extends Controller
 
                 // Deduct Ingredients based on Recipe
                 StockService::deductFromRecipe(
-                    $productId, 
-                    $branchId, 
-                    $qty, 
-                    $transaction->transaction_number, 
+                    $productId,
+                    $branchId,
+                    $qty,
+                    $transaction->transaction_number,
                     'PosTransaction'
                 );
 
@@ -176,19 +179,19 @@ class POSController extends Controller
                             'quantity' => $freeQty,
                             'unit_price' => 0,
                             'subtotal' => 0,
-                            'notes' => 'PROMO BOGO: ' . $promo->name
+                            'notes' => 'PROMO BOGO: '.$promo->name,
                         ]);
 
                         // Reduce Stock of free product
                         $freeProduct = Product::find($freeProductId);
                         if ($freeProduct) {
                             $freeProduct->decrement('stock', $freeQty);
-                            
+
                             StockService::deductFromRecipe(
-                                $freeProductId, 
-                                $branchId, 
-                                $freeQty, 
-                                $transaction->transaction_number, 
+                                $freeProductId,
+                                $branchId,
+                                $freeQty,
+                                $transaction->transaction_number,
                                 'PosTransaction'
                             );
                         }
@@ -198,21 +201,21 @@ class POSController extends Controller
 
             // Award points for this purchase if customer is selected
             if ($transaction->customer_id) {
-                \App\Services\PointsService::earnPoints($transaction->customer_id, $transaction->id, 'pos_transaction');
+                PointsService::earnPoints($transaction->customer_id, $transaction->id, 'pos_transaction');
 
                 // Send premium WhatsApp receipt
                 try {
-                    $waService = app(\App\Services\Notification\WhatsAppService::class);
+                    $waService = app(WhatsAppService::class);
                     $waService->sendOfflineReceipt($transaction);
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("Failed to send WA offline receipt: " . $e->getMessage());
+                    Log::error('Failed to send WA offline receipt: '.$e->getMessage());
                 }
             }
 
             return response()->json([
                 'success' => true,
                 'transaction' => $transaction->load(['items.product', 'merchant', 'branch']),
-                'message' => 'Transaksi berhasil'
+                'message' => 'Transaksi berhasil',
             ]);
         });
     }

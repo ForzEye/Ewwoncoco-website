@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class RateLimitingTest extends TestCase
@@ -21,7 +20,7 @@ class RateLimitingTest extends TestCase
         for ($i = 0; $i < 6; $i++) {
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/v1/orders', [
-                    'branch_id' => 9991 // Invalid, triggers early parsing or throttling
+                    'branch_id' => 9991, // Invalid, triggers early parsing or throttling
                 ]);
 
             if ($i >= 5) {
@@ -40,7 +39,7 @@ class RateLimitingTest extends TestCase
         for ($i = 0; $i < 11; $i++) {
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/v1/vouchers/validate', [
-                    'voucher_code' => 'DISCOUNT' . $i
+                    'voucher_code' => 'DISCOUNT'.$i,
                 ]);
 
             if ($i >= 10) {

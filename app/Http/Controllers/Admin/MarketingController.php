@@ -3,18 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Promotion;
 use App\Models\Product;
+use App\Models\Promotion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class MarketingController extends Controller
 {
     public function index()
     {
-        $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
-        if (!$merchant) {
+        $merchant = Auth::user()->merchant;
+        if (! $merchant) {
             return redirect()->route('admin.dashboard')->with('error', 'Anda tidak memiliki toko yang terdaftar.');
         }
 
@@ -27,7 +28,7 @@ class MarketingController extends Controller
 
         return Inertia::render('Admin/Marketing/Index', [
             'promotions' => $promotions,
-            'products' => $products
+            'products' => $products,
         ]);
     }
 
@@ -47,8 +48,10 @@ class MarketingController extends Controller
             'applicable_on' => 'required|in:all,online,offline',
         ]);
 
-        $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
-        if (!$merchant) return back()->with('error', 'Toko tidak ditemukan.');
+        $merchant = Auth::user()->merchant;
+        if (! $merchant) {
+            return back()->with('error', 'Toko tidak ditemukan.');
+        }
 
         Promotion::create([
             'merchant_id' => $merchant->id,
@@ -60,41 +63,45 @@ class MarketingController extends Controller
             'max_reward' => $request->max_reward,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
-            'buy_product_id' => ($request->buy_product_id === 'all' || !$request->buy_product_id) ? null : $request->buy_product_id,
-            'get_product_id' => ($request->get_product_id === 'all' || !$request->get_product_id) ? null : $request->get_product_id,
+            'buy_product_id' => ($request->buy_product_id === 'all' || ! $request->buy_product_id) ? null : $request->buy_product_id,
+            'get_product_id' => ($request->get_product_id === 'all' || ! $request->get_product_id) ? null : $request->get_product_id,
             'buy_quantity' => $request->buy_quantity,
             'get_quantity' => $request->get_quantity,
             'is_active' => true,
             'applicable_on' => $request->applicable_on,
         ]);
 
-        \Illuminate\Support\Facades\Cache::forget('promotions_active_mobile');
+        Cache::forget('promotions_active');
 
         return back()->with('success', 'Promo berhasil dibuat.');
     }
 
     public function toggle(Request $request, $id)
     {
-        $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
-        if (!$merchant) return back()->with('error', 'Toko tidak ditemukan.');
+        $merchant = Auth::user()->merchant;
+        if (! $merchant) {
+            return back()->with('error', 'Toko tidak ditemukan.');
+        }
 
         $promo = Promotion::where('merchant_id', $merchant->id)->findOrFail($id);
-        $promo->update(['is_active' => !$promo->is_active]);
+        $promo->update(['is_active' => ! $promo->is_active]);
 
-        \Illuminate\Support\Facades\Cache::forget('promotions_active_mobile');
+        Cache::forget('promotions_active');
 
         return back()->with('success', 'Status promo diperbarui.');
     }
 
     public function destroy($id)
     {
-        $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
-        if (!$merchant) return back()->with('error', 'Toko tidak ditemukan.');
+        $merchant = Auth::user()->merchant;
+        if (! $merchant) {
+            return back()->with('error', 'Toko tidak ditemukan.');
+        }
 
         $promo = Promotion::where('merchant_id', $merchant->id)->findOrFail($id);
         $promo->delete();
 
-        \Illuminate\Support\Facades\Cache::forget('promotions_active_mobile');
+        Cache::forget('promotions_active');
 
         return back()->with('success', 'Promo berhasil dihapus.');
     }

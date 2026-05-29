@@ -2,54 +2,67 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use App\Models\Order;
 use App\Events\OrderStatusUpdated;
+use App\Http\Controllers\Controller;
+use App\Jobs\SimulateDeliveryJob;
+use App\Jobs\SimulateThirdPartyDelivery;
+use App\Models\LoyaltyPoint;
+use App\Models\Order;
+use App\Models\Promotion;
+use App\Models\UserPointsBalance;
+use App\Services\PointsService;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use App\Services\StockService;
 
 class MerchantOrderController extends Controller
 {
     public function index()
     {
-        $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
-        if (!$merchant) {
+        $merchant = Auth::user()->merchant;
+        if (! $merchant) {
             return redirect()->route('admin.dashboard')->with('error', 'Anda tidak memiliki toko yang terdaftar.');
         }
 
         $orders = Order::where('merchant_id', $merchant->id)->with(['customer', 'branch'])->latest()->get();
+
         return Inertia::render('Admin/Orders/Index', [
-            'orders' => $orders
+            'orders' => $orders,
         ]);
     }
 
     public function show($id)
     {
-        $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
-        if (!$merchant) return back()->with('error', 'Toko tidak ditemukan.');
+        $merchant = Auth::user()->merchant;
+        if (! $merchant) {
+            return back()->with('error', 'Toko tidak ditemukan.');
+        }
 
         $order = Order::where('merchant_id', $merchant->id)->with(['items.product', 'customer', 'branch'])->findOrFail($id);
+
         return Inertia::render('Admin/Orders/Show', [
-            'order' => $order
+            'order' => $order,
         ]);
     }
 
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,confirmed,preparing,ready_for_pickup,on_delivery,delivered,cancelled'
+            'status' => 'required|in:pending,confirmed,preparing,ready_for_pickup,on_delivery,delivered,cancelled',
         ]);
 
-        $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
-        if (!$merchant) return back()->with('error', 'Toko tidak ditemukan.');
+        $merchant = Auth::user()->merchant;
+        if (! $merchant) {
+            return back()->with('error', 'Toko tidak ditemukan.');
+        }
 
         $order = Order::where('merchant_id', $merchant->id)->with('items.product')->findOrFail($id);
         $oldStatus = $order->status;
 
         try {
-            \Illuminate\Support\Facades\DB::transaction(function () use ($order, $request, $oldStatus) {
+            DB::transaction(function () use ($order, $request, $oldStatus) {
                 $order->update(['status' => $request->status]);
 
                 // Trigger simulation if status changes to preparing or on_delivery
@@ -57,10 +70,10 @@ class MerchantOrderController extends Controller
                     // Deduct Stock for all items in order
                     foreach ($order->items as $item) {
                         StockService::deductFromRecipe(
-                            $item->product_id, 
-                            $order->branch_id, 
-                            $item->quantity, 
-                            $order->order_number, 
+                            $item->product_id,
+                            $order->branch_id,
+                            $item->quantity,
+                            $order->order_number,
                             'OnlineOrder'
                         );
                     }
@@ -71,11 +84,11 @@ class MerchantOrderController extends Controller
         }
 
         if ($oldStatus !== 'preparing' && $request->status === 'preparing' && $order->delivery_type === 'delivery') {
-            \App\Jobs\SimulateDeliveryJob::dispatch($order->id);
+            SimulateDeliveryJob::dispatch($order->id);
         }
 
         if ($oldStatus !== 'on_delivery' && $request->status === 'on_delivery' && $order->delivery_type === 'delivery') {
-            \App\Jobs\SimulateThirdPartyDelivery::dispatch($order->id);
+            SimulateThirdPartyDelivery::dispatch($order->id);
         }
 
         // Award Rewards if status changes to delivered
@@ -95,13 +108,15 @@ class MerchantOrderController extends Controller
     protected function awardRewards(Order $order)
     {
         $customer = $order->customer;
-        if (!$customer) return;
+        if (! $customer) {
+            return;
+        }
 
         // 1. Award Base Purchase Points
-        \App\Services\PointsService::earnPoints($customer->id, $order->id);
+        PointsService::earnPoints($customer->id, $order->id);
 
         // 2. Cashback Promo
-        $promo = \App\Models\Promotion::active()
+        $promo = Promotion::active()
             ->where('merchant_id', $order->merchant_id)
             ->where('type', 'cashback_points')
             ->where('min_purchase', '<=', $order->total)
@@ -113,7 +128,7 @@ class MerchantOrderController extends Controller
                 $cashback = $promo->max_reward;
             }
 
-            \App\Models\LoyaltyPoint::create([
+            LoyaltyPoint::create([
                 'customer_id' => $customer->id,
                 'merchant_id' => $order->merchant_id,
                 'points' => $cashback,
@@ -124,7 +139,7 @@ class MerchantOrderController extends Controller
             ]);
 
             // Update balance
-            $balance = \App\Models\UserPointsBalance::getOrCreateForUser($customer->id);
+            $balance = UserPointsBalance::getOrCreateForUser($customer->id);
             $balance->addPoints($cashback);
         }
 
@@ -135,7 +150,7 @@ class MerchantOrderController extends Controller
                 ->count();
 
             if ($orderCount === 1) { // This is their first delivered order
-                \App\Services\PointsService::giveReferralBonus($customer->referred_by_id, $customer->id);
+                PointsService::giveReferralBonus($customer->referred_by_id, $customer->id);
             }
         }
     }

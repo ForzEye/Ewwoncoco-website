@@ -18,12 +18,12 @@ class NotificationController extends Controller
 
         $user = Auth::user();
         $user->update([
-            'fcm_token' => $request->fcm_token
+            'fcm_token' => $request->fcm_token,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'FCM Token updated successfully'
+            'message' => 'FCM Token updated successfully',
         ]);
     }
 }
