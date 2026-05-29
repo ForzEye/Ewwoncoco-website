@@ -9,11 +9,18 @@ import { toastWarning } from '../../lib/swal';
 
 interface CheckoutProps {
     promotions?: any[];
+    branches?: any[];
 }
 
-export default function Checkout({ promotions = [] }: CheckoutProps) {
+export default function Checkout({ promotions = [], branches = [] }: CheckoutProps) {
     const { items, getTotal, clearCart } = useCartStore();
     const [isMounted, setIsMounted] = useState(false);
+
+    const currentBranch = React.useMemo(() => {
+        if (!branches || branches.length === 0) return null;
+        const cartBranchId = items[0]?.product.branch_id;
+        return branches.find(b => Number(b.id) === Number(cartBranchId)) || branches[0];
+    }, [items, branches]);
 
     const freeBogoItems = React.useMemo(() => {
         if (!promotions || promotions.length === 0 || items.length === 0) return [];
@@ -195,8 +202,12 @@ export default function Checkout({ promotions = [] }: CheckoutProps) {
                                         Lokasi Pengambilan
                                     </h3>
                                     <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                                        <p className="font-poppins font-bold text-[#1A1A1A]">Outlet EWWON COCO Pusat</p>
-                                        <p className="text-sm text-gray-600 mt-1">Jl. Kelapa Muda No. 123, Jakarta Selatan</p>
+                                        <p className="font-poppins font-bold text-[#1A1A1A]">
+                                            {currentBranch ? currentBranch.name : 'Outlet EWWON COCO'}
+                                        </p>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            {currentBranch ? currentBranch.address : 'Alamat Pengambilan'}
+                                        </p>
                                         <p className="text-[10px] font-black text-[#00C48C] uppercase tracking-widest mt-3 flex items-center gap-2">
                                             <div className="w-1.5 h-1.5 bg-[#00C48C] rounded-full"></div>
                                             Tersedia untuk Diambil
