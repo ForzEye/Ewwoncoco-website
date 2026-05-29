@@ -280,7 +280,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                     </div>
 
                     {/* Product Grid — Premium Warm Cards */}
-                    <div className="flex-1 overflow-y-auto px-4 lg:px-6 pb-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-4 items-start bg-[#F5F3EF] content-start">
+                    <div className="flex-1 overflow-y-auto px-4 lg:px-6 pb-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-4 items-stretch bg-[#F5F3EF] content-start">
                         {filteredProducts.map(product => {
                             let localImg = product.image_url;
                             if (product.name.includes('Original')) localImg = '/coconut_original.png';
@@ -293,7 +293,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                                 <button 
                                     key={product.id}
                                     onClick={() => handleProductClick(product)}
-                                    className={`relative bg-white p-3.5 rounded-3xl border-2 transition-all duration-300 text-left flex flex-col h-fit group overflow-hidden ${
+                                    className={`relative bg-white p-3.5 rounded-3xl border-2 transition-all duration-300 text-left flex flex-col h-full group overflow-hidden ${
                                         inCartQty > 0 
                                             ? 'border-[#2D6A4F] shadow-[0_4px_20px_rgba(45,106,79,0.1)]' 
                                             : 'border-transparent shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:-translate-y-1'
