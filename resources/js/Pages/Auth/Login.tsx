@@ -1,11 +1,12 @@
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useState } from 'react';
 import { useForm, usePage, Link } from '@inertiajs/react';
 import AuthLayout from '@/Layouts/AuthLayout';
 import { PageProps } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const { flash } = usePage<PageProps>().props;
+    const [showPassword, setShowPassword] = useState(false);
     
     const { 
         data, 
@@ -97,16 +98,30 @@ export default function Login() {
                     <label htmlFor="password" className="block text-sm font-medium text-charcoal mb-1">
                         Kata Sandi
                     </label>
-                    <input
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        onChange={(e) => setData('password', e.target.value)}
-                        className="w-full px-4 py-2 border border-border-base rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow"
-                        placeholder="Masukkan kata sandi"
-                        required
-                    />
+                    <div className="relative">
+                        <input
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            name="password"
+                            value={data.password}
+                            onChange={(e) => setData('password', e.target.value)}
+                            className="w-full px-4 py-2 pr-10 border border-border-base rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow"
+                            placeholder="Masukkan kata sandi"
+                            required
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-charcoal focus:outline-none"
+                            tabIndex={-1}
+                        >
+                            {showPassword ? (
+                                <EyeOff className="w-5 h-5" />
+                            ) : (
+                                <Eye className="w-5 h-5" />
+                            )}
+                        </button>
+                    </div>
                     {errors.password && <div className="text-red-500 text-sm mt-1">{errors.password}</div>}
                 </div>
                 
