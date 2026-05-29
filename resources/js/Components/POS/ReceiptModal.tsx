@@ -75,20 +75,22 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                     <div 
                         id="receipt-thermal" 
                         style={{
-                            width: paperWidth,
+                            width: paperWidth === '58mm' ? '170px' : '230px',
+                            transform: leftMargin ? `translateX(${leftMargin * 1.5}px)` : 'none',
+                            transition: 'transform 0.15s ease-out, width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         }}
                         className="bg-white px-3.5 py-6 shadow-sm mx-auto receipt-print flex flex-col border border-[#E8E4DD] print:border-none print:shadow-none"
                     >
                         <div className="text-center mb-6">
-                            <h4 className="font-bold uppercase tracking-tighter mb-1 leading-none" style={{ fontSize: `${baseFontSize + 2}px` }}>
+                            <h4 className="font-bold uppercase tracking-tighter mb-1 leading-none" style={{ fontSize: `${baseFontSize + 4}px` }}>
                                 {order.merchant?.receipt_header || order.merchant?.name || 'EWWON COCO'}
                             </h4>
                             <p className="font-bold" style={{ fontSize: `${baseFontSize}px` }}>{order.branch?.name || 'Cabang Utama'}</p>
-                            <div className="mt-1 space-y-0.5" style={{ fontSize: '9px' }}>
+                            <div className="mt-1 space-y-0.5" style={{ fontSize: `${baseFontSize - 1.5}px` }}>
                                 <p className="leading-tight px-2">
                                     {order.branch?.address || order.merchant?.address || 'Jl. Raya No. 123'}
                                 </p>
-                                <p style={{ fontSize: '9px' }}>{order.branch?.phone || order.merchant?.phone || '0812-3456-7890'}</p>
+                                <p>{order.branch?.phone || order.merchant?.phone || '0812-3456-7890'}</p>
                             </div>
                         </div>
 
@@ -123,23 +125,31 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                                         custs = item.customizations;
                                     }
                                 }
+                                const itemSubtotal = item.subtotal || ((item.price || 0) * (item.quantity || 0)) || 0;
+                                const itemPrice = item.price || (item.quantity ? (itemSubtotal / item.quantity) : 0);
                                 return (
-                                    <div key={idx} className="space-y-1">
-                                        <p className="font-bold uppercase" style={{ fontSize: `${baseFontSize - 0.5}px` }}>{item.product?.name || 'Produk'}</p>
+                                    <div key={idx} className="space-y-1 mb-3" style={{ fontSize: `${baseFontSize}px` }}>
+                                        <div className="font-bold uppercase break-words leading-tight">
+                                            {item.product?.name || 'Produk'}
+                                        </div>
+                                        <div className="flex justify-between items-center gap-2">
+                                            <span>
+                                                {item.quantity} x {rupiah(itemPrice).replace('Rp ', '')}
+                                            </span>
+                                            <span className="font-bold whitespace-nowrap">
+                                                {rupiah(itemSubtotal).replace('Rp ', '')}
+                                            </span>
+                                        </div>
                                         {custs.length > 0 && (
-                                            <p className="italic opacity-80 pl-2 text-[8px] leading-tight" style={{ fontSize: `${baseFontSize - 1.5}px` }}>
+                                            <p className="italic opacity-80 pl-2 leading-none animate-fade-in mt-1" style={{ fontSize: `${baseFontSize - 1.5}px` }}>
                                                 * {custs.map((c: any) => c.name).join(', ')}
                                             </p>
                                         )}
                                         {item.notes && (
-                                            <p className="italic opacity-80 pl-2 text-[8px] leading-tight" style={{ fontSize: `${baseFontSize - 1.5}px` }}>
+                                            <p className="italic opacity-80 pl-2 leading-none animate-fade-in mt-1" style={{ fontSize: `${baseFontSize - 1.5}px` }}>
                                                 * CATATAN: {item.notes.toUpperCase()}
                                             </p>
                                         )}
-                                        <div className="flex justify-between items-end" style={{ fontSize: `${baseFontSize}px` }}>
-                                            <span className="opacity-70">{item.quantity} x {rupiah(item.unit_price || item.price || 0).replace('Rp ', '')}</span>
-                                            <span className="font-bold">{rupiah(item.subtotal || ((item.price || 0) * (item.quantity || 0)) || 0).replace('Rp ', '')}</span>
-                                        </div>
                                     </div>
                                 );
                             })}
@@ -206,12 +216,13 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                 :root {
                     --receipt-width: ${paperWidth};
                     --receipt-font: ${baseFontSize}px;
+                    --receipt-print-width: ${paperWidth === '58mm' ? '45mm' : '68mm'};
                 }
 
                 /* --- Tampilan Layar (Screen Preview) --- */
                 .receipt-print {
                     box-sizing: border-box !important;
-                    padding: 4mm 4mm 4mm ${leftMargin ? leftMargin + 3 : 3}mm !important; /* Batas aman padding agar tidak kepotong di layar */
+                    padding: 4mm !important; /* Batas aman padding agar tidak kepotong di layar */
                     font-size: var(--receipt-font, 12px) !important; /* Ukuran font dasar diwariskan ke anak */
                 }
 
@@ -276,15 +287,20 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                     }
 
                     .receipt-print {
-                        width: 100% !important;
-                        max-width: 100% !important;
+                        width: var(--receipt-print-width, 45mm) !important;
+                        max-width: var(--receipt-print-width, 45mm) !important;
                         box-sizing: border-box !important;
-                        margin: 0 !important;
-                        padding: 2mm 4mm 2mm ${leftMargin ? leftMargin + 3 : 3}mm !important; /* Ditambah batas aman padding 4mm kanan dan 3mm kiri agar tidak kepotong di printer thermal */
+                        margin: 0 auto !important;
+                        padding-top: 2mm !important;
+                        padding-bottom: 2mm !important;
+                        padding-left: 2mm !important;
+                        padding-right: 2mm !important;
                         background: #fff !important;
                         border: none !important;
                         box-shadow: none !important;
                         font-size: var(--receipt-font, 12px) !important; /* Ukuran font dasar diwariskan saat cetak */
+                        position: relative !important;
+                        left: ${leftMargin}mm !important;
                     }
 
                     .receipt-print,
@@ -305,6 +321,13 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                     .receipt-print h4,
                     .receipt-print h4 * {
                         font-weight: ${headerFontWeight} !important;
+                    }
+
+                    /* Mencegah pemotongan karakter terakhir di ujung kanan karena monospace + text-shadow */
+                    .receipt-print span,
+                    .receipt-print p,
+                    .receipt-print div {
+                        padding-right: 3px !important;
                     }
 
                     .no-print {

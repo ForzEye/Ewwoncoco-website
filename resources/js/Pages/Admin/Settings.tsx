@@ -647,7 +647,7 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                                 className="bg-white p-5 shadow-md text-[#1A1A1A] font-mono leading-tight flex flex-col border border-transparent shrink-0"
                             >
                                 <div className="text-center mb-4">
-                                    <p className="font-black uppercase tracking-tighter mb-1 leading-none animate-pulse-slow" style={{ fontSize: `${data.receipt_font_size + 2}px` }}>
+                                    <p className="font-black uppercase tracking-tighter mb-1 leading-none animate-pulse-slow" style={{ fontSize: `${data.receipt_font_size + 4}px` }}>
                                         {data.receipt_header || 'HEADER STRUK'}
                                     </p>
                                     <p className="font-bold" style={{ fontSize: `${data.receipt_font_size}px` }}>Cabang Malang</p>
@@ -661,18 +661,18 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                                 </div>
 
                                 <div className="space-y-3 mb-4 w-full">
-                                    <div className="space-y-0.5">
-                                        <p className="font-bold uppercase" style={{ fontSize: `${data.receipt_font_size - 0.5}px` }}>Es Kelapa Original</p>
-                                        <div className="flex justify-between items-end opacity-90" style={{ fontSize: `${data.receipt_font_size}px` }}>
+                                    <div className="space-y-1 mb-3" style={{ fontSize: `${data.receipt_font_size}px` }}>
+                                        <div className="font-bold uppercase break-words leading-tight">Es Kelapa Original</div>
+                                        <div className="flex justify-between items-center gap-2">
                                             <span>1 x 15.000</span>
-                                            <span className="font-bold">15.000</span>
+                                            <span className="font-bold whitespace-nowrap">15.000</span>
                                         </div>
                                     </div>
-                                    <div className="space-y-0.5">
-                                        <p className="font-bold uppercase" style={{ fontSize: `${data.receipt_font_size - 0.5}px` }}>Coco Dessert Bowl</p>
-                                        <div className="flex justify-between items-end opacity-90" style={{ fontSize: `${data.receipt_font_size}px` }}>
+                                    <div className="space-y-1 mb-3" style={{ fontSize: `${data.receipt_font_size}px` }}>
+                                        <div className="font-bold uppercase break-words leading-tight">Coco Dessert Bowl</div>
+                                        <div className="flex justify-between items-center gap-2">
                                             <span>2 x 15.000</span>
-                                            <span className="font-bold">30.000</span>
+                                            <span className="font-bold whitespace-nowrap">30.000</span>
                                         </div>
                                     </div>
                                 </div>
@@ -717,6 +717,7 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                 :root {
                     --receipt-width: ${data.receipt_paper_width};
                     --receipt-font: ${data.receipt_font_size}px;
+                    --receipt-print-width: ${data.receipt_paper_width === '58mm' ? '45mm' : '68mm'};
                 }
 
                 /* --- Tampilan Cetak (Print Stylesheet) --- */
@@ -753,15 +754,20 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                     }
 
                     #receipt-thermal-test {
-                        width: 100% !important;
-                        max-width: 100% !important;
+                        width: var(--receipt-print-width, 45mm) !important;
+                        max-width: var(--receipt-print-width, 45mm) !important;
                         box-sizing: border-box !important;
-                        margin: 0 !important;
-                        padding: 2mm 4mm 2mm ${data.receipt_left_margin ? data.receipt_left_margin + 3 : 3}mm !important;
+                        margin: 0 auto !important;
+                        padding-top: 2mm !important;
+                        padding-bottom: 2mm !important;
+                        padding-left: 2mm !important;
+                        padding-right: 2mm !important;
                         background: #fff !important;
                         border: none !important;
                         box-shadow: none !important;
                         font-size: var(--receipt-font, 12px) !important;
+                        position: relative !important;
+                        left: ${data.receipt_left_margin}mm !important;
                     }
 
                     #receipt-thermal-test,
@@ -781,6 +787,12 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                     #receipt-thermal-test h4,
                     #receipt-thermal-test h4 * {
                         font-weight: ${Math.max(100, data.receipt_font_weight - 40)} !important;
+                    }
+
+                    #receipt-thermal-test span,
+                    #receipt-thermal-test p,
+                    #receipt-thermal-test div {
+                        padding-right: 3px !important;
                     }
 
                     .no-print {
