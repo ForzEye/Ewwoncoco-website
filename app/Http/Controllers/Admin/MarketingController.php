@@ -44,6 +44,7 @@ class MarketingController extends Controller
             'get_product_id' => 'nullable',
             'buy_quantity' => 'required_if:type,bogo|nullable|integer|min:1',
             'get_quantity' => 'required_if:type,bogo|nullable|integer|min:1',
+            'applicable_on' => 'required|in:all,online,offline',
         ]);
 
         $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
@@ -64,7 +65,10 @@ class MarketingController extends Controller
             'buy_quantity' => $request->buy_quantity,
             'get_quantity' => $request->get_quantity,
             'is_active' => true,
+            'applicable_on' => $request->applicable_on,
         ]);
+
+        \Illuminate\Support\Facades\Cache::forget('promotions_active_mobile');
 
         return back()->with('success', 'Promo berhasil dibuat.');
     }
@@ -77,6 +81,21 @@ class MarketingController extends Controller
         $promo = Promotion::where('merchant_id', $merchant->id)->findOrFail($id);
         $promo->update(['is_active' => !$promo->is_active]);
 
+        \Illuminate\Support\Facades\Cache::forget('promotions_active_mobile');
+
         return back()->with('success', 'Status promo diperbarui.');
+    }
+
+    public function destroy($id)
+    {
+        $merchant = \Illuminate\Support\Facades\Auth::user()->merchant;
+        if (!$merchant) return back()->with('error', 'Toko tidak ditemukan.');
+
+        $promo = Promotion::where('merchant_id', $merchant->id)->findOrFail($id);
+        $promo->delete();
+
+        \Illuminate\Support\Facades\Cache::forget('promotions_active_mobile');
+
+        return back()->with('success', 'Promo berhasil dihapus.');
     }
 }

@@ -3,6 +3,7 @@ import { Head, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Plus, Megaphone, Trash2, Calendar, Target, Power } from 'lucide-react';
 import { rupiah } from '../../../lib/format';
+import Swal from 'sweetalert2';
 
 interface MarketingProps {
     promotions: any[];
@@ -10,7 +11,7 @@ interface MarketingProps {
 }
 
 export default function Marketing({ promotions, products = [] }: MarketingProps) {
-    const { data, setData, post, processing, reset } = useForm({
+    const { data, setData, post, delete: destroyPromo, processing, reset } = useForm({
         name: '',
         description: '',
         type: 'cashback_points',
@@ -23,6 +24,7 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
         get_product_id: '',
         buy_quantity: '1',
         get_quantity: '1',
+        applicable_on: 'all',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -30,6 +32,38 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
         post(route('admin.marketing.store'), {
             onSuccess: () => {
                 reset();
+                Swal.fire({
+                    title: 'Berhasil!',
+                    text: 'Campaign promo baru berhasil dibuat.',
+                    icon: 'success',
+                    confirmButtonColor: '#00C48C'
+                });
+            }
+        });
+    };
+
+    const handleDelete = (id: number) => {
+        Swal.fire({
+            title: 'Hapus Campaign?',
+            text: 'Apakah Anda yakin ingin menghapus campaign promo ini?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#00C48C',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                destroyPromo(route('admin.marketing.destroy', id), {
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Dihapus!',
+                            text: 'Campaign promo berhasil dihapus.',
+                            icon: 'success',
+                            confirmButtonColor: '#00C48C'
+                        });
+                    }
+                });
             }
         });
     };
@@ -172,6 +206,19 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                 </div>
                             )}
 
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-400 uppercase">Promo Berlaku Di (Saluran)</label>
+                                <select 
+                                    className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                    value={data.applicable_on}
+                                    onChange={e => setData('applicable_on', e.target.value)}
+                                >
+                                    <option value="all">Bisa Keduanya (Online & Offline)</option>
+                                    <option value="online">Hanya Pembelian Online</option>
+                                    <option value="offline">Hanya Pembelian Offline</option>
+                                </select>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-gray-400 uppercase">Mulai</label>
@@ -236,9 +283,20 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                                     </span>
                                                 )}
                                             </p>
-                                            <div className="flex items-center space-x-2 mt-2 text-[10px] font-bold text-gray-500">
-                                                <Calendar size={12} />
-                                                <span>{new Date(promo.start_date).toLocaleDateString()} - {new Date(promo.end_date).toLocaleDateString()}</span>
+                                            <div className="flex flex-wrap items-center gap-2.5 mt-2.5">
+                                                <div className="flex items-center space-x-1.5 text-[10px] font-bold text-gray-500">
+                                                    <Calendar size={12} />
+                                                    <span>{new Date(promo.start_date).toLocaleDateString()} - {new Date(promo.end_date).toLocaleDateString()}</span>
+                                                </div>
+                                                <span className={`px-2.5 py-0.5 text-[9px] font-black uppercase rounded-lg border ${
+                                                    promo.applicable_on === 'online' 
+                                                    ? 'bg-blue-50 text-blue-600 border-blue-100' 
+                                                    : promo.applicable_on === 'offline' 
+                                                    ? 'bg-amber-50 text-amber-600 border-amber-100' 
+                                                    : 'bg-[#F0FAF6] text-[#00C48C] border-[#00C48C]/15'
+                                                }`}>
+                                                    {promo.applicable_on === 'online' ? 'Online Only' : promo.applicable_on === 'offline' ? 'Offline Only' : 'Online & Offline'}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -251,7 +309,11 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                         >
                                             <Power size={18} />
                                         </button>
-                                        <button className="p-2 text-red-400 bg-red-50 hover:bg-red-100 rounded-lg transition-all">
+                                        <button 
+                                            onClick={() => handleDelete(promo.id)}
+                                            className="p-2 text-red-400 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
+                                            title="Hapus Promo"
+                                        >
                                             <Trash2 size={18} />
                                         </button>
                                     </div>

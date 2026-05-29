@@ -40,6 +40,7 @@ class POSController extends Controller
         $promotions = \App\Models\Promotion::active()
             ->where('merchant_id', $merchantId)
             ->where('type', 'bogo')
+            ->whereIn('applicable_on', ['offline', 'all'])
             ->get();
 
         return Inertia::render('POS/Screen', [
@@ -93,6 +94,7 @@ class POSController extends Controller
             $bogoPromosCollection = \App\Models\Promotion::active()
                 ->where('merchant_id', $merchantId)
                 ->where('type', 'bogo')
+                ->whereIn('applicable_on', ['offline', 'all'])
                 ->get();
 
             // Specific BOGOs (linked to a product)

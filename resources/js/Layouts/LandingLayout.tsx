@@ -1,7 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import { PageProps } from '@/types';
-import { ShoppingBag, User, LogOut, ChevronDown, LayoutDashboard, Sparkles, Mail, Phone } from 'lucide-react';
+import { ShoppingBag, User, LogOut, ChevronDown, LayoutDashboard, Sparkles, Mail, Phone, Menu, X } from 'lucide-react';
 
 interface LandingLayoutProps {
     children: ReactNode;
@@ -12,6 +12,7 @@ import { requestNotificationPermission, onMessageListener } from '@/lib/firebase
 export default function LandingLayout({ children }: LandingLayoutProps) {
     const { auth, site_settings = {} } = usePage<PageProps>().props;
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -48,15 +49,16 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
         <div className="min-h-screen flex flex-col bg-white">
             {/* Navbar */}
             <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-border-base transition-all">
-                <div className="container-max section-px h-16 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 group">
+                <div className="container-max section-px h-16 flex items-center justify-between relative">
+                    <Link href="/" className="flex items-center gap-2 group shrink-0">
                         {site_settings.site_logo ? (
-                            <img src={site_settings.site_logo} alt={site_settings.site_name} className="h-12 w-auto object-contain" />
+                            <img src={site_settings.site_logo} alt={site_settings.site_name} className="h-10 md:h-12 w-auto object-contain" />
                         ) : (
-                            <img src="/images/logo.png" alt={site_settings.site_name || 'EWWON COCO'} className="h-12 w-auto object-contain" />
+                            <img src="/images/logo.png" alt={site_settings.site_name || 'EWWON COCO'} className="h-10 md:h-12 w-auto object-contain" />
                         )}
                     </Link>
 
+                    {/* Desktop Navigation */}
                     <nav className="hidden lg:flex items-center gap-10">
                         <Link href="/" className="text-sm font-bold text-gray-muted hover:text-primary transition-colors tracking-tight uppercase">
                             Home
@@ -69,7 +71,8 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
                         </Link>
                     </nav>
 
-                    <div className="flex items-center gap-4">
+                    {/* Desktop Action Buttons */}
+                    <div className="hidden lg:flex items-center gap-4">
                         {auth.user ? (
                             <div className="flex items-center gap-4">
                                 <div className="relative" ref={dropdownRef}>
@@ -160,7 +163,169 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
                             </div>
                         )}
                     </div>
+
+                    {/* Mobile Hamburger Button */}
+                    <button 
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        className="lg:hidden p-2 rounded-xl text-charcoal hover:bg-gray-100 transition-colors"
+                        aria-label="Toggle Menu"
+                    >
+                        {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                    </button>
                 </div>
+
+                {/* Mobile Navigation Drawer Overlay */}
+                {mobileMenuOpen && (
+                    <div className="lg:hidden absolute top-16 left-0 right-0 bg-white border-b border-border-base p-6 shadow-xl flex flex-col gap-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+                        <nav className="flex flex-col gap-4">
+                            <Link 
+                                href="/" 
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="text-sm font-bold text-gray-muted hover:text-primary transition-colors tracking-tight uppercase"
+                            >
+                                Home
+                            </Link>
+                            <Link 
+                                href="/faq" 
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="text-sm font-bold text-gray-muted hover:text-primary transition-colors tracking-tight uppercase"
+                            >
+                                FAQ
+                            </Link>
+                            <Link 
+                                href="/contact" 
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="text-sm font-bold text-gray-muted hover:text-primary transition-colors tracking-tight uppercase"
+                            >
+                                Kontak
+                            </Link>
+                        </nav>
+                        
+                        <div className="border-t border-gray-100 pt-4 flex flex-col gap-4">
+                            {auth.user ? (
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex items-center gap-3 px-3 py-2 bg-[#F0FAF6]/50 rounded-2xl">
+                                        <div className="w-8 h-8 bg-[#F0FAF6] text-[#00C48C] rounded-full flex items-center justify-center font-bold border border-[#00C48C]/20">
+                                            {auth.user.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-gray-muted font-bold uppercase tracking-wider">Halo,</p>
+                                            <p className="text-sm font-black text-charcoal leading-none mt-0.5">{auth.user.name}</p>
+                                        </div>
+                                    </div>
+                                    <Link 
+                                        href="/orders" 
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-sm font-bold text-gray-muted hover:text-primary transition-colors px-1"
+                                    >
+                                        Pesanan Saya
+                                    </Link>
+                                    <Link 
+                                        href="/loyalty" 
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-sm font-bold text-gray-muted hover:text-primary transition-colors px-1"
+                                    >
+                                        Poin & Reward
+                                    </Link>
+                                    <Link 
+                                        href="/chats" 
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-sm font-bold text-gray-muted hover:text-primary transition-colors px-1"
+                                    >
+                                        Chat Merchant
+                                    </Link>
+                                    <Link 
+                                        href="/referral" 
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-sm font-bold text-gray-muted hover:text-primary transition-colors px-1"
+                                    >
+                                        Undang Teman
+                                    </Link>
+
+                                    {/* Role Based Access in mobile menu */}
+                                    {auth.user.role === 'admin' && (
+                                        <Link 
+                                            href="/admin" 
+                                            onClick={() => setMobileMenuOpen(false)}
+                                            className="text-sm font-black text-[#2D6A4F] flex items-center gap-2 px-1"
+                                        >
+                                            <LayoutDashboard className="w-4 h-4" />
+                                            DASHBOARD ADMIN
+                                        </Link>
+                                    )}
+                                    {auth.user.role === 'kasir' && (
+                                        <>
+                                            <Link 
+                                                href="/pos/dashboard" 
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                className="text-sm font-black text-[#2D6A4F] flex items-center gap-2 px-1"
+                                            >
+                                                <LayoutDashboard className="w-4 h-4" />
+                                                DASHBOARD KASIR
+                                            </Link>
+                                            <Link 
+                                                href="/pos" 
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                className="text-sm font-black text-amber-600 flex items-center gap-2 px-1"
+                                            >
+                                                <Sparkles className="w-4 h-4" />
+                                                BUKA LAYAR POS
+                                            </Link>
+                                        </>
+                                    )}
+                                    {auth.user.role === 'super_admin' && (
+                                        <Link 
+                                            href="/super-admin" 
+                                            onClick={() => setMobileMenuOpen(false)}
+                                            className="text-sm font-black text-indigo-600 flex items-center gap-2 px-1"
+                                        >
+                                            <LayoutDashboard className="w-4 h-4" />
+                                            DASHBOARD SUPER
+                                        </Link>
+                                    )}
+
+                                    <Link 
+                                        href="/shop" 
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="btn-primary py-3 px-6 rounded-2xl shadow-sm text-sm justify-center flex mt-2"
+                                    >
+                                        <ShoppingBag className="w-4 h-4" />
+                                        Belanja Sekarang
+                                    </Link>
+                                    
+                                    <Link 
+                                        href={route('logout')} 
+                                        method="post" 
+                                        as="button" 
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="w-full text-left py-3 text-sm font-bold text-red-600 flex items-center gap-2 border-t border-gray-100 mt-2 pt-4 px-1"
+                                    >
+                                        <LogOut className="w-4 h-4" />
+                                        Keluar
+                                    </Link>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-3">
+                                    <Link 
+                                        href="/login" 
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-sm font-bold text-charcoal hover:text-primary transition-colors text-center py-3 rounded-2xl border border-gray-200 hover:bg-gray-50"
+                                    >
+                                        Masuk
+                                    </Link>
+                                    <Link 
+                                        href="/register" 
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="btn-primary py-3 px-6 rounded-2xl shadow-sm text-sm justify-center flex"
+                                    >
+                                        <User className="w-4 h-4" />
+                                        Mulai Sekarang
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </header>
 
             {/* Main Content */}

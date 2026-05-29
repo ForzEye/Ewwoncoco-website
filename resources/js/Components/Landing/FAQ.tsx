@@ -85,36 +85,38 @@ export default function FAQ() {
     return (
         <section id="faq" className="relative py-12 bg-white">
             <div className="container-max section-px relative z-10">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
                     {/* Sidebar Tabs */}
-                    <div className="lg:col-span-4 space-y-3">
-                        <div className="sticky top-24">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 ml-4">Pilih Kategori</p>
-                            <div className="space-y-2">
-                                {faqCategories.map((cat) => (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => {
-                                            setActiveTab(cat.id);
-                                            setOpenIdx(0); // Reset accordion when tab changes
-                                        }}
-                                        className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-300 ${
-                                            activeTab === cat.id 
-                                            ? 'bg-[#1A1A1A] text-white shadow-xl shadow-gray-200 translate-x-2' 
-                                            : 'text-gray-500 hover:bg-gray-50 hover:text-charcoal'
-                                        }`}
-                                    >
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                                            activeTab === cat.id ? 'bg-[#00C48C]' : 'bg-gray-100 text-gray-400'
-                                        }`}>
-                                            <cat.icon size={20} />
-                                        </div>
-                                        <span className="font-poppins font-bold text-sm">{cat.label}</span>
-                                    </button>
-                                ))}
+                    <div className="lg:col-span-4">
+                        <div className="lg:sticky lg:top-24 space-y-6">
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 ml-4 hidden lg:block">Pilih Kategori</p>
+                                <div className="flex flex-row overflow-x-auto gap-3 pb-4 -mx-4 px-4 scrollbar-none lg:mx-0 lg:px-0 lg:flex-col lg:overflow-x-visible lg:pb-0 lg:space-y-2">
+                                    {faqCategories.map((cat) => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => {
+                                                setActiveTab(cat.id);
+                                                setOpenIdx(0); // Reset accordion when tab changes
+                                            }}
+                                            className={`flex items-center gap-3 px-5 py-3.5 lg:px-6 lg:py-4 rounded-2xl transition-all duration-300 shrink-0 ${
+                                                activeTab === cat.id 
+                                                ? 'bg-[#1A1A1A] text-white shadow-xl shadow-gray-200 lg:translate-x-2' 
+                                                : 'text-gray-500 bg-gray-50/50 hover:bg-gray-50 hover:text-charcoal'
+                                            }`}
+                                        >
+                                            <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-xl flex items-center justify-center transition-colors ${
+                                                activeTab === cat.id ? 'bg-[#00C48C]' : 'bg-gray-100 text-gray-400'
+                                            }`}>
+                                                <cat.icon className="w-4 h-4 lg:w-5 lg:h-5" />
+                                            </div>
+                                            <span className="font-poppins font-bold text-xs lg:text-sm">{cat.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             
-                            <div className="mt-12 p-8 bg-[#F0FAF6] rounded-[32px] border border-[#00C48C]/10 relative overflow-hidden group">
+                            <div className="hidden lg:block p-8 bg-[#F0FAF6] rounded-[32px] border border-[#00C48C]/10 relative overflow-hidden group">
                                 <div className="relative z-10">
                                     <h4 className="font-poppins font-black text-[#1A1A1A] mb-2">Bantuan Khusus?</h4>
                                     <p className="text-xs text-[#2D6A4F] font-medium leading-relaxed">Hubungi Support Center kami jika pertanyaan Anda belum terjawab.</p>

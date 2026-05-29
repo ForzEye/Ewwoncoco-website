@@ -49,7 +49,7 @@ export default function HowItWorks() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
                     {/* Connecting line (desktop only) */}
-                    <div className="hidden lg:block absolute top-16 left-[12%] right-[12%] h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
+                    <div className="hidden lg:block absolute top-[44px] left-[12%] right-[12%] h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
 
                     {steps.map((step, index) => (
                         <div 
@@ -58,19 +58,19 @@ export default function HowItWorks() {
                             style={{animation: `fadeInUp 0.5s ease-out ${index * 150}ms both`}}
                         >
                             {/* Step circle */}
-                            <div className="relative mx-auto mb-8">
-                                <div className="w-[88px] h-[88px] mx-auto bg-white rounded-3xl flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.04)] group-hover:shadow-[0_8px_30px_rgba(0,196,140,0.12)] group-hover:-translate-y-2 transition-all duration-500 border border-gray-100 group-hover:border-[#00C48C]/15">
+                            <div className="relative w-[88px] h-[88px] mx-auto mb-8">
+                                <div className="w-full h-full bg-white rounded-3xl flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.04)] group-hover:shadow-[0_8px_30px_rgba(0,196,140,0.12)] group-hover:-translate-y-2 transition-all duration-500 border border-gray-100 group-hover:border-[#00C48C]/15">
                                     <step.icon className="w-9 h-9 text-[#00C48C] group-hover:scale-110 transition-transform duration-300" strokeWidth={1.8} />
                                 </div>
                                 {/* Step number badge */}
-                                <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg bg-[#1A1A1A] group-hover:bg-[#00C48C] text-white flex items-center justify-center font-poppins font-black text-xs border-[3px] border-[#FAFBFC] transition-colors duration-300 shadow-sm">
+                                <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg bg-[#1A1A1A] group-hover:bg-[#00C48C] text-white flex items-center justify-center font-poppins font-black text-xs border-[3px] border-white transition-colors duration-300 shadow-sm">
                                     {index + 1}
                                 </div>
                             </div>
                             
                             {/* Arrow connector (desktop) */}
                             {index < steps.length - 1 && (
-                                <div className="hidden lg:block absolute top-16 -right-4 z-20">
+                                <div className="hidden lg:block absolute top-[36px] -right-4 z-20">
                                     <ArrowRight className="w-4 h-4 text-gray-300" />
                                 </div>
                             )}

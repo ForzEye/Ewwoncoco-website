@@ -6,11 +6,11 @@ export default function Hero() {
     const { auth, site_settings = {} } = usePage<PageProps>().props;
 
     return (
-        <section className="relative overflow-hidden bg-white min-h-[700px] flex items-center border-b border-gray-50">
+        <section className="relative overflow-hidden bg-white min-h-[600px] lg:min-h-[700px] flex items-center border-b border-gray-50 py-8 lg:py-0">
             {/* Subtle grain texture */}
             <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }}></div>
 
-            <div className="container-max section-px relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center py-12">
+            <div className="container-max section-px relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center py-8 lg:py-12">
                 <div className="max-w-2xl" style={{ animation: 'fadeInUp 0.7s ease-out both' }}>
                     {/* Trust badge */}
                     <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-[#00C48C]/15 shadow-[0_2px_12px_rgba(0,196,140,0.08)] mb-8">
@@ -22,7 +22,7 @@ export default function Hero() {
                         <Shield className="w-3.5 h-3.5 text-[#00C48C]" />
                     </div>
 
-                    <h1 className="text-[3.2rem] lg:text-[4rem] font-poppins font-black text-[#1A1A1A] mb-7 tracking-tight">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[4rem] font-poppins font-black text-[#1A1A1A] mb-6 lg:mb-7 leading-[1.15] lg:leading-[1.1] tracking-tight">
                         {site_settings.hero_title || (
                             <>
                                 Kesegaran Asli{' '}

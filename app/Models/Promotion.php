@@ -9,7 +9,7 @@ class Promotion extends Model
     protected $fillable = [
         'merchant_id', 'name', 'description', 'type', 'value',
         'min_purchase', 'max_reward', 'start_date', 'end_date', 'is_active',
-        'buy_product_id', 'get_product_id', 'buy_quantity', 'get_quantity',
+        'buy_product_id', 'get_product_id', 'buy_quantity', 'get_quantity', 'applicable_on',
     ];
 
     protected $casts = [

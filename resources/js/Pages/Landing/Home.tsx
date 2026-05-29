@@ -36,12 +36,12 @@ export default function Home({ meta }: HomeProps) {
             <TopSelling />
 
             {/* Mobile App Download Section */}
-            <section className="relative py-24 bg-[#1A1A1A] text-white overflow-hidden border-b border-gray-900 rounded-[48px] mx-4 my-8 md:mx-8">
+            <section className="relative py-12 md:py-24 bg-[#1A1A1A] text-white overflow-hidden border-b border-gray-900 rounded-3xl md:rounded-[48px] mx-4 my-8 md:mx-8">
                 {/* Decorative background glow */}
                 <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#00C48C]/10 rounded-full blur-[120px] pointer-events-none"></div>
                 <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[#FF8A00]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-                <div className="container-max section-px relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+                <div className="container-max section-px relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
                     {/* Left Column: Branding and Download Info */}
                     <div className="lg:col-span-7 space-y-8" style={{ animation: 'fadeInUp 0.7s ease-out both' }}>
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-sm">
@@ -155,24 +155,24 @@ export default function Home({ meta }: HomeProps) {
             <FAQ />
             
             {/* Premium CTA */}
-            <section className="relative py-28 bg-white text-center overflow-hidden border-t border-gray-50">
+            <section className="relative py-16 md:py-28 bg-white text-center overflow-hidden border-t border-gray-50">
                 <div className="container-max section-px relative z-10">
                     <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white border border-[#00C48C]/15 shadow-sm mb-8">
                         <Sparkles className="w-4 h-4 text-[#00C48C]" />
                         <span className="text-xs font-black text-[#1A1A1A] uppercase tracking-[0.15em]">Promo Spesial</span>
                     </div>
-                    <h2 className="text-4xl md:text-[4rem] font-poppins font-black text-[#1A1A1A] mb-6 leading-[1.05] tracking-tight max-w-3xl mx-auto">
+                    <h2 className="text-3xl md:text-[4rem] font-poppins font-black text-[#1A1A1A] mb-6 leading-[1.1] md:leading-[1.05] tracking-tight max-w-3xl mx-auto">
                         Siap Menikmati Kesegaran{' '}
                         <span className="text-[#00C48C]">Kelapa Asli?</span>
                     </h2>
-                    <p className="text-gray-500 max-w-2xl mx-auto mb-12 text-lg font-medium leading-relaxed">
+                    <p className="text-gray-500 max-w-2xl mx-auto mb-12 text-base md:text-lg font-medium leading-relaxed">
                         Daftar sekarang dan nikmati diskon spesial untuk pesanan pertama Anda. 
                         Kurir kami siap mengantar kesegaran dalam waktu kurang dari 30 menit.
                     </p>
                     <div className="flex flex-wrap justify-center gap-4">
                         <Link 
                             href={route('register')} 
-                            className="group inline-flex items-center gap-3 bg-[#1A1A1A] hover:bg-[#00C48C] text-white px-10 py-5 rounded-2xl font-poppins font-bold text-lg shadow-xl shadow-gray-200 transition-all duration-300 hover:-translate-y-1"
+                            className="group inline-flex items-center gap-3 bg-[#1A1A1A] hover:bg-[#00C48C] text-white px-8 md:px-10 py-4 md:py-5 rounded-2xl font-poppins font-bold text-base md:text-lg shadow-xl shadow-gray-200 transition-all duration-300 hover:-translate-y-1"
                         >
                             Daftar Sekarang
                             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -180,7 +180,7 @@ export default function Home({ meta }: HomeProps) {
                     </div>
                     
                     {/* Bottom trust line */}
-                    <div className="mt-12 flex flex-wrap justify-center items-center gap-6 text-xs text-gray-500 font-bold uppercase tracking-widest">
+                    <div className="mt-12 flex flex-wrap justify-center items-center gap-4 md:gap-6 text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-widest">
                         <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#00C48C]" /> Gratis ongkir &lt; 3km</span>
                         <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#00C48C]" /> Pembayaran aman QRIS</span>
                         <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#00C48C]" /> 100% Segar Alami</span>
