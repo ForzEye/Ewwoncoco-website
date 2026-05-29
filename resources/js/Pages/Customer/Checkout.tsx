@@ -7,9 +7,57 @@ import { MapPin, Truck, Wallet, CheckCircle } from 'lucide-react';
 
 import { toastWarning } from '../../lib/swal';
 
-export default function Checkout() {
+interface CheckoutProps {
+    promotions?: any[];
+}
+
+export default function Checkout({ promotions = [] }: CheckoutProps) {
     const { items, getTotal, clearCart } = useCartStore();
     const [isMounted, setIsMounted] = useState(false);
+
+    const freeBogoItems = React.useMemo(() => {
+        if (!promotions || promotions.length === 0 || items.length === 0) return [];
+        
+        const specificBogoPromos = promotions.filter(p => p.buy_product_id !== null && p.buy_product_id !== undefined);
+        const globalBogoPromo = promotions.find(p => p.buy_product_id === null || p.buy_product_id === undefined);
+
+        const freeItemsMap: { [productId: number]: { product: any; quantity: number; promoName: string } } = {};
+
+        items.forEach(item => {
+            const productId = Number(item.product.id);
+            const qty = item.quantity;
+
+            let promo = specificBogoPromos.find(p => Number(p.buy_product_id) === productId);
+            if (!promo && globalBogoPromo) {
+                promo = globalBogoPromo;
+            }
+
+            if (promo) {
+                const buyQty = Number(promo.buy_quantity) || 1;
+                const getQty = Number(promo.get_quantity) || 1;
+                const multiplier = Math.floor(qty / buyQty);
+                const freeQty = multiplier * getQty;
+
+                if (freeQty > 0) {
+                    const freeProductId = promo.get_product_id ? Number(promo.get_product_id) : productId;
+                    const freeProd = promo.get_product || item.product; // Fallback
+                    if (freeProd) {
+                        if (freeItemsMap[freeProductId]) {
+                            freeItemsMap[freeProductId].quantity += freeQty;
+                        } else {
+                            freeItemsMap[freeProductId] = {
+                                product: freeProd,
+                                quantity: freeQty,
+                                promoName: promo.name
+                            };
+                        }
+                    }
+                }
+            }
+        });
+
+        return Object.values(freeItemsMap);
+    }, [items, promotions]);
 
     const { data, setData, post, processing, errors } = useForm({
         address: '',
@@ -284,6 +332,20 @@ export default function Checkout() {
                                             </div>
                                         );
                                     })}
+
+                                    {freeBogoItems.map((freeItem, idx) => (
+                                        <div key={`free-${freeItem.product.id}`} className="flex flex-col text-sm font-inter bg-green-50/50 p-2.5 rounded-xl border border-dashed border-green-200">
+                                            <div className="flex justify-between">
+                                                <span className="text-green-700 font-semibold truncate mr-2">
+                                                    {freeItem.quantity}x {freeItem.product.name} (Gratis BOGO)
+                                                </span>
+                                                <span className="font-medium text-green-700 flex-shrink-0">Rp 0</span>
+                                            </div>
+                                            <div className="text-[10px] text-green-600 font-medium mt-0.5">
+                                                Promo: {freeItem.promoName}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
 
                                 <div className="border-t border-gray-200 pt-4 space-y-2 mb-4 text-sm font-inter">

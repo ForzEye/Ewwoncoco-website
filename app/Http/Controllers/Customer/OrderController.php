@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
+use App\Models\Promotion;
+
 class OrderController extends Controller
 {
     protected $deliveryService;
@@ -46,7 +48,14 @@ class OrderController extends Controller
 
     public function checkout(Request $request)
     {
-        return Inertia::render('Customer/Checkout');
+        $promotions = Promotion::active()
+            ->whereIn('applicable_on', ['online', 'all'])
+            ->with(['buyProduct', 'getProduct'])
+            ->get();
+
+        return Inertia::render('Customer/Checkout', [
+            'promotions' => $promotions,
+        ]);
     }
 
     public function getDeliveryQuote(Request $request)
@@ -127,8 +136,54 @@ class OrderController extends Controller
             'delivery_lng' => $request->lng,
         ]);
 
+        // Fetch active BOGO promotions for this merchant
+        $bogoPromosCollection = Promotion::active()
+            ->where('merchant_id', $firstProduct->merchant_id)
+            ->where('type', 'bogo')
+            ->whereIn('applicable_on', ['online', 'all'])
+            ->get();
+
+        // Specific BOGOs (linked to a product)
+        $specificBogoPromos = $bogoPromosCollection->whereNotNull('buy_product_id')->keyBy('buy_product_id');
+
+        // Global BOGO (applies to "all menus")
+        $globalBogoPromo = $bogoPromosCollection->whereNull('buy_product_id')->first();
+
         foreach ($orderItemsData as $itemData) {
             $order->items()->create($itemData);
+
+            // Apply BOGO Promo
+            $productId = $itemData['product_id'];
+            $qty = $itemData['quantity'];
+            
+            $promo = null;
+            $freeProductId = null;
+
+            if (isset($specificBogoPromos[$productId])) {
+                $promo = $specificBogoPromos[$productId];
+                $freeProductId = $promo->get_product_id;
+            } elseif ($globalBogoPromo) {
+                $promo = $globalBogoPromo;
+                $freeProductId = $globalBogoPromo->get_product_id ?: $productId; // Specific free product or same product
+            }
+
+            if ($promo && $freeProductId) {
+                $buyQty = $promo->buy_quantity ?: 1;
+                $getQty = $promo->get_quantity ?: 1;
+
+                $multiplier = floor($qty / $buyQty);
+                $freeQty = $multiplier * $getQty;
+
+                if ($freeQty > 0) {
+                    $order->items()->create([
+                        'product_id' => $freeProductId,
+                        'quantity' => $freeQty,
+                        'unit_price' => 0,
+                        'subtotal' => 0,
+                        'notes' => 'PROMO BOGO: '.$promo->name,
+                    ]);
+                }
+            }
         }
 
         // Dispatch Event for Real-time POS notification
