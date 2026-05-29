@@ -37,7 +37,7 @@ class CustomerController extends Controller
 
     public function product(Request $request, $slug)
     {
-        $product = Product::where('slug', $slug)->with(['merchant', 'category'])->firstOrFail();
+        $product = Product::where('slug', $slug)->with(['merchant', 'category', 'customizations.options'])->firstOrFail();
 
         $reviews = Review::with('customer:id,name,avatar_url')
             ->where('product_id', $product->id)

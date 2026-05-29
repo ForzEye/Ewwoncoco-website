@@ -36,7 +36,7 @@ class POSController extends Controller
             ]);
         }
 
-        $products = Product::where('is_available', true)->with('category')->get();
+        $products = Product::where('is_available', true)->with(['category', 'customizations.options'])->get();
         $categories = ProductCategory::all();
 
         $merchantId = $user->merchant_id ?? 1;
@@ -86,7 +86,12 @@ class POSController extends Controller
 
         return DB::transaction(function () use ($request, $user, $activeShift) {
             $subtotal = collect($request->items)->sum(function ($item) {
-                return $item['product']['price'] * $item['quantity'];
+                $itemPrice = $item['product']['price'];
+                if (isset($item['customizations']) && is_array($item['customizations'])) {
+                    $itemPrice += collect($item['customizations'])->sum('price');
+                }
+
+                return $itemPrice * $item['quantity'];
             });
 
             // Ambil merchant/branch dari user yang login (kasir)
@@ -131,6 +136,9 @@ class POSController extends Controller
                 $productId = $item['product']['id'];
                 $qty = $item['quantity'];
                 $unitPrice = $item['product']['price'];
+                if (isset($item['customizations']) && is_array($item['customizations'])) {
+                    $unitPrice += collect($item['customizations'])->sum('price');
+                }
 
                 PosTransactionItem::create([
                     'transaction_id' => $transaction->id,
@@ -138,6 +146,7 @@ class POSController extends Controller
                     'quantity' => $qty,
                     'unit_price' => $unitPrice,
                     'subtotal' => $unitPrice * $qty,
+                    'customizations' => $item['customizations'] ?? null,
                 ]);
 
                 // Reduce Stock (Simple & Recipe)

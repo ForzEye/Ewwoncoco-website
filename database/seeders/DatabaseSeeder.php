@@ -112,7 +112,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 5. Create Products
-        Product::create([
+        $p1 = Product::create([
             'merchant_id' => $merchant->id,
             'category_id' => $catMinuman->id,
             'name' => 'Es Kelapa Muda Original',
@@ -126,7 +126,7 @@ class DatabaseSeeder extends Seeder
             'is_available' => true,
         ]);
 
-        Product::create([
+        $p2 = Product::create([
             'merchant_id' => $merchant->id,
             'category_id' => $catMinuman->id,
             'name' => 'Kelapa Jeruk Nipis',
@@ -187,5 +187,49 @@ class DatabaseSeeder extends Seeder
             'used_count' => 0,
             'is_active' => true,
         ]);
+
+        // 7. Create Customizations & Options
+        $cIce = \App\Models\Customization::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Pilih Ice',
+            'type' => 'single',
+            'is_required' => true,
+            'is_active' => true,
+        ]);
+        $cIce->options()->createMany([
+            ['name' => 'Normal Ice', 'price' => 0],
+            ['name' => 'Less Ice', 'price' => 0],
+            ['name' => 'No Ice', 'price' => 0],
+        ]);
+
+        $cSugar = \App\Models\Customization::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Pilih Sugar',
+            'type' => 'single',
+            'is_required' => true,
+            'is_active' => true,
+        ]);
+        $cSugar->options()->createMany([
+            ['name' => 'Normal Sugar', 'price' => 0],
+            ['name' => 'Less Sugar', 'price' => 0],
+            ['name' => 'No Sugar', 'price' => 0],
+        ]);
+
+        $cToppings = \App\Models\Customization::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Tambah Topping',
+            'type' => 'multiple',
+            'is_required' => false,
+            'is_active' => true,
+        ]);
+        $cToppings->options()->createMany([
+            ['name' => 'Grass Jelly', 'price' => 3000],
+            ['name' => 'Boba', 'price' => 2000],
+            ['name' => 'Coconut Jelly', 'price' => 4000],
+        ]);
+
+        // Link customizations to products
+        $p1->customizations()->sync([$cIce->id, $cSugar->id, $cToppings->id]);
+        $p2->customizations()->sync([$cIce->id, $cSugar->id, $cToppings->id]);
     }
 }

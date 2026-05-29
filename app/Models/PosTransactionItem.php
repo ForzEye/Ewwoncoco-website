@@ -6,7 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class PosTransactionItem extends Model
 {
-    protected $fillable = ['transaction_id', 'product_id', 'quantity', 'unit_price', 'subtotal'];
+    protected $fillable = ['transaction_id', 'product_id', 'quantity', 'unit_price', 'subtotal', 'customizations'];
+
+    protected $casts = [
+        'customizations' => 'array',
+    ];
 
     public function transaction()
     {

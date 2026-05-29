@@ -57,6 +57,47 @@ export default function Screen({ products, categories, activeShift, promotions }
         setCustomerName 
     } = usePOSStore();
 
+    const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
+    const [posSelectedOptions, setPosSelectedOptions] = useState<Record<number, number[]>>({});
+
+    const handleProductClick = (product: Product) => {
+        if (product.customizations && product.customizations.length > 0) {
+            // Open customization modal
+            const initial: Record<number, number[]> = {};
+            product.customizations.forEach((cust) => {
+                if (cust.type === 'single' && cust.options && cust.options.length > 0) {
+                    initial[cust.id] = [cust.options[0].id];
+                } else {
+                    initial[cust.id] = [];
+                }
+            });
+            setPosSelectedOptions(initial);
+            setCustomizingProduct(product);
+        } else {
+            // Add immediately
+            addItem(product);
+        }
+    };
+
+    const handleConfirmCustomization = () => {
+        if (!customizingProduct) return;
+        const selectedList: any[] = [];
+        if (customizingProduct.customizations) {
+            customizingProduct.customizations.forEach((cust) => {
+                const selectedIds = posSelectedOptions[cust.id] || [];
+                if (cust.options) {
+                    cust.options.forEach((opt) => {
+                        if (selectedIds.includes(opt.id)) {
+                            selectedList.push(opt);
+                        }
+                    });
+                }
+            });
+        }
+        addItem(customizingProduct, 1, '', selectedList);
+        setCustomizingProduct(null);
+    };
+
     const handleSearchCustomer = async () => {
         if (!customerQuery) return;
         setIsSearchingCustomer(true);
@@ -246,22 +287,22 @@ export default function Screen({ products, categories, activeShift, promotions }
                             if (product.name.includes('Jeruk')) localImg = '/coconut_lime.png';
                             if (product.name.includes('Puding')) localImg = '/coconut_pudding.png';
 
-                            const inCart = items.find(i => i.product.id === product.id);
+                            const inCartQty = items.filter(i => i.product.id === product.id).reduce((s, i) => s + i.quantity, 0);
 
                             return (
                                 <button 
                                     key={product.id}
-                                    onClick={() => addItem(product)}
+                                    onClick={() => handleProductClick(product)}
                                     className={`relative bg-white p-3.5 rounded-3xl border-2 transition-all duration-300 text-left flex flex-col h-fit group overflow-hidden ${
-                                        inCart 
+                                        inCartQty > 0 
                                             ? 'border-[#2D6A4F] shadow-[0_4px_20px_rgba(45,106,79,0.1)]' 
                                             : 'border-transparent shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:-translate-y-1'
                                     }`}
                                 >
                                     {/* Cart quantity badge */}
-                                    {inCart && (
+                                    {inCartQty > 0 && (
                                         <div className="absolute top-3 right-3 z-20 w-7 h-7 bg-[#2D6A4F] rounded-xl flex items-center justify-center shadow-md shadow-[#2D6A4F]/20">
-                                            <span className="text-[11px] font-black text-white">{angka(inCart.quantity)}</span>
+                                            <span className="text-[11px] font-black text-white">{angka(inCartQty)}</span>
                                         </div>
                                     )}
 
@@ -415,36 +456,47 @@ export default function Screen({ products, categories, activeShift, promotions }
                             </div>
                         ) : (
                             <>
-                                {items.map((item, idx) => (
-                                    <div key={item.product.id} className="flex items-center gap-3 bg-[#FAFAF8] p-3 rounded-2xl border border-[#F0EDE8] hover:bg-[#F5F3EF] transition-colors">
-                                        <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD]">
-                                            <img 
-                                                src={item.product.name.includes('Original') ? '/coconut_original.png' : (item.product.name.includes('Jeruk') ? '/coconut_lime.png' : (item.product.name.includes('Puding') ? '/coconut_pudding.png' : item.product.image_url || '/coconut_original.png'))} 
-                                                className="w-full h-full object-cover" 
-                                                alt=""
-                                            />
+                                {items.map((item, idx) => {
+                                    const itemKey = item.product.id + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
+                                    const sumToppings = (item.customizations || []).reduce((s, c) => s + Number(c.price), 0);
+                                    const itemTotalPrice = (Number(item.product.price) + sumToppings) * item.quantity;
+
+                                    return (
+                                        <div key={itemKey} className="flex items-center gap-3 bg-[#FAFAF8] p-3 rounded-2xl border border-[#F0EDE8] hover:bg-[#F5F3EF] transition-colors">
+                                            <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD]">
+                                                <img 
+                                                    src={item.product.name.includes('Original') ? '/coconut_original.png' : (item.product.name.includes('Jeruk') ? '/coconut_lime.png' : (item.product.name.includes('Puding') ? '/coconut_pudding.png' : item.product.image_url || '/coconut_original.png'))} 
+                                                    className="w-full h-full object-cover" 
+                                                    alt=""
+                                                />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h5 className="text-[12px] font-black text-[#1A1A1A] truncate font-poppins">{item.product.name}</h5>
+                                                {item.customizations && item.customizations.length > 0 && (
+                                                    <p className="text-[9px] text-[#8A8379] font-bold truncate">
+                                                        {item.customizations.map(c => c.name).join(', ')}
+                                                    </p>
+                                                )}
+                                                <p className="text-[11px] text-[#2D6A4F] font-black">{rupiah(itemTotalPrice)}</p>
+                                            </div>
+                                            <div className="flex items-center bg-white rounded-xl p-0.5 border border-[#E8E4DD] shadow-sm">
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity - 1, item.customizations); }} 
+                                                    className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                >
+                                                    <Minus size={13} strokeWidth={2.5} />
+                                                </button>
+                                                <span className="w-7 text-center text-[12px] font-black text-[#1A1A1A]">{angka(item.quantity)}</span>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity + 1, item.customizations); }} 
+                                                    className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-[#2D6A4F] hover:bg-[#E8F5E9] rounded-lg transition-all"
+                                                >
+                                                    <Plus size={13} strokeWidth={2.5} />
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h5 className="text-[12px] font-black text-[#1A1A1A] truncate font-poppins">{item.product.name}</h5>
-                                            <p className="text-[11px] text-[#2D6A4F] font-black">{rupiah(item.product.price * item.quantity)}</p>
-                                        </div>
-                                        <div className="flex items-center bg-white rounded-xl p-0.5 border border-[#E8E4DD] shadow-sm">
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity - 1); }} 
-                                                className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                            >
-                                                <Minus size={13} strokeWidth={2.5} />
-                                            </button>
-                                            <span className="w-7 text-center text-[12px] font-black text-[#1A1A1A]">{angka(item.quantity)}</span>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity + 1); }} 
-                                                className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-[#2D6A4F] hover:bg-[#E8F5E9] rounded-lg transition-all"
-                                            >
-                                                <Plus size={13} strokeWidth={2.5} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
 
                                 {freeBogoItems.map((freeItem, idx) => (
                                     <div key={`free-${freeItem.product.id}`} className="flex items-center gap-3 bg-[#E8F5E9]/50 p-3 rounded-2xl border border-dashed border-[#2D6A4F]/20 relative overflow-hidden transition-all duration-200">
@@ -568,6 +620,82 @@ export default function Screen({ products, categories, activeShift, promotions }
                 onClose={() => setIsReceiptOpen(false)}
                 order={lastOrder}
             />
+
+            {/* POS Customization Modal */}
+            {customizingProduct && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-[#E8E4DD] flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="p-6 border-b border-[#E8E4DD] bg-[#F5F3EF]">
+                            <h3 className="text-lg font-black text-[#1A1A1A] font-poppins">{customizingProduct.name}</h3>
+                            <p className="text-xs text-[#8A8379] font-medium mt-1">Sesuaikan pesanan pelanggan</p>
+                        </div>
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            {customizingProduct.customizations?.map((cust) => (
+                                <div key={cust.id} className="space-y-2.5">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[11px] font-black text-[#B5AFA6] uppercase tracking-wider">{cust.name}</span>
+                                        <span className="text-[9px] font-bold bg-[#E8F5E9] text-[#2D6A4F] px-2 py-0.5 rounded">
+                                            {cust.type === 'single' ? 'Pilih Satu' : 'Pilih Banyak'}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {cust.options?.map((opt) => {
+                                            const isSelected = (posSelectedOptions[cust.id] || []).includes(opt.id);
+                                            return (
+                                                <button
+                                                    key={opt.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const current = posSelectedOptions[cust.id] || [];
+                                                        if (cust.type === 'single') {
+                                                            setPosSelectedOptions({ ...posSelectedOptions, [cust.id]: [opt.id] });
+                                                        } else {
+                                                            if (current.includes(opt.id)) {
+                                                                setPosSelectedOptions({ ...posSelectedOptions, [cust.id]: current.filter(id => id !== opt.id) });
+                                                            } else {
+                                                                setPosSelectedOptions({ ...posSelectedOptions, [cust.id]: [...current, opt.id] });
+                                                            }
+                                                        }
+                                                    }}
+                                                    className={`p-3 rounded-2xl border-2 font-bold text-left transition-all flex flex-col justify-between h-20 ${
+                                                        isSelected 
+                                                            ? 'border-[#2D6A4F] bg-[#E8F5E9] text-[#2D6A4F]' 
+                                                            : 'border-[#E8E4DD] bg-white text-[#8A8379] hover:border-[#C4BEB5]'
+                                                    }`}
+                                                >
+                                                    <span className="text-xs">{opt.name}</span>
+                                                    {Number(opt.price) > 0 && (
+                                                        <span className="text-[11px] font-black text-[#2D6A4F]">+{rupiah(opt.price)}</span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Footer */}
+                        <div className="p-6 border-t border-[#E8E4DD] bg-[#F5F3EF] flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setCustomizingProduct(null)}
+                                className="flex-1 py-3.5 bg-white border border-[#E8E4DD] text-[#8A8379] font-bold rounded-2xl hover:bg-gray-100 transition-all text-sm uppercase tracking-wider"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmCustomization}
+                                className="flex-1 py-3.5 bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-bold rounded-2xl transition-all text-sm uppercase tracking-wider"
+                            >
+                                Konfirmasi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </POSLayout>
     );
 }

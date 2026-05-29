@@ -59,50 +59,65 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             <p className="font-inter">Keranjang belanja Anda kosong</p>
                         </div>
                     ) : (
-                        items.map((item) => (
-                            <div key={item.product.id} className="flex gap-4 border-b border-gray-100 pb-4">
-                                <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
-                                    {item.product.image_url ? (
-                                        <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">IMG</div>
-                                    )}
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="font-poppins font-medium text-sm text-[#1A1A1A] line-clamp-2">
-                                        {item.product.name}
-                                    </h4>
-                                    <div className="text-[#00C48C] font-semibold text-sm mt-1">
-                                        {rupiah(item.product.price)}
+                        items.map((item) => {
+                            const itemKey = item.product.id + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
+                            const sumToppings = (item.customizations || []).reduce((s, c) => s + Number(c.price), 0);
+                            const itemUnitPrice = Number(item.product.price) + sumToppings;
+
+                            return (
+                                <div key={itemKey} className="flex gap-4 border-b border-gray-100 pb-4">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                                        {item.product.image_url ? (
+                                            <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">IMG</div>
+                                        )}
                                     </div>
-                                    <div className="flex items-center justify-between mt-2">
-                                        <div className="flex items-center border border-gray-200 rounded-md">
-                                            <button 
-                                                onClick={() => {
-                                                    if (item.quantity > 1) {
-                                                        updateQuantity(item.product.id, item.quantity - 1);
-                                                    } else {
-                                                        removeItem(item.product.id);
-                                                    }
-                                                }}
-                                                className="px-2 py-1 text-gray-600 hover:bg-gray-50"
-                                            >
-                                                <Minus size={14} />
-                                            </button>
-                                            <span className="px-2 py-1 text-sm font-medium w-8 text-center">
-                                                {item.quantity}
-                                            </span>
-                                            <button 
-                                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                                                className="px-2 py-1 text-gray-600 hover:bg-gray-50"
-                                            >
-                                                <Plus size={14} />
-                                            </button>
+                                    <div className="flex-1">
+                                        <h4 className="font-poppins font-medium text-sm text-[#1A1A1A] line-clamp-2">
+                                            {item.product.name}
+                                        </h4>
+                                        {item.customizations && item.customizations.length > 0 && (
+                                            <div className="text-[11px] text-gray-500 font-inter mt-1 space-y-0.5">
+                                                {item.customizations.map((c) => (
+                                                    <div key={c.id}>
+                                                        • {c.name} {Number(c.price) > 0 && `(+${rupiah(c.price)})`}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div className="text-[#00C48C] font-semibold text-sm mt-1">
+                                            {rupiah(itemUnitPrice)}
+                                        </div>
+                                        <div className="flex items-center justify-between mt-2">
+                                            <div className="flex items-center border border-gray-200 rounded-md">
+                                                <button 
+                                                    onClick={() => {
+                                                        if (item.quantity > 1) {
+                                                            updateQuantity(item.product.id, item.quantity - 1, item.customizations);
+                                                        } else {
+                                                            removeItem(item.product.id, item.customizations);
+                                                        }
+                                                    }}
+                                                    className="px-2 py-1 text-gray-600 hover:bg-gray-50"
+                                                >
+                                                    <Minus size={14} />
+                                                </button>
+                                                <span className="px-2 py-1 text-sm font-medium w-8 text-center">
+                                                    {item.quantity}
+                                                </span>
+                                                <button 
+                                                    onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.customizations)}
+                                                    className="px-2 py-1 text-gray-600 hover:bg-gray-50"
+                                                >
+                                                    <Plus size={14} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
 

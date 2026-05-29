@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminSettingsController;
+use App\Http\Controllers\Admin\CustomizationController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\MarketingController;
@@ -131,6 +132,12 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     Route::get('/products/{id}/edit', [MerchantProductController::class, 'edit'])->name('products.edit');
     Route::post('/products/{id}', [MerchantProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{id}', [MerchantProductController::class, 'destroy'])->name('products.destroy');
+
+    // Customizations
+    Route::get('/customizations', [CustomizationController::class, 'index'])->name('customizations.index');
+    Route::post('/customizations', [CustomizationController::class, 'store'])->name('customizations.store');
+    Route::post('/customizations/{id}', [CustomizationController::class, 'update'])->name('customizations.update');
+    Route::delete('/customizations/{id}', [CustomizationController::class, 'destroy'])->name('customizations.destroy');
 
     // Orders
     Route::get('/orders', [MerchantOrderController::class, 'index'])->name('orders.index');

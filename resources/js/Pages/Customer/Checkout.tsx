@@ -30,7 +30,11 @@ export default function Checkout() {
         setData('items', items.map(item => ({
             product_id: item.product.id,
             quantity: item.quantity,
-            notes: item.notes
+            notes: item.notes,
+            customizations: (item.customizations || []).map(c => ({
+                name: c.name,
+                price: Number(c.price)
+            }))
         })));
     }, [items]);
 
@@ -262,12 +266,24 @@ export default function Checkout() {
                                 <h3 className="font-poppins font-semibold text-lg text-[#1A1A1A] mb-4">Ringkasan Pesanan</h3>
                                 
                                 <div className="space-y-3 mb-4">
-                                    {items.map(item => (
-                                        <div key={item.product.id} className="flex justify-between text-sm font-inter">
-                                            <span className="text-gray-600 truncate mr-2">{item.quantity}x {item.product.name}</span>
-                                            <span className="font-medium text-[#1A1A1A] flex-shrink-0">{rupiah(item.product.price * item.quantity)}</span>
-                                        </div>
-                                    ))}
+                                    {items.map(item => {
+                                        const sumToppings = (item.customizations || []).reduce((s, c) => s + Number(c.price), 0);
+                                        const itemTotal = (Number(item.product.price) + sumToppings) * item.quantity;
+                                        const itemKey = item.product.id + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
+                                        return (
+                                            <div key={itemKey} className="flex flex-col text-sm font-inter">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600 truncate mr-2">{item.quantity}x {item.product.name}</span>
+                                                    <span className="font-medium text-[#1A1A1A] flex-shrink-0">{rupiah(itemTotal)}</span>
+                                                </div>
+                                                {item.customizations && item.customizations.length > 0 && (
+                                                    <div className="text-[11px] text-gray-400 font-inter pl-4">
+                                                        {item.customizations.map(c => c.name).join(', ')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
 
                                 <div className="border-t border-gray-200 pt-4 space-y-2 mb-4 text-sm font-inter">

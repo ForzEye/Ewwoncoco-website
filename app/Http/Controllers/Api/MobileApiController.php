@@ -170,7 +170,7 @@ class MobileApiController extends Controller
     public function getProducts(Request $request, $branchId)
     {
         // Ambil produk yang spesifik untuk cabang ini ATAU yang bersifat global (branch_id null)
-        $products = Product::with('category')
+        $products = Product::with(['category', 'customizations.options'])
             ->where(function ($query) use ($branchId) {
                 $query->where('branch_id', $branchId)
                     ->orWhereNull('branch_id');
@@ -195,6 +195,9 @@ class MobileApiController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.customizations' => 'nullable|array',
+            'items.*.customizations.*.name' => 'required|string',
+            'items.*.customizations.*.price' => 'required|numeric|min:0',
             'subtotal' => 'required|numeric|min:0',
             'delivery_fee' => 'nullable|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
@@ -260,6 +263,7 @@ class MobileApiController extends Controller
                     'unit_price' => $unitPrice,
                     'subtotal' => $qty * $unitPrice,
                     'notes' => $item['notes'] ?? null,
+                    'customizations' => $item['customizations'] ?? null,
                 ]);
 
                 // Apply BOGO Promo

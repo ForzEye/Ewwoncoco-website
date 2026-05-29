@@ -51,4 +51,9 @@ class Product extends Model
     {
         return $this->hasMany(Recipe::class);
     }
+
+    public function customizations()
+    {
+        return $this->belongsToMany(Customization::class, 'product_customizations');
+    }
 }

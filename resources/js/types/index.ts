@@ -61,6 +61,24 @@ export interface ProductCategory {
     order: number;
 }
 
+export interface CustomizationOption {
+    id: number;
+    customization_id: number;
+    name: string;
+    price: number;
+    is_active: boolean;
+}
+
+export interface Customization {
+    id: number;
+    merchant_id?: number | null;
+    name: string;
+    type: 'single' | 'multiple';
+    is_required: boolean;
+    is_active: boolean;
+    options?: CustomizationOption[];
+}
+
 export interface Product {
     id: number;
     merchant_id: number;
@@ -78,6 +96,7 @@ export interface Product {
     category?: ProductCategory;
     merchant?: Merchant;
     recipes?: Recipe[];
+    customizations?: Customization[];
 }
 
 export interface Recipe {
@@ -111,6 +130,7 @@ export interface OrderItem {
     subtotal: number;
     notes?: string | null;
     product?: Product;
+    customizations?: CustomizationOption[] | null;
 }
 
 export interface Order {
@@ -282,6 +302,7 @@ export interface CartItem {
     product: Product;
     quantity: number;
     notes?: string;
+    customizations?: CustomizationOption[];
 }
 
 // ─── Delivery Quote ───

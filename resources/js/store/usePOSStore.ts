@@ -1,19 +1,20 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Product } from '../types';
+import { Product, CustomizationOption } from '../types';
 
 export interface POSItem {
     product: Product;
     quantity: number;
     notes?: string;
+    customizations?: CustomizationOption[];
 }
 
 interface POSState {
     items: POSItem[];
     customerName: string;
-    addItem: (product: Product, quantity?: number) => void;
-    removeItem: (productId: number) => void;
-    updateQuantity: (productId: number, quantity: number) => void;
+    addItem: (product: Product, quantity?: number, notes?: string, customizations?: CustomizationOption[]) => void;
+    removeItem: (productId: number, customizations?: CustomizationOption[]) => void;
+    updateQuantity: (productId: number, quantity: number, customizations?: CustomizationOption[]) => void;
     clearCart: () => void;
     setCustomerName: (name: string) => void;
     getTotal: () => number;
@@ -25,43 +26,63 @@ export const usePOSStore = create<POSState>()(
         (set, get) => ({
             items: [],
             customerName: 'Pelanggan Umum',
-            addItem: (product, quantity = 1) => {
-                const currentItems = get().items;
-                const existingItem = currentItems.find((item) => item.product.id === product.id);
-
-                if (existingItem) {
-                    set({
-                        items: currentItems.map((item) =>
-                            item.product.id === product.id
-                                ? { ...item, quantity: item.quantity + quantity }
-                                : item
-                        ),
+            addItem: (product, quantity = 1, notes = '', customizations = []) => {
+                set((state) => {
+                    const newCustIds = (customizations || []).map((c) => c.id).sort().join(',');
+                    const existingItem = state.items.find((item) => {
+                        if (item.product.id !== product.id) return false;
+                        const itemCustIds = (item.customizations || []).map((c) => c.id).sort().join(',');
+                        return itemCustIds === newCustIds;
                     });
-                } else {
-                    set({ items: [...currentItems, { product, quantity }] });
-                }
+
+                    if (existingItem) {
+                        return {
+                            items: state.items.map((item) => {
+                                const itemCustIds = (item.customizations || []).map((c) => c.id).sort().join(',');
+                                return item.product.id === product.id && itemCustIds === newCustIds
+                                    ? { ...item, quantity: item.quantity + quantity, notes: notes || item.notes }
+                                    : item;
+                            }),
+                        };
+                    }
+
+                    return { items: [...state.items, { product, quantity, notes, customizations }] };
+                });
             },
-            removeItem: (productId) => {
-                set({ items: get().items.filter((item) => item.product.id !== productId) });
+            removeItem: (productId, customizations = []) => {
+                const newCustIds = (customizations || []).map((c) => c.id).sort().join(',');
+                set((state) => ({
+                    items: state.items.filter((item) => {
+                        if (item.product.id !== productId) return true;
+                        const itemCustIds = (item.customizations || []).map((c) => c.id).sort().join(',');
+                        return itemCustIds !== newCustIds;
+                    }),
+                }));
             },
-            updateQuantity: (productId, quantity) => {
+            updateQuantity: (productId, quantity, customizations = []) => {
+                const newCustIds = (customizations || []).map((c) => c.id).sort().join(',');
                 if (quantity <= 0) {
-                    get().removeItem(productId);
+                    get().removeItem(productId, customizations);
                     return;
                 }
-                set({
-                    items: get().items.map((item) =>
-                        item.product.id === productId ? { ...item, quantity } : item
-                    ),
-                });
+                set((state) => ({
+                    items: state.items.map((item) => {
+                        if (item.product.id !== productId) return item;
+                        const itemCustIds = (item.customizations || []).map((c) => c.id).sort().join(',');
+                        return itemCustIds === newCustIds ? { ...item, quantity } : item;
+                    }),
+                }));
             },
             clearCart: () => set({ items: [], customerName: 'Pelanggan Umum' }),
             setCustomerName: (name) => set({ customerName: name }),
             getTotal: () => {
-                return get().items.reduce(
-                    (total, item) => total + item.product.price * item.quantity,
-                    0
-                );
+                return get().items.reduce((total, item) => {
+                    const toppingsPrice = (item.customizations || []).reduce(
+                        (sum, c) => sum + Number(c.price),
+                        0
+                    );
+                    return total + (Number(item.product.price) + toppingsPrice) * item.quantity;
+                }, 0);
             },
             getItemCount: () => {
                 return get().items.reduce((count, item) => count + item.quantity, 0);

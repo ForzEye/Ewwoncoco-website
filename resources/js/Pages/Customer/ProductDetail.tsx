@@ -19,8 +19,71 @@ export default function ProductDetail({ product, reviews, avgRating, reviewCount
     const [quantity, setQuantity] = useState(1);
     const addItem = useCartStore((state) => state.addItem);
 
+    // Initial state with default choices for required/single customizations
+    const [selectedOptions, setSelectedOptions] = useState<Record<number, number[]>>(() => {
+        const initial: Record<number, number[]> = {};
+        if (product.customizations) {
+            product.customizations.forEach((cust) => {
+                if (cust.type === 'single' && cust.options && cust.options.length > 0) {
+                    initial[cust.id] = [cust.options[0].id];
+                } else {
+                    initial[cust.id] = [];
+                }
+            });
+        }
+        return initial;
+    });
+
+    const handleOptionChange = (customizationId: number, optionId: number, type: 'single' | 'multiple') => {
+        setSelectedOptions((prev) => {
+            const current = prev[customizationId] || [];
+            if (type === 'single') {
+                return { ...prev, [customizationId]: [optionId] };
+            } else {
+                if (current.includes(optionId)) {
+                    return { ...prev, [customizationId]: current.filter((id) => id !== optionId) };
+                } else {
+                    return { ...prev, [customizationId]: [...current, optionId] };
+                }
+            }
+        });
+    };
+
+    const getToppingsPriceSum = () => {
+        let sum = 0;
+        if (product.customizations) {
+            product.customizations.forEach((cust) => {
+                const selectedIds = selectedOptions[cust.id] || [];
+                if (cust.options) {
+                    cust.options.forEach((opt) => {
+                        if (selectedIds.includes(opt.id)) {
+                            sum += Number(opt.price);
+                        }
+                    });
+                }
+            });
+        }
+        return sum;
+    };
+
+    const currentSinglePrice = Number(product.price) + getToppingsPriceSum();
+    const totalPrice = currentSinglePrice * quantity;
+
     const handleAddToCart = () => {
-        addItem(product, quantity);
+        const customizationsList: any[] = [];
+        if (product.customizations) {
+            product.customizations.forEach((cust) => {
+                const selectedIds = selectedOptions[cust.id] || [];
+                if (cust.options) {
+                    cust.options.forEach((opt) => {
+                        if (selectedIds.includes(opt.id)) {
+                            customizationsList.push(opt);
+                        }
+                    });
+                }
+            });
+        }
+        addItem(product, quantity, '', customizationsList);
         setIsCartOpen(true);
     };
 
@@ -87,7 +150,7 @@ export default function ProductDetail({ product, reviews, avgRating, reviewCount
 
                             <div className="flex items-center space-x-2 mb-6">
                                 <span className="font-poppins font-bold text-3xl text-[#00C48C]">
-                                    {rupiah(product.price)}
+                                    {rupiah(currentSinglePrice)}
                                 </span>
                                 {product.stock > 0 ? (
                                     <span className="text-sm text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-100">
@@ -103,6 +166,50 @@ export default function ProductDetail({ product, reviews, avgRating, reviewCount
                             <p className="text-gray-600 font-inter leading-relaxed mb-8">
                                 {product.description || 'Produk berkualitas dari EWWON COCO. Segera pesan sebelum kehabisan!'}
                             </p>
+
+                            {/* Customization Options */}
+                            {product.customizations && product.customizations.length > 0 && (
+                                <div className="space-y-6 mb-8 border-t border-b border-gray-100 py-6">
+                                    <h3 className="font-poppins font-bold text-lg text-charcoal">Kustomisasi</h3>
+                                    {product.customizations.map((cust) => (
+                                        <div key={cust.id} className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <label className="font-poppins font-semibold text-sm text-[#1A1A1A]">
+                                                    {cust.name}
+                                                    {cust.is_required && <span className="text-red-500 ml-1">*</span>}
+                                                </label>
+                                                <span className="text-[10px] bg-gray-100 text-gray-500 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                    {cust.type === 'single' ? 'Pilih 1' : 'Pilih Banyak'}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {cust.options?.map((opt) => {
+                                                    const isSelected = (selectedOptions[cust.id] || []).includes(opt.id);
+                                                    return (
+                                                        <button
+                                                            key={opt.id}
+                                                            type="button"
+                                                            onClick={() => handleOptionChange(cust.id, opt.id, cust.type)}
+                                                            className={`flex items-center justify-between p-4 border rounded-xl transition-all text-left ${
+                                                                isSelected 
+                                                                    ? 'border-[#00C48C] bg-[#F0FAF6] text-[#00C48C]' 
+                                                                    : 'border-gray-200 hover:border-gray-300 bg-white text-[#1A1A1A]'
+                                                            }`}
+                                                        >
+                                                            <span className="text-sm font-semibold">{opt.name}</span>
+                                                            {Number(opt.price) > 0 && (
+                                                                <span className="text-xs font-bold text-gray-500">
+                                                                    +{rupiah(opt.price)}
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             {/* Merchant Info Card */}
                             {product.merchant && (
