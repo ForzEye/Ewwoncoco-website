@@ -223,7 +223,7 @@ class POSController extends Controller
 
             return response()->json([
                 'success' => true,
-                'transaction' => $transaction->load(['items.product', 'merchant', 'branch']),
+                'transaction' => $transaction->load(['items.product', 'merchant', 'branch', 'cashier']),
                 'message' => 'Transaksi berhasil',
             ]);
         });

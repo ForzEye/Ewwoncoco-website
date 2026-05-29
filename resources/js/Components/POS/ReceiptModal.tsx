@@ -55,7 +55,7 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
         <div id="print-modal-wrapper" className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
             
-            <div id="print-modal-dialog" className="relative bg-[#F5F3EF] w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-[#E8E4DD] animate-in fade-in zoom-in duration-300">
+            <div id="print-modal-dialog" className="relative bg-[#F5F3EF] w-full max-w-md max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-[#E8E4DD] animate-in fade-in zoom-in duration-300">
                 <div className="p-6 border-b border-[#E8E4DD] flex items-center justify-between no-print bg-white">
                     <div>
                         <h3 className="font-poppins font-black text-[#1A1A1A]">Preview Struk</h3>
@@ -66,7 +66,7 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                     </button>
                 </div>
 
-                <div id="print-modal-content" className="flex-1 p-8 overflow-y-auto flex flex-col items-center">
+                <div id="print-modal-content" className="flex-1 p-6 md:p-8 overflow-y-auto flex flex-col items-center">
                     <div className="w-16 h-16 bg-[#E8F5E9] text-[#2D6A4F] rounded-2xl flex items-center justify-center mb-8 no-print shadow-sm">
                         <CheckCircle2 size={32} />
                     </div>
@@ -86,11 +86,11 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                                 {order.merchant?.receipt_header || order.merchant?.name || 'EWWON COCO'}
                             </h4>
                             <p className="font-bold" style={{ fontSize: `${baseFontSize}px` }}>{order.branch?.name || 'Cabang Utama'}</p>
-                            <div className="mt-1 space-y-0.5" style={{ fontSize: `${baseFontSize - 1.5}px` }}>
+                            <div className="mt-1 space-y-0.5" style={{ fontSize: `${Math.max(6.5, baseFontSize - 2.5)}px` }}>
                                 <p className="leading-tight px-2">
                                     {order.branch?.address || order.merchant?.address || 'Jl. Raya No. 123'}
                                 </p>
-                                <p>{order.branch?.phone || order.merchant?.phone || '0812-3456-7890'}</p>
+                                <p style={{ fontSize: `${Math.max(7, baseFontSize - 2)}px` }}>{order.branch?.phone || order.merchant?.phone || '0812-3456-7890'}</p>
                             </div>
                         </div>
 
