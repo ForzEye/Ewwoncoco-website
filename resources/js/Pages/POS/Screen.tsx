@@ -130,29 +130,29 @@ export default function Screen({ products, categories, activeShift, promotions }
     const freeBogoItems = useMemo(() => {
         if (!promotions || promotions.length === 0 || items.length === 0) return [];
         
-        const specificBogoPromos = promotions.filter(p => p.buy_product_id !== null);
-        const globalBogoPromo = promotions.find(p => p.buy_product_id === null);
+        const specificBogoPromos = promotions.filter(p => p.buy_product_id !== null && p.buy_product_id !== undefined);
+        const globalBogoPromo = promotions.find(p => p.buy_product_id === null || p.buy_product_id === undefined);
 
         const freeItemsMap: { [productId: number]: { product: Product; quantity: number; promoName: string } } = {};
 
         items.forEach(item => {
-            const productId = item.product.id;
+            const productId = Number(item.product.id);
             const qty = item.quantity;
 
-            let promo = specificBogoPromos.find(p => p.buy_product_id === productId);
+            let promo = specificBogoPromos.find(p => Number(p.buy_product_id) === productId);
             if (!promo && globalBogoPromo) {
                 promo = globalBogoPromo;
             }
 
             if (promo) {
-                const buyQty = promo.buy_quantity || 1;
-                const getQty = promo.get_quantity || 1;
+                const buyQty = Number(promo.buy_quantity) || 1;
+                const getQty = Number(promo.get_quantity) || 1;
                 const multiplier = Math.floor(qty / buyQty);
                 const freeQty = multiplier * getQty;
 
                 if (freeQty > 0) {
-                    const freeProductId = promo.get_product_id || productId;
-                    const freeProd = products.find(p => p.id === freeProductId);
+                    const freeProductId = promo.get_product_id ? Number(promo.get_product_id) : productId;
+                    const freeProd = products.find(p => Number(p.id) === freeProductId);
                     if (freeProd) {
                         if (freeItemsMap[freeProductId]) {
                             freeItemsMap[freeProductId].quantity += freeQty;

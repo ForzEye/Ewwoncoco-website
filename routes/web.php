@@ -47,24 +47,37 @@ Route::get('/debug-promo', function() {
     $now = now();
     $promotions_raw = \App\Models\Promotion::all();
     $promotions_active = \App\Models\Promotion::active()->get();
+    $user = auth()->user();
+    
+    $merchantId = $user ? ($user->merchant_id ?? 1) : 1;
+    $promotions_for_user = \App\Models\Promotion::active()
+        ->where('merchant_id', $merchantId)
+        ->where('type', 'bogo')
+        ->whereIn('applicable_on', ['offline', 'all'])
+        ->get();
     
     return response()->json([
         'current_time_php' => $now->toDateTimeString(),
         'current_timezone_php' => date_default_timezone_get(),
         'laravel_timezone' => config('app.timezone'),
         'database_now' => \Illuminate\Support\Facades\DB::select('SELECT NOW() as db_time')[0]->db_time ?? null,
-        'all_promotions_in_db' => $promotions_raw->map(function($p) {
+        'authenticated_user' => $user ? [
+            'id' => $user->id,
+            'name' => $user->name,
+            'role' => $user->role,
+            'merchant_id' => $user->merchant_id,
+        ] : null,
+        'all_users_in_db' => \App\Models\User::all(['id', 'name', 'role', 'merchant_id'])->toArray(),
+        'promotions_for_authenticated_user' => $promotions_for_user->map(function($p) {
             return [
                 'id' => $p->id,
                 'name' => $p->name,
-                'type' => $p->type,
-                'start_date' => $p->start_date ? (string)$p->start_date : null,
-                'end_date' => $p->end_date ? (string)$p->end_date : null,
-                'is_active' => $p->is_active,
-                'applicable_on' => $p->applicable_on,
                 'merchant_id' => $p->merchant_id,
+                'type' => $p->type,
+                'applicable_on' => $p->applicable_on,
             ];
         }),
+        'all_promotions_in_db' => $promotions_raw,
         'active_promotions_queried' => $promotions_active->pluck('id')->toArray(),
     ]);
 });
