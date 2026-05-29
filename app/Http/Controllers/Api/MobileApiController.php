@@ -414,13 +414,9 @@ class MobileApiController extends Controller
     public function getPromos()
     {
         $promos = Cache::remember('promotions_active', 300, function () {
-            return Promotion::where('is_active', true)
+            return Promotion::active()
                 ->whereIn('applicable_on', ['online', 'all'])
                 ->with(['buyProduct', 'getProduct'])
-                ->where(function ($query) {
-                    $query->whereNull('end_date')
-                        ->orWhere('end_date', '>=', now());
-                })
                 ->get();
         });
 

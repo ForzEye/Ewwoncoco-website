@@ -43,6 +43,40 @@ Route::get('/', [LandingController::class, 'index'])->name('home');
 Route::get('/contact', [LandingController::class, 'contact'])->name('contact');
 Route::get('/faq', [LandingController::class, 'faq'])->name('faq');
 
+Route::get('/debug-promo', function() {
+    $now = now();
+    $promotions_raw = \App\Models\Promotion::all();
+    $promotions_active = \App\Models\Promotion::active()->get();
+    
+    return response()->json([
+        'current_time_php' => $now->toDateTimeString(),
+        'current_timezone_php' => date_default_timezone_get(),
+        'laravel_timezone' => config('app.timezone'),
+        'database_now' => \Illuminate\Support\Facades\DB::select('SELECT NOW() as db_time')[0]->db_time ?? null,
+        'all_promotions_in_db' => $promotions_raw->map(function($p) {
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'type' => $p->type,
+                'start_date' => $p->start_date ? $p->start_date->toDateTimeString() : null,
+                'end_date' => $p->end_date ? $p->end_date->toDateTimeString() : null,
+                'is_active' => $p->is_active,
+                'applicable_on' => $p->applicable_on,
+                'merchant_id' => $p->merchant_id,
+            ];
+        }),
+        'active_promotions_queried' => $promotions_active->pluck('id')->toArray(),
+    ]);
+});
+
+Route::get('/clear-cache', function() {
+    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    \Illuminate\Support\Facades\Artisan::call('route:clear');
+    \Illuminate\Support\Facades\Artisan::call('view:clear');
+    return '🚀 Seluruh cache aplikasi berhasil dibersihkan!';
+});
+
 // Informational Pages (others)
 Route::get('/terms', [LandingController::class, 'info'])->defaults('type', 'terms')->name('terms');
 Route::get('/privacy', [LandingController::class, 'info'])->defaults('type', 'privacy')->name('privacy');
