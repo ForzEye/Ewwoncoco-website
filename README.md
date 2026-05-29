@@ -58,10 +58,5 @@ Ewwon Coco adalah ekosistem digital modern yang dirancang untuk revolusi bisnis 
    php artisan queue:work
    ```
 
-## 🔒 Hak Akses (Credentials Default)
-- **Super Admin**: `superadmin@ewwoncoco.id` / `password`
-- **Admin Merchant**: `admin@ewwoncoco.id` / `password`
-- **Kasir**: `kasir@ewwoncoco.id` / `password`
-
 ---
 *Built with ❤️ for Ewwon Coco Ecosystem.*
