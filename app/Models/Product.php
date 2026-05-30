@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'merchant_id', 'branch_id', 'category_id', 'name', 'slug', 'description',
         'price', 'image_url', 'barcode', 'stock', 'min_stock', 'is_available',

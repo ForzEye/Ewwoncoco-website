@@ -30,12 +30,12 @@ class Promotion extends Model
 
     public function buyProduct()
     {
-        return $this->belongsTo(Product::class, 'buy_product_id');
+        return $this->belongsTo(Product::class, 'buy_product_id')->withTrashed();
     }
 
     public function getProduct()
     {
-        return $this->belongsTo(Product::class, 'get_product_id');
+        return $this->belongsTo(Product::class, 'get_product_id')->withTrashed();
     }
 
     /**
