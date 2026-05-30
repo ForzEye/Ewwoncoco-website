@@ -60,12 +60,18 @@ class AdminSettingsController extends Controller
 
         // Handle QRIS image upload
         if ($request->hasFile('qris_image')) {
-            // Delete old image if exists and is a storage path
-            if ($merchant->qris_image_url && ! str_starts_with($merchant->qris_image_url, 'http')) {
-                Storage::disk('public')->delete($merchant->qris_image_url);
+            // Delete old image if exists
+            if ($merchant->qris_image_url) {
+                if (str_starts_with($merchant->qris_image_url, 'http')) {
+                    $oldPath = parse_url($merchant->qris_image_url, PHP_URL_PATH);
+                    $oldPath = ltrim(str_replace('/'.env('AWS_BUCKET'), '', $oldPath), '/');
+                    Storage::disk('s3')->delete($oldPath);
+                } else {
+                    Storage::disk('public')->delete($merchant->qris_image_url);
+                }
             }
-            $path = $request->file('qris_image')->store('qris', 'public');
-            $validated['qris_image_url'] = $path;
+            $path = $request->file('qris_image')->store('qris', 's3');
+            $validated['qris_image_url'] = Storage::disk('s3')->url($path);
         }
 
         // Remove files and map parameters not in merchants table
