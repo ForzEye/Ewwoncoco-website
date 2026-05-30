@@ -58,7 +58,7 @@ class TransactionController extends Controller
         $page = $request->input('page', 1);
         $perPage = 15;
         $paginated = new LengthAwarePaginator(
-            $merged->forPage($page, $perPage),
+            $merged->forPage($page, $perPage)->values(),
             $merged->count(),
             $perPage,
             $page,
@@ -121,12 +121,37 @@ class TransactionController extends Controller
                 Product::where('id', $item->product_id)->increment('stock', $item->quantity);
             }
 
-            // Mark as voided (Assuming we add a status column or just delete?)
-            // The user didn't specify a status column. I'll check if it exists.
-            // If it doesn't, I'll just delete it or add a column in a new migration.
-            // For now, I'll assume we want to keep the record but mark it.
-            // I'll add a 'status' column to pos_transactions in a separate migration if needed.
-            // But let's check the schema first.
+            // Reverse Loyalty Points if customer is associated
+            if ($transaction->customer_id) {
+                // 1. Revert Earned Points
+                $earnLedger = \App\Models\LoyaltyPoint::where('customer_id', $transaction->customer_id)
+                    ->where('reference_type', 'pos_transaction')
+                    ->where('reference_id', $transaction->id)
+                    ->where('transaction_type', 'earn')
+                    ->first();
+
+                if ($earnLedger) {
+                    $balance = \App\Models\UserPointsBalance::where('user_id', $transaction->customer_id)->first();
+                    if ($balance) {
+                        $balance->deductPoints($earnLedger->points);
+                    }
+                    $earnLedger->delete();
+                }
+
+                // 2. Revert Redeemed Points (Kembalikan poin yang dipakai potong harga)
+                $redeemLedger = \App\Models\LoyaltyPoint::where('customer_id', $transaction->customer_id)
+                    ->where('reference_type', 'pos_transaction')
+                    ->where('reference_id', $transaction->id)
+                    ->where('transaction_type', 'redeem')
+                    ->first();
+
+                if ($redeemLedger) {
+                    $balance = \App\Models\UserPointsBalance::getOrCreateForUser($transaction->customer_id);
+                    $balance->addPoints(abs($redeemLedger->points));
+                    $redeemLedger->delete();
+                }
+            }
+
             $transaction->delete(); // For now let's just delete to restore stock correctly.
 
             $activeShift->increment('void_count');
