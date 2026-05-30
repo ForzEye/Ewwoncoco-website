@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 import { 
     Search, 
@@ -37,6 +37,8 @@ export default function Users({ users, filters, merchants }: UsersProps) {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [isCreating, setIsCreating] = useState(false);
 
+    const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
+
     const editForm = useForm({
         role: '' as Role,
         is_active: true,
@@ -47,6 +49,7 @@ export default function Users({ users, filters, merchants }: UsersProps) {
         email: '',
         phone: '',
         password: '',
+        password_confirmation: '',
         role: 'customer' as Role,
         merchant_id: '',
     });
@@ -100,6 +103,20 @@ export default function Users({ users, filters, merchants }: UsersProps) {
             <Head title="Manajemen Pengguna" />
 
             <div className="space-y-6">
+                {/* Flash Messages */}
+                {flash?.success && (
+                    <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-700 text-sm font-semibold animate-in slide-in-from-top-2 duration-300">
+                        <CheckCircle2 size={18} className="shrink-0" />
+                        {flash.success}
+                    </div>
+                )}
+                {flash?.error && (
+                    <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm font-semibold animate-in slide-in-from-top-2 duration-300">
+                        <AlertCircle size={18} className="shrink-0" />
+                        {flash.error}
+                    </div>
+                )}
+
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-poppins font-bold text-charcoal">Users Control</h2>
@@ -322,85 +339,118 @@ export default function Users({ users, filters, merchants }: UsersProps) {
                             </button>
                         </div>
                         
-                        <form onSubmit={handleSubmitCreate} className="p-8 space-y-5">
+                        <form onSubmit={handleSubmitCreate} className="p-8 space-y-5 max-h-[80vh] overflow-y-auto">
+                            {/* Global form error */}
+                            {Object.keys(createForm.errors).length > 0 && (
+                                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl">
+                                    <p className="text-red-600 text-xs font-bold mb-2 uppercase tracking-widest">Terdapat Kesalahan:</p>
+                                    <ul className="space-y-1">
+                                        {Object.values(createForm.errors).map((err, i) => (
+                                            <li key={i} className="text-red-500 text-xs flex items-start gap-1.5">
+                                                <span className="mt-0.5">•</span>{err}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-2 gap-5">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Nama Lengkap</label>
                                     <input 
                                         type="text" 
-                                        className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                        className={`w-full px-5 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none ${createForm.errors.name ? 'border-red-300 bg-red-50' : 'border-transparent'}`}
                                         placeholder="John Doe"
                                         value={createForm.data.name}
                                         onChange={e => createForm.setData('name', e.target.value)}
                                         required
                                     />
+                                    {createForm.errors.name && <p className="text-red-500 text-[11px] ml-1">{createForm.errors.name}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Email</label>
                                     <input 
                                         type="email" 
-                                        className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                        className={`w-full px-5 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none ${createForm.errors.email ? 'border-red-300 bg-red-50' : 'border-transparent'}`}
                                         placeholder="john@example.com"
                                         value={createForm.data.email}
                                         onChange={e => createForm.setData('email', e.target.value)}
                                         required
                                     />
+                                    {createForm.errors.email && <p className="text-red-500 text-[11px] ml-1">{createForm.errors.email}</p>}
                                 </div>
                             </div>
 
-                             <div className="grid grid-cols-2 gap-5">
+                            <div className="grid grid-cols-2 gap-5">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Nomor WhatsApp</label>
                                     <input 
                                         type="text" 
-                                        className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                        className={`w-full px-5 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none ${createForm.errors.phone ? 'border-red-300 bg-red-50' : 'border-transparent'}`}
                                         placeholder="081234567890"
                                         value={createForm.data.phone}
                                         onChange={e => createForm.setData('phone', e.target.value)}
                                         required
                                     />
+                                    {createForm.errors.phone && <p className="text-red-500 text-[11px] ml-1">{createForm.errors.phone}</p>}
                                 </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Pilih Role</label>
+                                    <select 
+                                        className={`w-full px-5 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none ${createForm.errors.role ? 'border-red-300 bg-red-50' : 'border-transparent'}`}
+                                        value={createForm.data.role}
+                                        onChange={e => createForm.setData('role', e.target.value as Role)}
+                                    >
+                                        <option value="customer">Customer</option>
+                                        <option value="kasir">Kasir</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="super_admin">Super Admin</option>
+                                    </select>
+                                    {createForm.errors.role && <p className="text-red-500 text-[11px] ml-1">{createForm.errors.role}</p>}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-5">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
                                     <input 
                                         type="password" 
-                                        className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
-                                        placeholder="••••••••"
+                                        className={`w-full px-5 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none ${createForm.errors.password ? 'border-red-300 bg-red-50' : 'border-transparent'}`}
+                                        placeholder="Min. 8 karakter"
                                         value={createForm.data.password}
                                         onChange={e => createForm.setData('password', e.target.value)}
                                         required
                                     />
+                                    {createForm.errors.password && <p className="text-red-500 text-[11px] ml-1">{createForm.errors.password}</p>}
                                 </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Pilih Role</label>
-                                <select 
-                                    className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
-                                    value={createForm.data.role}
-                                    onChange={e => createForm.setData('role', e.target.value as Role)}
-                                >
-                                    <option value="customer">Customer</option>
-                                    <option value="kasir">Kasir</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="super_admin">Super Admin</option>
-                                </select>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Konfirmasi Password</label>
+                                    <input 
+                                        type="password" 
+                                        className={`w-full px-5 py-3.5 bg-gray-50 border rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none ${createForm.errors.password_confirmation ? 'border-red-300 bg-red-50' : 'border-transparent'}`}
+                                        placeholder="Ulangi password"
+                                        value={createForm.data.password_confirmation}
+                                        onChange={e => createForm.setData('password_confirmation', e.target.value)}
+                                        required
+                                    />
+                                    {createForm.errors.password_confirmation && <p className="text-red-500 text-[11px] ml-1">{createForm.errors.password_confirmation}</p>}
+                                </div>
                             </div>
 
                             {(createForm.data.role === 'admin' || createForm.data.role === 'kasir') && (
                                 <div className="space-y-2 animate-in slide-in-from-top-2">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Assign ke Merchant</label>
                                     <select 
-                                        className="w-full px-5 py-3.5 bg-[#F0FAF6] border-none rounded-2xl text-sm font-bold text-[#2D6A4F] focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                        className={`w-full px-5 py-3.5 bg-[#F0FAF6] border rounded-2xl text-sm font-bold text-[#2D6A4F] focus:ring-2 focus:ring-[#00C48C]/20 outline-none ${createForm.errors.merchant_id ? 'border-red-300' : 'border-transparent'}`}
                                         value={createForm.data.merchant_id}
                                         onChange={e => createForm.setData('merchant_id', e.target.value)}
-                                        required
                                     >
                                         <option value="">Pilih Merchant...</option>
                                         {merchants.map(m => (
                                             <option key={m.id} value={m.id}>{m.name}</option>
                                         ))}
                                     </select>
+                                    {createForm.errors.merchant_id && <p className="text-red-500 text-[11px] ml-1">{createForm.errors.merchant_id}</p>}
                                 </div>
                             )}
 

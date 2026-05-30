@@ -104,23 +104,30 @@ class SuperAdminController extends Controller
 
     public function storeUser(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'phone' => 'required|string|max:20',
-            'password' => 'required|string|min:8',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'phone' => 'required|string|max:20|unique:users,phone',
+            'password' => 'required|string|min:8|confirmed',
             'role' => 'required|in:super_admin,admin,kasir,customer',
-            'merchant_id' => 'required_if:role,admin,kasir',
+            'merchant_id' => 'nullable|required_if:role,admin|required_if:role,kasir|exists:merchants,id',
+        ], [
+            'email.unique' => 'Email ini sudah digunakan oleh pengguna lain.',
+            'phone.unique' => 'Nomor telepon ini sudah digunakan oleh pengguna lain.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+            'merchant_id.required_if' => 'Merchant wajib dipilih untuk role Admin dan Kasir.',
+            'merchant_id.exists' => 'Merchant yang dipilih tidak valid.',
         ]);
 
         User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => bcrypt($request->password),
-            'role' => $request->role,
-            'merchant_id' => $request->merchant_id,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'password' => bcrypt($validated['password']),
+            'role' => $validated['role'],
+            'merchant_id' => $validated['merchant_id'] ?? null,
             'is_active' => true,
+            'email_verified_at' => now(), // Auto-verify since created by super admin
         ]);
 
         return back()->with('success', 'User berhasil dibuat.');
