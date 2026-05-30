@@ -53,7 +53,7 @@ class OrderController extends Controller
             ->with(['buyProduct', 'getProduct'])
             ->get();
 
-        $branches = Branch::where('is_active', true)->get();
+        $branches = Branch::where('is_active', true)->with('merchant')->get();
 
         return Inertia::render('Customer/Checkout', [
             'promotions' => $promotions,

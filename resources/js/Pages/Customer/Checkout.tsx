@@ -298,9 +298,17 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
                                 {/* Placeholder QR Code */}
                                 {data.payment_method === 'qris' && (
                                     <div className="mt-4 p-6 bg-gray-50 border border-gray-200 rounded-lg text-center">
-                                        <div className="w-48 h-48 bg-gray-200 mx-auto mb-4 rounded-md flex items-center justify-center border-2 border-dashed border-gray-400">
-                                            <span className="text-gray-500 font-inter text-sm">QR Code Merchant<br/>(Akan Tampil Disini)</span>
-                                        </div>
+                                        {currentBranch?.merchant?.qris_image_url ? (
+                                            <img 
+                                                src={currentBranch.merchant.qris_image_url} 
+                                                alt="QRIS Merchant" 
+                                                className="w-48 h-auto mx-auto mb-4 rounded-md shadow-sm border border-gray-200" 
+                                            />
+                                        ) : (
+                                            <div className="w-48 h-48 bg-gray-200 mx-auto mb-4 rounded-md flex items-center justify-center border-2 border-dashed border-gray-400 animate-pulse">
+                                                <span className="text-gray-500 font-inter text-sm">QR Code Merchant<br/>(Belum Diupload)</span>
+                                            </div>
+                                        )}
                                         <p className="text-sm text-gray-600 font-inter">Silakan scan kode QR di atas untuk melakukan pembayaran. Bukti transfer dapat diunggah setelah pesanan dibuat.</p>
                                     </div>
                                 )}
@@ -310,8 +318,8 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
                                         <h4 className="font-poppins font-semibold text-[#1A1A1A] mb-2">Informasi Transfer</h4>
                                         <p className="text-sm text-gray-600 font-inter mb-2">Silakan transfer ke rekening berikut:</p>
                                         <div className="bg-white p-3 rounded border border-gray-200 text-sm font-mono mb-3">
-                                            BANK BCA: 1234567890<br/>
-                                            A/N: EWWON COCO
+                                            BANK {currentBranch?.merchant?.bank_name || 'BCA'}: {currentBranch?.merchant?.bank_account_number || '-'}<br/>
+                                            A/N: {currentBranch?.merchant?.bank_account_name || 'EWWON COCO'}
                                         </div>
                                         <p className="text-xs text-gray-500 font-inter italic">Catatan: Pesanan akan diproses setelah bukti transfer dikonfirmasi oleh admin.</p>
                                     </div>
