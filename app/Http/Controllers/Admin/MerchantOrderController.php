@@ -15,6 +15,7 @@ use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class MerchantOrderController extends Controller
@@ -69,13 +70,21 @@ class MerchantOrderController extends Controller
                 if ($oldStatus !== 'confirmed' && $request->status === 'confirmed') {
                     // Deduct Stock for all items in order
                     foreach ($order->items as $item) {
-                        StockService::deductFromRecipe(
-                            $item->product_id,
-                            $order->branch_id,
-                            $item->quantity,
-                            $order->order_number,
-                            'OnlineOrder'
-                        );
+                        try {
+                            StockService::deductFromRecipe(
+                                $item->product_id,
+                                $order->branch_id,
+                                $item->quantity,
+                                $order->order_number,
+                                'OnlineOrder'
+                            );
+                        } catch (\Exception $e) {
+                            Log::warning('MerchantOrder StockService deductFromRecipe warning: ' . $e->getMessage(), [
+                                'product_id' => $item->product_id,
+                                'branch_id' => $order->branch_id,
+                                'order_number' => $order->order_number,
+                            ]);
+                        }
                     }
                 }
             });

@@ -98,12 +98,15 @@ class POSController extends Controller
             $merchantId = $user->merchant_id ?? 1; // fallback ke merchant pertama
             $branchId = $activeShift->branch_id;
 
-            // Fetch active BOGO promotions for this merchant
-            $bogoPromosCollection = Promotion::active()
-                ->where('merchant_id', $merchantId)
-                ->where('type', 'bogo')
-                ->whereIn('applicable_on', ['offline', 'all'])
-                ->get();
+            // Fetch active BOGO promotions for this merchant only if customer is a registered member
+            $bogoPromosCollection = collect();
+            if ($request->customer_id) {
+                $bogoPromosCollection = Promotion::active()
+                    ->where('merchant_id', $merchantId)
+                    ->where('type', 'bogo')
+                    ->whereIn('applicable_on', ['offline', 'all'])
+                    ->get();
+            }
 
             // Specific BOGOs (linked to a product)
             $specificBogoPromos = $bogoPromosCollection->whereNotNull('buy_product_id')->keyBy('buy_product_id');

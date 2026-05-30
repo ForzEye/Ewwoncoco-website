@@ -128,6 +128,7 @@ export default function Screen({ products, categories, activeShift, promotions }
     }, [items, pointsDiscount]);
 
     const freeBogoItems = useMemo(() => {
+        if (!selectedCustomer) return [];
         if (!promotions || promotions.length === 0 || items.length === 0) return [];
         
         const specificBogoPromos = promotions.filter(p => p.buy_product_id !== null && p.buy_product_id !== undefined);
@@ -169,7 +170,7 @@ export default function Screen({ products, categories, activeShift, promotions }
         });
 
         return Object.values(freeItemsMap);
-    }, [items, promotions, products]);
+    }, [items, promotions, products, selectedCustomer]);
 
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
@@ -425,6 +426,18 @@ export default function Screen({ products, categories, activeShift, promotions }
                                             onChange={(e) => setCustomerName(e.target.value)}
                                             className="w-full border-none bg-transparent focus:ring-0 font-black text-[#1A1A1A] p-0 text-sm placeholder:text-[#C4BEB5]"
                                         />
+                                    </div>
+                                </div>
+                            )}
+
+                            {items.length > 0 && !selectedCustomer && promotions && promotions.length > 0 && (
+                                <div className="bg-amber-50 border border-amber-200/60 rounded-2xl p-3 flex gap-2.5 items-start mt-2">
+                                    <Tag className="text-amber-600 flex-shrink-0 mt-0.5" size={14} />
+                                    <div>
+                                        <p className="text-[10px] font-black text-amber-800 uppercase tracking-wider">Promo BOGO Tersedia!</p>
+                                        <p className="text-[10px] text-amber-700/90 mt-0.5 leading-relaxed font-bold">
+                                            Masukkan email/No. HP member untuk mengaktifkan promo otomatis.
+                                        </p>
                                     </div>
                                 </div>
                             )}
