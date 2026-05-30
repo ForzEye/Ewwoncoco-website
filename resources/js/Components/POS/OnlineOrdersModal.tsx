@@ -34,9 +34,10 @@ export default function OnlineOrdersModal({ isOpen, onClose, orders, onUpdate }:
             await axios.post(route('pos.online_orders.accept', orderId));
             onUpdate();
             toastSuccess('Pesanan diterima! Mencetak struk dapur...');
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toastError('Gagal menerima pesanan.');
+            const errMsg = error.response?.data?.message || 'Gagal menerima pesanan.';
+            toastError(errMsg);
         } finally {
             setProcessingId(null);
         }

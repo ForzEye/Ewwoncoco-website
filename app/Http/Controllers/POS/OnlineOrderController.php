@@ -67,21 +67,13 @@ class OnlineOrderController extends Controller
             // Deduct Stock for all items in order
             $order->load('items.product');
             foreach ($order->items as $item) {
-                try {
-                    StockService::deductFromRecipe(
-                        $item->product_id,
-                        $order->branch_id,
-                        $item->quantity,
-                        $order->id,
-                        'OnlineOrder'
-                    );
-                } catch (\Exception $e) {
-                    Log::warning('OnlineOrder StockService deductFromRecipe warning: ' . $e->getMessage(), [
-                        'product_id' => $item->product_id,
-                        'branch_id' => $order->branch_id,
-                        'order' => $order->id,
-                    ]);
-                }
+                StockService::deductFromRecipe(
+                    $item->product_id,
+                    $order->branch_id,
+                    $item->quantity,
+                    $order->id,
+                    'OnlineOrder'
+                );
             }
         });
 

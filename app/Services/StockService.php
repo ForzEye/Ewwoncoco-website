@@ -29,7 +29,7 @@ class StockService
 
             if (! $branchIngredient || $branchIngredient->stock < $totalNeeded) {
                 $ingredientName = $recipe->ingredient->name ?? ('Bahan #'.$recipe->ingredient_id);
-                throw new \Exception("Stok tidak mencukupi untuk bahan: {$ingredientName} (Dibutuhkan: {$totalNeeded}, Tersedia: ".($branchIngredient->stock ?? 0).')');
+                throw new \Exception("Stok bahan baku tidak mencukupi: {$ingredientName} (Butuh: {$totalNeeded}, Tersedia: ".($branchIngredient->stock ?? 0)."). Silakan lakukan isi ulang stok terlebih dahulu.");
             }
 
             $branchIngredient->decrement('stock', $totalNeeded);

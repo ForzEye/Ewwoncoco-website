@@ -201,9 +201,10 @@ export default function Screen({ products, categories, activeShift, promotions }
                 setIsPaymentOpen(false);
                 setIsReceiptOpen(true);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            alertError('Pembayaran Gagal', 'Terjadi kesalahan saat memproses transaksi.');
+            const errMsg = error.response?.data?.message || 'Terjadi kesalahan saat memproses transaksi.';
+            alertError('Pembayaran Gagal', errMsg);
         } finally {
             setIsProcessing(false);
         }
