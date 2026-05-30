@@ -153,14 +153,22 @@ class POSController extends Controller
                 $product = Product::find($productId);
                 $product->decrement('stock', $qty);
 
-                // Deduct Ingredients based on Recipe
-                StockService::deductFromRecipe(
-                    $productId,
-                    $branchId,
-                    $qty,
-                    $transaction->transaction_number,
-                    'PosTransaction'
-                );
+                // Deduct Ingredients based on Recipe (non-blocking)
+                try {
+                    StockService::deductFromRecipe(
+                        $productId,
+                        $branchId,
+                        $qty,
+                        $transaction->transaction_number,
+                        'PosTransaction'
+                    );
+                } catch (\Exception $e) {
+                    Log::warning('POS StockService deductFromRecipe warning: ' . $e->getMessage(), [
+                        'product_id' => $productId,
+                        'branch_id' => $branchId,
+                        'transaction' => $transaction->transaction_number,
+                    ]);
+                }
 
                 // Apply BOGO Promo
                 $promo = null;
@@ -196,13 +204,22 @@ class POSController extends Controller
                         if ($freeProduct) {
                             $freeProduct->decrement('stock', $freeQty);
 
-                            StockService::deductFromRecipe(
-                                $freeProductId,
-                                $branchId,
-                                $freeQty,
-                                $transaction->transaction_number,
-                                'PosTransaction'
-                            );
+                            // Deduct Ingredients for free BOGO product (non-blocking)
+                            try {
+                                StockService::deductFromRecipe(
+                                    $freeProductId,
+                                    $branchId,
+                                    $freeQty,
+                                    $transaction->transaction_number,
+                                    'PosTransaction'
+                                );
+                            } catch (\Exception $e) {
+                                Log::warning('POS BOGO StockService warning: ' . $e->getMessage(), [
+                                    'product_id' => $freeProductId,
+                                    'branch_id' => $branchId,
+                                    'transaction' => $transaction->transaction_number,
+                                ]);
+                            }
                         }
                     }
                 }
