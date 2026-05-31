@@ -180,136 +180,157 @@ export default function Show({ order }: OrderShowProps) {
                             </div>
                             <div>
                                 <p className="font-black text-[#1A1A1A] text-[16px] tracking-tight">{order.customer?.name}</p>
-                                <p className="text-[11px] font-bold text-[#B5AFA6] uppercase tracking-wider mt-0.5">ID Pelanggan: #{order.customer_id}</p>
+                                <p className="text-[11px] font-bold text-[#B5AFA6] uppercase tracking-wider mt-0.5">
+                                    {order.customer_id ? `ID Pelanggan: #${order.customer_id}` : 'Pelanggan Umum (Walk-in)'}
+                                </p>
                             </div>
-                        </div>
-
-                        <div className="space-y-6 pt-4">
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center text-[#2D6A4F] flex-shrink-0">
-                                    <Phone size={16} strokeWidth={2.5} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-widest mb-1">Telepon</p>
-                                    <p className="text-[13px] font-black text-[#1A1A1A]">{order.customer?.phone || '-'}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0">
-                                    <Mail size={16} strokeWidth={2.5} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-widest mb-1">Email</p>
-                                    <p className="text-[13px] font-black text-[#1A1A1A]">{order.customer?.email}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500 flex-shrink-0">
-                                    {order.delivery_type === 'pickup' ? <ShoppingBag size={16} strokeWidth={2.5} /> : <MapPin size={16} strokeWidth={2.5} />}
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-widest mb-1">
-                                        {order.delivery_type === 'pickup' ? 'Lokasi Pengambilan' : 'Alamat Pengiriman'}
-                                    </p>
-                                    <p className="text-[13px] font-black text-[#1A1A1A] leading-relaxed">
-                                        {order.delivery_type === 'pickup' ? (order.branch?.name || 'Ambil di Toko') : order.delivery_address}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500 flex-shrink-0">
-                                    <CreditCard size={16} strokeWidth={2.5} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-widest mb-1">Metode Pembayaran</p>
-                                    <p className="text-[13px] font-black text-[#1A1A1A] uppercase tracking-wider">{order.payment_method.replace('_', ' ')}</p>
-                                </div>
-                            </div>
-                            {order.notes && (
-                                <div className="flex items-start gap-4 pt-4 border-t border-[#F8F8F8]">
-                                    <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0">
-                                        <span className="text-[14px]">✍️</span>
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest mb-1">Catatan Pembeli</p>
-                                        <p className="text-[13px] font-bold text-amber-900 leading-relaxed bg-[#FAF6F0] border border-[#F5ECE2] p-3.5 rounded-2xl mt-1">{order.notes}</p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Quick Actions — High Impact Buttons */}
-                    <div className="bg-white p-10 rounded-[40px] border border-[#F0F0F0] shadow-sm space-y-4">
-                        <h3 className="font-poppins font-black text-[18px] text-[#1A1A1A] mb-6">Kelola Pesanan</h3>
-                        
-                        {order.status === 'pending' && (
-                            <button 
-                                onClick={() => handleUpdateStatus('confirmed')}
-                                disabled={processing}
-                                className="w-full py-5 bg-[#2D6A4F] text-white font-black rounded-3xl hover:bg-[#1B4332] transition-all disabled:opacity-50 shadow-xl shadow-[#2D6A4F]/20 flex items-center justify-center gap-3 group"
-                            >
-                                <CheckCircle size={20} strokeWidth={3} />
-                                <span className="uppercase tracking-[0.2em] text-[12px]">Konfirmasi</span>
-                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        )}
-                        
-                        {order.status === 'confirmed' && (
-                            <button 
-                                onClick={() => handleUpdateStatus('preparing')}
-                                disabled={processing}
-                                className="w-full py-5 bg-blue-500 text-white font-black rounded-3xl hover:bg-blue-600 transition-all disabled:opacity-50 shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3 group"
-                            >
-                                <Package size={20} strokeWidth={3} />
-                                <span className="uppercase tracking-[0.2em] text-[12px]">Siapkan Menu</span>
-                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        )}
-
-                        {order.status === 'preparing' && (
-                            <button 
-                                onClick={() => handleUpdateStatus(order.delivery_type === 'pickup' ? 'ready_for_pickup' : 'on_delivery')}
-                                disabled={processing}
-                                className={`w-full py-5 ${order.delivery_type === 'pickup' ? 'bg-orange-500' : 'bg-purple-500'} text-white font-black rounded-3xl hover:opacity-90 transition-all disabled:opacity-50 shadow-xl flex items-center justify-center gap-3 group`}
-                            >
-                                {order.delivery_type === 'pickup' ? <ShoppingBag size={20} strokeWidth={3} /> : <Truck size={20} strokeWidth={3} />}
-                                <span className="uppercase tracking-[0.2em] text-[12px]">{order.delivery_type === 'pickup' ? 'Siap Diambil' : 'Kirim Sekarang'}</span>
-                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        )}
-
-                        {order.status === 'ready_for_pickup' && (
-                            <button 
-                                onClick={() => handleUpdateStatus('delivered')}
-                                disabled={processing}
-                                className="w-full py-5 bg-green-500 text-white font-black rounded-3xl hover:bg-green-600 transition-all disabled:opacity-50 shadow-xl shadow-green-500/20 flex items-center justify-center gap-3 group"
-                            >
-                                <CheckCircle size={20} strokeWidth={3} />
-                                <span className="uppercase tracking-[0.2em] text-[12px]">Selesaikan (Sudah Diambil)</span>
-                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        )}
-
-                        {order.status === 'on_delivery' && (
-                            <button 
-                                onClick={() => handleUpdateStatus('delivered')}
-                                disabled={processing}
-                                className="w-full py-5 bg-green-500 text-white font-black rounded-3xl hover:bg-green-600 transition-all disabled:opacity-50 shadow-xl shadow-green-500/20 flex items-center justify-center gap-3 group"
-                            >
-                                <CheckCircle size={20} strokeWidth={3} />
-                                <span className="uppercase tracking-[0.2em] text-[12px]">Selesaikan</span>
-                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        )}
-
-                        <button className="w-full py-5 bg-white border-2 border-[#F0F0F0] text-[#A0A0A0] font-black rounded-3xl hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center gap-3">
-                            <XCircle size={18} strokeWidth={3} />
-                            <span className="uppercase tracking-[0.2em] text-[12px]">Batalkan</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </AdminLayout>
-    );
-}
+                         </div>
+ 
+                         <div className="space-y-6 pt-4">
+                             <div className="flex items-start gap-4">
+                                 <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center text-[#2D6A4F] flex-shrink-0">
+                                     <Phone size={16} strokeWidth={2.5} />
+                                 </div>
+                                 <div>
+                                     <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-widest mb-1">Telepon</p>
+                                     <p className="text-[13px] font-black text-[#1A1A1A]">{order.customer?.phone || '-'}</p>
+                                 </div>
+                             </div>
+                             <div className="flex items-start gap-4">
+                                 <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0">
+                                     <Mail size={16} strokeWidth={2.5} />
+                                 </div>
+                                 <div>
+                                     <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-widest mb-1">Email</p>
+                                     <p className="text-[13px] font-black text-[#1A1A1A]">{order.customer?.email}</p>
+                                 </div>
+                             </div>
+                             <div className="flex items-start gap-4">
+                                 <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500 flex-shrink-0">
+                                     {order.delivery_type === 'pickup' ? <ShoppingBag size={16} strokeWidth={2.5} /> : <MapPin size={16} strokeWidth={2.5} />}
+                                 </div>
+                                 <div>
+                                     <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-widest mb-1">
+                                         {order.delivery_type === 'pickup' ? 'Lokasi Pengambilan' : 'Alamat Pengiriman'}
+                                     </p>
+                                     <p className="text-[13px] font-black text-[#1A1A1A] leading-relaxed">
+                                         {order.delivery_type === 'pickup' ? (order.branch?.name || 'Ambil di Toko') : order.delivery_address}
+                                     </p>
+                                 </div>
+                             </div>
+                             <div className="flex items-start gap-4">
+                                 <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500 flex-shrink-0">
+                                     <CreditCard size={16} strokeWidth={2.5} />
+                                 </div>
+                                 <div>
+                                     <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-widest mb-1">Metode Pembayaran</p>
+                                     <p className="text-[13px] font-black text-[#1A1A1A] uppercase tracking-wider">{order.payment_method.replace('_', ' ')}</p>
+                                 </div>
+                             </div>
+                             {order.notes && (
+                                 <div className="flex items-start gap-4 pt-4 border-t border-[#F8F8F8]">
+                                     <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0">
+                                         <span className="text-[14px]">✍️</span>
+                                     </div>
+                                     <div className="flex-1">
+                                         <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest mb-1">Catatan Pembeli</p>
+                                         <p className="text-[13px] font-bold text-amber-900 leading-relaxed bg-[#FAF6F0] border border-[#F5ECE2] p-3.5 rounded-2xl mt-1">{order.notes}</p>
+                                     </div>
+                                 </div>
+                             )}
+                         </div>
+                     </div>
+ 
+                     {/* Quick Actions — High Impact Buttons */}
+                     {order.is_online ? (
+                         <div className="bg-white p-10 rounded-[40px] border border-[#F0F0F0] shadow-sm space-y-4">
+                             <h3 className="font-poppins font-black text-[18px] text-[#1A1A1A] mb-6">Kelola Pesanan</h3>
+                             
+                             {order.status === 'pending' && (
+                                 <button 
+                                     onClick={() => handleUpdateStatus('confirmed')}
+                                     disabled={processing}
+                                     className="w-full py-5 bg-[#2D6A4F] text-white font-black rounded-3xl hover:bg-[#1B4332] transition-all disabled:opacity-50 shadow-xl shadow-[#2D6A4F]/20 flex items-center justify-center gap-3 group"
+                                 >
+                                     <CheckCircle size={20} strokeWidth={3} />
+                                     <span className="uppercase tracking-[0.2em] text-[12px]">Konfirmasi</span>
+                                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                 </button>
+                             )}
+                             
+                             {order.status === 'confirmed' && (
+                                 <button 
+                                     onClick={() => handleUpdateStatus('preparing')}
+                                     disabled={processing}
+                                     className="w-full py-5 bg-blue-500 text-white font-black rounded-3xl hover:bg-blue-600 transition-all disabled:opacity-50 shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3 group"
+                                 >
+                                     <Package size={20} strokeWidth={3} />
+                                     <span className="uppercase tracking-[0.2em] text-[12px]">Siapkan Menu</span>
+                                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                 </button>
+                             )}
+ 
+                             {order.status === 'preparing' && (
+                                 <button 
+                                     onClick={() => handleUpdateStatus(order.delivery_type === 'pickup' ? 'ready_for_pickup' : 'on_delivery')}
+                                     disabled={processing}
+                                     className={`w-full py-5 ${order.delivery_type === 'pickup' ? 'bg-orange-500' : 'bg-purple-500'} text-white font-black rounded-3xl hover:opacity-90 transition-all disabled:opacity-50 shadow-xl flex items-center justify-center gap-3 group`}
+                                 >
+                                     {order.delivery_type === 'pickup' ? <ShoppingBag size={20} strokeWidth={3} /> : <Truck size={20} strokeWidth={3} />}
+                                     <span className="uppercase tracking-[0.2em] text-[12px]">{order.delivery_type === 'pickup' ? 'Siap Diambil' : 'Kirim Sekarang'}</span>
+                                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                 </button>
+                             )}
+ 
+                             {order.status === 'ready_for_pickup' && (
+                                 <button 
+                                     onClick={() => handleUpdateStatus('delivered')}
+                                     disabled={processing}
+                                     className="w-full py-5 bg-green-500 text-white font-black rounded-3xl hover:bg-green-600 transition-all disabled:opacity-50 shadow-xl shadow-green-500/20 flex items-center justify-center gap-3 group"
+                                 >
+                                     <CheckCircle size={20} strokeWidth={3} />
+                                     <span className="uppercase tracking-[0.2em] text-[12px]">Selesaikan (Sudah Diambil)</span>
+                                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                 </button>
+                             )}
+ 
+                             {order.status === 'on_delivery' && (
+                                 <button 
+                                     onClick={() => handleUpdateStatus('delivered')}
+                                     disabled={processing}
+                                     className="w-full py-5 bg-green-500 text-white font-black rounded-3xl hover:bg-green-600 transition-all disabled:opacity-50 shadow-xl shadow-green-500/20 flex items-center justify-center gap-3 group"
+                                 >
+                                     <CheckCircle size={20} strokeWidth={3} />
+                                     <span className="uppercase tracking-[0.2em] text-[12px]">Selesaikan</span>
+                                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                 </button>
+                             )}
+ 
+                             <button className="w-full py-5 bg-white border-2 border-[#F0F0F0] text-[#A0A0A0] font-black rounded-3xl hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center gap-3">
+                                 <XCircle size={18} strokeWidth={3} />
+                                 <span className="uppercase tracking-[0.2em] text-[12px]">Batalkan</span>
+                             </button>
+                         </div>
+                     ) : (
+                         <div className="bg-white p-10 rounded-[40px] border border-[#F0F0F0] shadow-sm text-center">
+                             <div className="w-16 h-16 bg-[#F9F9F9] rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6">
+                                 🖥️
+                             </div>
+                             <h3 className="font-poppins font-black text-[18px] text-[#1A1A1A]">Transaksi POS Kasir</h3>
+                             <p className="text-xs font-bold text-[#B5AFA6] mt-2 leading-relaxed">
+                                 Pesanan ini dilakukan secara langsung (offline) melalui mesin kasir POS.
+                             </p>
+                             {(order as any).cashier && (
+                                 <div className="mt-6 pt-6 border-t border-[#F8F8F8] text-left">
+                                     <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-widest mb-1">Kasir Pembantu</p>
+                                     <p className="text-[13px] font-black text-[#1A1A1A]">{(order as any).cashier.name}</p>
+                                     <p className="text-[11px] text-[#8A8A8A] mt-0.5">{(order as any).cashier.email}</p>
+                                 </div>
+                             )}
+                          </div>
+                      )}
+                  </div>
+              </div>
+          </AdminLayout>
+      );
+  }

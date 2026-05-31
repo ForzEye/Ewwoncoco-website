@@ -60,6 +60,7 @@ class OnlineOrderController extends Controller
         DB::transaction(function () use ($order, $user, $activeShift) {
             $order->update([
                 'status' => 'confirmed',
+                'payment_status' => 'confirmed',
                 'cashier_id' => $user->id,
                 'shift_id' => $activeShift ? $activeShift->id : null,
             ]);

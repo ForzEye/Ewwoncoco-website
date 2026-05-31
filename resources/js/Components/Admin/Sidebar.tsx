@@ -28,7 +28,7 @@ export default function Sidebar() {
     const allMenuItems = [
         // Admin Specific
         { name: 'Dashboard Admin', icon: LayoutDashboard, href: '/admin', active: url === '/admin', roles: ['admin', 'super_admin'] },
-        { name: 'Pesanan Online', icon: ShoppingBag, href: '/admin/orders', active: url.startsWith('/admin/orders'), roles: ['admin', 'super_admin'] },
+        { name: 'Semua Pesanan', icon: ShoppingBag, href: '/admin/orders', active: url.startsWith('/admin/orders'), roles: ['admin', 'super_admin'] },
         { name: 'Monitoring Shift', icon: Clock, href: '/admin/shifts', active: url === '/admin/shifts', roles: ['admin', 'super_admin'] },
         { name: 'Produk & Menu', icon: Package, href: '/admin/products', active: url.startsWith('/admin/products'), roles: ['admin', 'super_admin'] },
         { name: 'Kustomisasi Topping', icon: Sliders, href: '/admin/customizations', active: url.startsWith('/admin/customizations'), roles: ['admin', 'super_admin'] },

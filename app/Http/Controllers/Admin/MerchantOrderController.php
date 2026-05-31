@@ -8,6 +8,7 @@ use App\Jobs\SimulateDeliveryJob;
 use App\Jobs\SimulateThirdPartyDelivery;
 use App\Models\LoyaltyPoint;
 use App\Models\Order;
+use App\Models\PosTransaction;
 use App\Models\Promotion;
 use App\Models\UserPointsBalance;
 use App\Services\PointsService;
@@ -27,10 +28,66 @@ class MerchantOrderController extends Controller
             return redirect()->route('admin.dashboard')->with('error', 'Anda tidak memiliki toko yang terdaftar.');
         }
 
-        $orders = Order::where('merchant_id', $merchant->id)->with(['customer', 'branch'])->latest()->get();
+        $onlineOrders = Order::where('merchant_id', $merchant->id)
+            ->with(['customer', 'branch'])
+            ->latest()
+            ->get();
+
+        $posTransactions = PosTransaction::where('merchant_id', $merchant->id)
+            ->with(['customer', 'branch'])
+            ->latest()
+            ->get();
+
+        $mappedOnline = $onlineOrders->map(function ($order) {
+            return [
+                'id' => 'online-' . $order->id,
+                'customer_id' => $order->customer_id,
+                'merchant_id' => $order->merchant_id,
+                'branch_id' => $order->branch_id,
+                'order_number' => $order->order_number,
+                'delivery_type' => $order->delivery_type,
+                'status' => $order->status,
+                'payment_method' => $order->payment_method,
+                'payment_status' => $order->payment_status,
+                'subtotal' => (float)$order->subtotal,
+                'delivery_fee' => (float)$order->delivery_fee,
+                'discount' => (float)$order->discount,
+                'total' => (float)$order->total,
+                'created_at' => $order->created_at->toIso8601String(),
+                'updated_at' => $order->updated_at->toIso8601String(),
+                'customer' => $order->customer,
+                'branch' => $order->branch,
+                'is_online' => true,
+            ];
+        });
+
+        $mappedPos = $posTransactions->map(function ($pos) {
+            return [
+                'id' => 'pos-' . $pos->id,
+                'customer_id' => $pos->customer_id,
+                'merchant_id' => $pos->merchant_id,
+                'branch_id' => $pos->branch_id,
+                'order_number' => $pos->transaction_number,
+                'delivery_type' => 'pickup',
+                'status' => 'delivered',
+                'payment_method' => $pos->payment_method,
+                'payment_status' => 'confirmed',
+                'subtotal' => (float)($pos->total + $pos->discount),
+                'delivery_fee' => 0.0,
+                'discount' => (float)$pos->discount,
+                'total' => (float)$pos->total,
+                'created_at' => $pos->transaction_at ? $pos->transaction_at->toIso8601String() : $pos->created_at->toIso8601String(),
+                'updated_at' => $pos->updated_at->toIso8601String(),
+                'customer' => $pos->customer,
+                'branch' => $pos->branch,
+                'is_online' => false,
+            ];
+        });
+
+        $allOrders = $mappedOnline->concat($mappedPos)->sortByDesc('created_at')->values()->all();
 
         return Inertia::render('Admin/Orders/Index', [
-            'orders' => $orders,
+            'orders' => $allOrders,
         ]);
     }
 
@@ -41,7 +98,29 @@ class MerchantOrderController extends Controller
             return back()->with('error', 'Toko tidak ditemukan.');
         }
 
-        $order = Order::where('merchant_id', $merchant->id)->with(['items.product', 'customer', 'branch'])->findOrFail($id);
+        if (str_starts_with($id, 'pos-')) {
+            $posId = substr($id, 4);
+            $posTransaction = PosTransaction::where('merchant_id', $merchant->id)
+                ->with(['items.product', 'customer', 'branch', 'cashier'])
+                ->findOrFail($posId);
+
+            $order = $this->mapPosTransactionToOrder($posTransaction);
+        } else {
+            $orderId = str_starts_with($id, 'online-') ? substr($id, 7) : $id;
+            $orderModel = Order::where('merchant_id', $merchant->id)
+                ->with(['items.product', 'customer', 'branch'])
+                ->findOrFail($orderId);
+
+            $order = array_merge($orderModel->toArray(), [
+                'is_online' => true,
+                'payment_proof_url' => $orderModel->payment_proof_url,
+                'items' => $orderModel->items->map(function ($item) {
+                    return array_merge($item->toArray(), [
+                        'price' => (float)$item->unit_price,
+                    ]);
+                })->toArray(),
+            ]);
+        }
 
         return Inertia::render('Admin/Orders/Show', [
             'order' => $order,
@@ -50,6 +129,10 @@ class MerchantOrderController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
+        if (str_starts_with($id, 'pos-')) {
+            return back()->with('error', 'Pesanan POS Kasir tidak dapat diubah statusnya.');
+        }
+
         $request->validate([
             'status' => 'required|in:pending,confirmed,preparing,ready_for_pickup,on_delivery,delivered,cancelled',
         ]);
@@ -59,12 +142,17 @@ class MerchantOrderController extends Controller
             return back()->with('error', 'Toko tidak ditemukan.');
         }
 
-        $order = Order::where('merchant_id', $merchant->id)->with('items.product')->findOrFail($id);
+        $orderId = str_starts_with($id, 'online-') ? substr($id, 7) : $id;
+        $order = Order::where('merchant_id', $merchant->id)->with('items.product')->findOrFail($orderId);
         $oldStatus = $order->status;
 
         try {
             DB::transaction(function () use ($order, $request, $oldStatus) {
-                $order->update(['status' => $request->status]);
+                $updateData = ['status' => $request->status];
+                if ($request->status !== 'pending' && $request->status !== 'cancelled') {
+                    $updateData['payment_status'] = 'confirmed';
+                }
+                $order->update($updateData);
 
                 // Trigger simulation if status changes to preparing or on_delivery
                 if ($oldStatus !== 'confirmed' && $request->status === 'confirmed') {
@@ -101,6 +189,51 @@ class MerchantOrderController extends Controller
         event(new OrderStatusUpdated($order));
 
         return back()->with('success', 'Status pesanan berhasil diperbarui.');
+    }
+
+    private function mapPosTransactionToOrder(PosTransaction $pos)
+    {
+        return [
+            'id' => 'pos-' . $pos->id,
+            'customer_id' => $pos->customer_id ?? 0,
+            'merchant_id' => $pos->merchant_id,
+            'branch_id' => $pos->branch_id,
+            'order_number' => $pos->transaction_number,
+            'delivery_type' => 'pickup',
+            'status' => 'delivered',
+            'payment_method' => $pos->payment_method,
+            'payment_status' => 'confirmed',
+            'subtotal' => (float)($pos->total + $pos->discount),
+            'delivery_fee' => 0.0,
+            'discount' => (float)$pos->discount,
+            'total' => (float)$pos->total,
+            'delivery_address' => null,
+            'notes' => null,
+            'items' => $pos->items->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'order_id' => 'pos-' . $item->transaction_id,
+                    'product_id' => $item->product_id,
+                    'quantity' => $item->quantity,
+                    'unit_price' => (float)$item->unit_price,
+                    'price' => (float)$item->unit_price,
+                    'subtotal' => (float)$item->subtotal,
+                    'notes' => $item->notes ?? null,
+                    'customizations' => $item->customizations ?? null,
+                    'product' => $item->product,
+                ];
+            }),
+            'customer' => $pos->customer ?? [
+                'name' => 'Pelanggan Umum',
+                'email' => '-',
+                'phone' => '-',
+            ],
+            'branch' => $pos->branch,
+            'cashier' => $pos->cashier,
+            'created_at' => $pos->transaction_at ? $pos->transaction_at->toIso8601String() : $pos->created_at->toIso8601String(),
+            'updated_at' => $pos->updated_at->toIso8601String(),
+            'is_online' => false,
+        ];
     }
 
     /**

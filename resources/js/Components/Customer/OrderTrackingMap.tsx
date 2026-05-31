@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
 
 interface OrderTrackingMapProps {
-    orderId: number;
+    orderId: number | string;
     storeLocation: { lat: number; lng: number };
     deliveryLocation?: { lat: number; lng: number };
     driverLocation?: { lat: number; lng: number } | null;

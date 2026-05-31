@@ -90,7 +90,16 @@ export default function Index({ orders }: OrdersIndexProps) {
                                     <tr key={order.id} className="hover:bg-[#FAFAFA] transition-all group">
                                         <td className="px-8 py-6 whitespace-nowrap">
                                             <div className="flex flex-col">
-                                                <span className="text-[13px] font-black text-[#2D6A4F] font-mono tracking-tighter">{order.order_number}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[13px] font-black text-[#2D6A4F] font-mono tracking-tighter">{order.order_number}</span>
+                                                    <span className={`inline-flex items-center text-[9px] font-bold px-2 py-0.5 rounded-lg border ${
+                                                        order.is_online
+                                                            ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                            : 'bg-purple-50 text-purple-600 border-purple-100'
+                                                    }`}>
+                                                        {order.is_online ? '🌐 Online' : '🖥️ POS Kasir'}
+                                                    </span>
+                                                </div>
                                                 <span className="text-[10px] font-bold text-[#B5AFA6] mt-1 uppercase tracking-wider">{tanggalWaktu(order.created_at)}</span>
                                             </div>
                                         </td>
@@ -111,8 +120,15 @@ export default function Index({ orders }: OrdersIndexProps) {
                                                     <status.icon size={12} strokeWidth={3} />
                                                     <span className="text-[10px] font-black uppercase tracking-widest">{status.label}</span>
                                                 </div>
-                                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${order.delivery_type === 'pickup' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                                                    {order.delivery_type === 'pickup' ? '🏘️ Ambil Sendiri' : '🚚 Delivery'}
+                                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${
+                                                    order.is_online 
+                                                        ? (order.delivery_type === 'pickup' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-blue-50 text-blue-600 border-blue-100')
+                                                        : 'bg-purple-50 text-purple-600 border-purple-100'
+                                                }`}>
+                                                    {order.is_online 
+                                                        ? (order.delivery_type === 'pickup' ? '🏘️ Ambil Sendiri' : '🚚 Delivery')
+                                                        : '🛍️ Dine In / Take Away'
+                                                    }
                                                 </span>
                                             </div>
                                         </td>
@@ -126,45 +142,45 @@ export default function Index({ orders }: OrdersIndexProps) {
                                         </td>
                                         <td className="px-8 py-6 whitespace-nowrap text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {order.status === 'pending' && (
+                                                {order.is_online && order.status === 'pending' && (
                                                     <button 
-                                                        onClick={() => handleUpdateStatus(order.id, 'confirmed')}
+                                                        onClick={() => handleUpdateStatus(order.id as number, 'confirmed')}
                                                         className="w-10 h-10 flex items-center justify-center bg-[#F0FAF6] text-[#2D6A4F] hover:bg-[#2D6A4F] hover:text-white rounded-xl transition-all shadow-sm"
                                                         title="Konfirmasi Pesanan"
                                                     >
                                                         <CheckCircle size={16} strokeWidth={2.5} />
                                                     </button>
                                                 )}
-                                                {order.status === 'confirmed' && (
+                                                {order.is_online && order.status === 'confirmed' && (
                                                     <button 
-                                                        onClick={() => handleUpdateStatus(order.id, 'preparing')}
+                                                        onClick={() => handleUpdateStatus(order.id as number, 'preparing')}
                                                         className="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white rounded-xl transition-all shadow-sm"
                                                         title="Mulai Proses"
                                                     >
                                                         <Package size={16} strokeWidth={2.5} />
                                                     </button>
                                                 )}
-                                                {order.status === 'preparing' && (
+                                                {order.is_online && order.status === 'preparing' && (
                                                     <button 
-                                                        onClick={() => handleUpdateStatus(order.id, order.delivery_type === 'pickup' ? 'ready_for_pickup' : 'on_delivery')}
+                                                        onClick={() => handleUpdateStatus(order.id as number, order.delivery_type === 'pickup' ? 'ready_for_pickup' : 'on_delivery')}
                                                         className="w-10 h-10 flex items-center justify-center bg-purple-50 text-purple-500 hover:bg-purple-500 hover:text-white rounded-xl transition-all shadow-sm"
                                                         title={order.delivery_type === 'pickup' ? "Siap Diambil" : "Kirim Pesanan"}
                                                     >
                                                         {order.delivery_type === 'pickup' ? <ShoppingBag size={16} strokeWidth={2.5} /> : <Truck size={16} strokeWidth={2.5} />}
                                                     </button>
                                                 )}
-                                                {order.status === 'ready_for_pickup' && (
+                                                {order.is_online && order.status === 'ready_for_pickup' && (
                                                     <button 
-                                                        onClick={() => handleUpdateStatus(order.id, 'delivered')}
+                                                        onClick={() => handleUpdateStatus(order.id as number, 'delivered')}
                                                         className="w-10 h-10 flex items-center justify-center bg-green-50 text-green-500 hover:bg-green-500 hover:text-white rounded-xl transition-all shadow-sm"
                                                         title="Selesaikan (Sudah Diambil)"
                                                     >
                                                         <CheckCircle size={16} strokeWidth={2.5} />
                                                     </button>
                                                 )}
-                                                {order.status === 'on_delivery' && (
+                                                {order.is_online && order.status === 'on_delivery' && (
                                                     <button 
-                                                        onClick={() => handleUpdateStatus(order.id, 'delivered')}
+                                                        onClick={() => handleUpdateStatus(order.id as number, 'delivered')}
                                                         className="w-10 h-10 flex items-center justify-center bg-green-50 text-green-500 hover:bg-green-500 hover:text-white rounded-xl transition-all shadow-sm"
                                                         title="Selesaikan"
                                                     >

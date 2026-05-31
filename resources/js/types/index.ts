@@ -134,7 +134,7 @@ export interface OrderItem {
 }
 
 export interface Order {
-    id: number;
+    id: number | string;
     customer_id: number;
     merchant_id: number;
     branch_id: number;
@@ -159,6 +159,7 @@ export interface Order {
     customer?: User;
     payment_proof_url?: string | null;
     delivery_request?: DeliveryRequest;
+    is_online?: boolean;
 }
 
 export type DeliveryProvider = 'gosend' | 'grabexpress';
