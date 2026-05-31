@@ -42,20 +42,34 @@ class ReportController extends Controller
             'total_orders' => $onlineQuery->count() + $posQuery->count(),
             'online_revenue' => $onlineQuery->sum('total'),
             'pos_revenue' => $posQuery->sum('total'),
-            'cash_revenue' => Order::where('merchant_id', $merchantId)
+            'pos_cash_revenue' => (float) PosTransaction::where('merchant_id', $merchantId)
+                ->where('payment_method', 'cash')
+                ->whereBetween('transaction_at', [$startDateTime, $endDateTime])->sum('total'),
+            'pos_qris_revenue' => (float) PosTransaction::where('merchant_id', $merchantId)
+                ->where('payment_method', 'qris')
+                ->whereBetween('transaction_at', [$startDateTime, $endDateTime])->sum('total'),
+            'online_qris_revenue' => (float) Order::where('merchant_id', $merchantId)
+                ->where('payment_status', 'confirmed')
+                ->where('payment_method', 'qris')
+                ->whereBetween('created_at', [$startDateTime, $endDateTime])->sum('total'),
+            'online_transfer_revenue' => (float) Order::where('merchant_id', $merchantId)
+                ->where('payment_status', 'confirmed')
+                ->where('payment_method', 'manual_transfer')
+                ->whereBetween('created_at', [$startDateTime, $endDateTime])->sum('total'),
+            'cash_revenue' => (float) (Order::where('merchant_id', $merchantId)
                 ->where('payment_status', 'confirmed')
                 ->where('payment_method', 'cash')
                 ->whereBetween('created_at', [$startDateTime, $endDateTime])->sum('total') +
                 PosTransaction::where('merchant_id', $merchantId)
                     ->where('payment_method', 'cash')
-                    ->whereBetween('transaction_at', [$startDateTime, $endDateTime])->sum('total'),
-            'qris_revenue' => Order::where('merchant_id', $merchantId)
+                    ->whereBetween('transaction_at', [$startDateTime, $endDateTime])->sum('total')),
+            'qris_revenue' => (float) (Order::where('merchant_id', $merchantId)
                 ->where('payment_status', 'confirmed')
                 ->where('payment_method', 'qris')
                 ->whereBetween('created_at', [$startDateTime, $endDateTime])->sum('total') +
                 PosTransaction::where('merchant_id', $merchantId)
                     ->where('payment_method', 'qris')
-                    ->whereBetween('transaction_at', [$startDateTime, $endDateTime])->sum('total'),
+                    ->whereBetween('transaction_at', [$startDateTime, $endDateTime])->sum('total')),
         ];
 
         // 2. Chart Data: Daily Revenue

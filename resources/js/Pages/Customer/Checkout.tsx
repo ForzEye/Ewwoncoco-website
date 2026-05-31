@@ -282,7 +282,7 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
                                         <span className="ml-3 font-poppins font-semibold text-[#1A1A1A]">QRIS Statis</span>
                                     </label>
 
-                                    <label className={`cursor-pointer border rounded-lg p-4 flex items-center transition-colors ${data.payment_method === 'cash' ? 'border-[#00C48C] bg-[#F0FAF6]' : 'border-gray-200'}`}>
+                                    <label className={`cursor-pointer border rounded-lg p-4 flex items-center transition-colors ${data.payment_method === 'manual_transfer' ? 'border-[#00C48C] bg-[#F0FAF6]' : 'border-gray-200'}`}>
                                         <input 
                                             type="radio" 
                                             name="payment_method" 

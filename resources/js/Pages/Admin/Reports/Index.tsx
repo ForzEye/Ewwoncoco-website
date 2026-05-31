@@ -44,6 +44,10 @@ interface ReportsProps {
         pos_revenue: number;
         cash_revenue: number;
         qris_revenue: number;
+        pos_cash_revenue: number;
+        pos_qris_revenue: number;
+        online_qris_revenue: number;
+        online_transfer_revenue: number;
         total_hpp: number;
         gross_profit: number;
         profit_margin: number;
@@ -140,37 +144,67 @@ export default function Reports({ summary, chartData, topProducts, recentTransac
                 </div>
 
                 {/* Summary Grid — Glassmorphism Effect */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-[#2D6A4F]/5 transition-all group">
-                        <div className="w-12 h-12 bg-[#F0FAF6] text-[#2D6A4F] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                            <TrendingUp size={24} strokeWidth={2.5} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-[#2D6A4F]/5 transition-all group flex items-center gap-6">
+                        <div className="w-14 h-14 bg-[#F0FAF6] text-[#2D6A4F] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                            <TrendingUp size={28} strokeWidth={2.5} />
                         </div>
-                        <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">Gross Revenue</p>
-                        <h3 className="text-[24px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.total_revenue)}</h3>
+                        <div>
+                            <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">Gross Revenue (Total Pendapatan)</p>
+                            <h3 className="text-[28px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.total_revenue)}</h3>
+                        </div>
                     </div>
 
-                    <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group">
-                        <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                            <ShoppingBag size={24} strokeWidth={2.5} />
+                    <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group flex items-center gap-6">
+                        <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                            <ShoppingBag size={28} strokeWidth={2.5} />
                         </div>
-                        <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">Volume Penjualan</p>
-                        <h3 className="text-[24px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{angka(summary.total_orders)} <span className="text-[11px] font-bold text-[#B5AFA6] tracking-normal">Trx</span></h3>
+                        <div>
+                            <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">Volume Penjualan (Total Transaksi)</p>
+                            <h3 className="text-[28px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{angka(summary.total_orders)} <span className="text-[14px] font-bold text-[#B5AFA6] tracking-normal">Trx</span></h3>
+                        </div>
                     </div>
+                </div>
 
-                    <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-green-500/5 transition-all group">
-                        <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                            <CreditCard size={24} strokeWidth={2.5} />
+                {/* Payment Methods Breakdown */}
+                <div className="space-y-4">
+                    <h3 className="text-[11px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] mb-4 ml-1">Rincian Berdasarkan Metode Pembayaran</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {/* Cash POS */}
+                        <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-green-500/5 transition-all group">
+                            <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                <CreditCard size={24} strokeWidth={2.5} />
+                            </div>
+                            <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">💵 Tunai POS Kasir</p>
+                            <h3 className="text-[22px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.pos_cash_revenue)}</h3>
                         </div>
-                        <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">Total Tunai (Cash)</p>
-                        <h3 className="text-[24px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.cash_revenue)}</h3>
-                    </div>
 
-                    <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group">
-                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                            <QrCode size={24} strokeWidth={2.5} />
+                        {/* QRIS POS */}
+                        <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-purple-500/5 transition-all group">
+                            <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                <QrCode size={24} strokeWidth={2.5} />
+                            </div>
+                            <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">🖥️ QRIS POS Kasir</p>
+                            <h3 className="text-[22px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.pos_qris_revenue)}</h3>
                         </div>
-                        <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">Total Non-Tunai (QRIS)</p>
-                        <h3 className="text-[24px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.qris_revenue)}</h3>
+
+                        {/* QRIS Online */}
+                        <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group">
+                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                <QrCode size={24} strokeWidth={2.5} />
+                            </div>
+                            <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">🌐 QRIS Pesanan Online</p>
+                            <h3 className="text-[22px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.online_qris_revenue)}</h3>
+                        </div>
+
+                        {/* Transfer Online */}
+                        <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-amber-500/5 transition-all group">
+                            <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                <CreditCard size={24} strokeWidth={2.5} />
+                            </div>
+                            <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">🏦 Transfer Online (Manual)</p>
+                            <h3 className="text-[22px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.online_transfer_revenue)}</h3>
+                        </div>
                     </div>
                 </div>
 
@@ -380,24 +414,29 @@ export default function Reports({ summary, chartData, topProducts, recentTransac
                 </div>
 
                 {/* Summary Grid for Print */}
-                <div className="grid grid-cols-4 gap-6 mb-12">
-                    <div className="bg-[#F9F9F9] p-6 rounded-3xl border border-[#F0F0F0]">
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Total Pendapatan</p>
-                        <p className="text-2xl font-black text-[#1A1A1A] tracking-tighter">{rupiah(summary.total_revenue)}</p>
+                <div className="grid grid-cols-5 gap-4 mb-12">
+                    <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Total Pendapatan</p>
+                        <p className="text-xl font-black text-[#1A1A1A] tracking-tighter">{rupiah(summary.total_revenue)}</p>
                     </div>
-                    <div className="bg-[#F9F9F9] p-6 rounded-3xl border border-[#F0F0F0]">
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Pencapaian QRIS</p>
-                        <p className="text-2xl font-black text-blue-600 tracking-tighter">{rupiah(summary.qris_revenue)}</p>
+                    <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">QRIS POS Kasir</p>
+                        <p className="text-xl font-black text-purple-600 tracking-tighter">{rupiah(summary.pos_qris_revenue)}</p>
                     </div>
-                    <div className="bg-[#F0FAF6] p-6 rounded-3xl border border-[#2D6A4F]/10">
-                        <p className="text-[9px] font-black text-[#2D6A4F] uppercase tracking-widest mb-2">Pencapaian Tunai</p>
-                        <p className="text-2xl font-black text-[#2D6A4F] tracking-tighter">{rupiah(summary.cash_revenue)}</p>
+                    <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">QRIS Online</p>
+                        <p className="text-xl font-black text-blue-600 tracking-tighter">{rupiah(summary.online_qris_revenue)}</p>
                     </div>
-                    <div className="bg-[#F9F9F9] p-6 rounded-3xl border border-[#F0F0F0]">
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Total Transaksi</p>
-                        <p className="text-2xl font-black text-[#1A1A1A] tracking-tighter">{angka(summary.total_orders)} <span className="text-[10px] font-normal uppercase tracking-normal">Unit</span></p>
+                    <div className="bg-[#F0FAF6] p-5 rounded-3xl border border-[#2D6A4F]/10">
+                        <p className="text-[8px] font-black text-[#2D6A4F] uppercase tracking-widest mb-1.5">Tunai POS Kasir</p>
+                        <p className="text-xl font-black text-[#2D6A4F] tracking-tighter">{rupiah(summary.pos_cash_revenue)}</p>
+                    </div>
+                    <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Transfer Online</p>
+                        <p className="text-xl font-black text-amber-600 tracking-tighter">{rupiah(summary.online_transfer_revenue)}</p>
                     </div>
                 </div>
+
 
                 <div className="flex gap-10">
                     <div className="print-main-content space-y-6">
