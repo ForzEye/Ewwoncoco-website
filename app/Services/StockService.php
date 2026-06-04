@@ -33,6 +33,8 @@ class StockService
             }
 
             $branchIngredient->decrement('stock', $totalNeeded);
+            $branchIngredient->refresh();
+            \App\Services\Notification\StockAlertService::checkAndSendIngredientAlert($branchIngredient);
 
             // Record Movement
             StockMovement::create([

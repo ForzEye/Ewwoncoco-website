@@ -156,9 +156,10 @@ class POSController extends Controller
                     'customizations' => $item['customizations'] ?? null,
                 ]);
 
-                // Reduce Stock (Simple & Recipe)
                 $product = Product::find($productId);
                 $product->decrement('stock', $qty);
+                $product->refresh();
+                \App\Services\Notification\StockAlertService::checkAndSendProductAlert($product);
 
                 // Deduct Ingredients based on Recipe (blocking)
                 StockService::deductFromRecipe(
@@ -198,10 +199,11 @@ class POSController extends Controller
                             'notes' => 'PROMO BOGO: '.$promo->name,
                         ]);
 
-                        // Reduce Stock of free product
                         $freeProduct = Product::find($freeProductId);
                         if ($freeProduct) {
                             $freeProduct->decrement('stock', $freeQty);
+                            $freeProduct->refresh();
+                            \App\Services\Notification\StockAlertService::checkAndSendProductAlert($freeProduct);
 
                             // Deduct Ingredients for free BOGO product (blocking)
                             StockService::deductFromRecipe(

@@ -45,6 +45,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'verify.webhook' => VerifyWebhookSignature::class,
         ]);
     })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
+        $schedule->command('check:low-stock')->hourly();
+    })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->reportable(function (Throwable $e) {
             try {

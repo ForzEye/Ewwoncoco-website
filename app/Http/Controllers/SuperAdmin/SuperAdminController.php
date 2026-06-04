@@ -53,11 +53,162 @@ class SuperAdminController extends Controller
 
     public function orders(Request $request)
     {
+        $branches = \App\Models\Branch::with('merchant')->get();
+        $selectedBranchId = $request->input('branch_id');
+
+        if ($selectedBranchId) {
+            $branch = \App\Models\Branch::with('merchant')->findOrFail($selectedBranchId);
+
+            // Fetch Online Orders (limit 50)
+            $onlineOrders = Order::where('branch_id', $selectedBranchId)
+                ->with(['customer', 'cashier'])
+                ->orderBy('created_at', 'desc')
+                ->limit(50)
+                ->get()
+                ->map(function ($order) {
+                    return [
+                        'id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'total' => (float)$order->total,
+                        'status' => $order->status,
+                        'payment_status' => $order->payment_status,
+                        'payment_method' => $order->payment_method,
+                        'created_at' => $order->created_at->toIso8601String(),
+                        'customer_name' => $order->customer?->name ?? 'Guest',
+                        'type' => 'ONLINE',
+                    ];
+                });
+
+            // Fetch POS Transactions (limit 50)
+            $posTransactions = PosTransaction::where('branch_id', $selectedBranchId)
+                ->with(['customer', 'cashier'])
+                ->orderBy('transaction_at', 'desc')
+                ->limit(50)
+                ->get()
+                ->map(function ($pos) {
+                    return [
+                        'id' => $pos->id,
+                        'order_number' => $pos->transaction_number,
+                        'total' => (float)$pos->total,
+                        'status' => 'delivered',
+                        'payment_status' => 'confirmed',
+                        'payment_method' => $pos->payment_method,
+                        'created_at' => ($pos->transaction_at ?: $pos->created_at)->toIso8601String(),
+                        'customer_name' => $pos->customer?->name ?? 'POS Customer',
+                        'type' => 'POS',
+                    ];
+                });
+
+            // Combine and sort
+            $combinedOrders = $onlineOrders->concat($posTransactions)
+                ->sortByDesc('created_at')
+                ->values()
+                ->all();
+
+            // Fetch Stock Movements with filters
+            $stockMovementsQuery = \App\Models\StockMovement::where('branch_id', $selectedBranchId)
+                ->with('ingredient')
+                ->orderBy('created_at', 'desc');
+
+            if ($request->input('stock_type')) {
+                $stockMovementsQuery->where('type', $request->input('stock_type'));
+            }
+
+            if ($request->input('stock_search')) {
+                $search = $request->input('stock_search');
+                $stockMovementsQuery->whereHas('ingredient', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                });
+            }
+
+            $stockMovements = $stockMovementsQuery->limit(100)->get()->map(function($sm) {
+                return [
+                    'id' => $sm->id,
+                    'type' => $sm->type,
+                    'quantity' => (float)$sm->quantity,
+                    'notes' => $sm->notes,
+                    'created_at' => $sm->created_at->toIso8601String(),
+                    'ingredient' => $sm->ingredient ? [
+                        'id' => $sm->ingredient->id,
+                        'name' => $sm->ingredient->name,
+                        'unit' => $sm->ingredient->unit,
+                    ] : null,
+                ];
+            });
+
+            // Fetch Current Stock Level
+            $stockData = \App\Models\BranchIngredient::where('branch_id', $selectedBranchId)
+                ->with('ingredient')
+                ->get()
+                ->map(function ($si) {
+                    return [
+                        'id' => $si->id,
+                        'stock' => (float)$si->stock,
+                        'min_stock' => (float)$si->min_stock,
+                        'average_cost' => (float)$si->average_cost,
+                        'ingredient' => $si->ingredient ? [
+                            'id' => $si->ingredient->id,
+                            'name' => $si->ingredient->name,
+                            'unit' => $si->ingredient->unit,
+                        ] : null,
+                    ];
+                });
+
+            // Fetch Cashier Shifts (limit 30)
+            $shifts = \App\Models\PosShift::where('branch_id', $selectedBranchId)
+                ->with('cashier')
+                ->orderBy('created_at', 'desc')
+                ->limit(30)
+                ->get()
+                ->map(function ($shift) {
+                    $expectedCashSales = PosTransaction::where('shift_id', $shift->id)
+                        ->where('payment_method', 'cash')
+                        ->sum('total');
+
+                    $expectedQrisSales = PosTransaction::where('shift_id', $shift->id)
+                        ->where('payment_method', 'qris')
+                        ->sum('total');
+
+                    return [
+                        'id' => $shift->id,
+                        'cashier_name' => $shift->cashier?->name ?? 'Unknown',
+                        'opened_at' => $shift->opened_at ? $shift->opened_at->toIso8601String() : null,
+                        'closed_at' => $shift->closed_at ? $shift->closed_at->toIso8601String() : null,
+                        'opening_cash' => (float)$shift->opening_cash,
+                        'expected_cash' => (float)($shift->opening_cash + $expectedCashSales),
+                        'actual_cash' => $shift->closing_cash !== null ? (float)$shift->closing_cash : null,
+                        'expected_qris' => (float)$expectedQrisSales,
+                        'actual_qris' => $shift->closing_qris !== null ? (float)$shift->closing_qris : null,
+                        'notes' => $shift->notes,
+                    ];
+                });
+
+            return Inertia::render('SuperAdmin/Orders', [
+                'branches' => $branches,
+                'selectedBranchId' => (int) $selectedBranchId,
+                'branchDetail' => [
+                    'branch' => $branch,
+                    'combinedOrders' => $combinedOrders,
+                    'stockMovements' => $stockMovements,
+                    'stockData' => $stockData,
+                    'shifts' => $shifts,
+                ],
+                'filters' => [
+                    'stock_type' => $request->input('stock_type', ''),
+                    'stock_search' => $request->input('stock_search', ''),
+                ]
+            ]);
+        }
+
+        // Global Orders (Default)
         $orders = Order::with(['merchant', 'customer', 'branch'])
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return Inertia::render('SuperAdmin/Orders', [
+            'branches' => $branches,
+            'selectedBranchId' => null,
             'orders' => $orders,
         ]);
     }

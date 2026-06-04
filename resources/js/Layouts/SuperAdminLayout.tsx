@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { PageProps } from '../types';
 import { requestNotificationPermission, onMessageListener } from '../lib/firebase-setup';
+import { toastWarning } from '../lib/swal';
 
 interface SuperAdminLayoutProps {
     children: ReactNode;
@@ -31,11 +32,14 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
 
             const unsubscribe = onMessageListener((payload: any) => {
                 console.log('FCM Message received in foreground:', payload);
-                if (Notification.permission === 'granted') {
+                if (Notification.permission === 'granted' && payload.notification) {
                     new Notification(payload.notification.title, {
                         body: payload.notification.body,
                         icon: '/coconut_original.png',
                     });
+                }
+                if (payload.notification) {
+                    toastWarning(`${payload.notification.title}: ${payload.notification.body}`);
                 }
             });
 

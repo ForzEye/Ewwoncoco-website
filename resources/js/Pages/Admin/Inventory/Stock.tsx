@@ -105,7 +105,7 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
         adjustForm.setData({
             branch_id: selectedBranchId,
             ingredient_id: item.ingredient_id.toString(),
-            actual_stock: item.stock.toString(),
+            actual_stock: Number(item.stock).toString(),
             notes: '',
         });
         setIsAdjustModalOpen(true);
@@ -114,9 +114,9 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
     const openEdit = (item: BranchIngredient) => {
         setEditingItem(item);
         editForm.setData({
-            stock: item.stock.toString(),
-            min_stock: item.min_stock.toString(),
-            average_cost: item.average_cost.toString(),
+            stock: Number(item.stock).toString(),
+            min_stock: Number(item.min_stock).toString(),
+            average_cost: Number(item.average_cost).toString(),
         });
         setIsEditModalOpen(true);
     };

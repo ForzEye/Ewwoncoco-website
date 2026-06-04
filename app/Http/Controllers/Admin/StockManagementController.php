@@ -126,6 +126,8 @@ class StockManagementController extends Controller
             $diff = $newStock - $oldStock;
 
             $branchIngredient->update(['stock' => $newStock]);
+            $branchIngredient->refresh();
+            \App\Services\Notification\StockAlertService::checkAndSendIngredientAlert($branchIngredient);
 
             // Record Movement
             StockMovement::create([
@@ -163,6 +165,8 @@ class StockManagementController extends Controller
             'min_stock' => $newMin,
             'average_cost' => $newCost,
         ]);
+        $branchIngredient->refresh();
+        \App\Services\Notification\StockAlertService::checkAndSendIngredientAlert($branchIngredient);
 
         // Log directly in StockMovement
         StockMovement::create([

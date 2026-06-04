@@ -28,40 +28,26 @@ class CheckLowStock extends Command
      */
     public function handle(FCMService $fcmService)
     {
-        $lowStockProducts = Product::with(['merchant', 'branch'])
-            ->whereColumn('stock', '<=', 'min_stock')
+        // 1. Check Finished Products
+        $lowStockProducts = Product::whereColumn('stock', '<=', 'min_stock')
             ->where('is_available', true)
             ->get();
 
-        if ($lowStockProducts->isEmpty()) {
-            $this->info('Semua stok aman.');
-
-            return;
+        foreach ($lowStockProducts as $product) {
+            $this->warn("Stok produk menipis: {$product->name} (Sisa: {$product->stock})");
+            \App\Services\Notification\StockAlertService::checkAndSendProductAlert($product);
         }
 
-        foreach ($lowStockProducts as $product) {
-            $this->warn("Stok menipis: {$product->name} (Sisa: {$product->stock})");
+        // 2. Check Branch Ingredients (Bahan Baku Cabang)
+        $lowStockIngredients = \App\Models\BranchIngredient::with(['ingredient', 'branch'])
+            ->whereColumn('stock', '<=', 'min_stock')
+            ->get();
 
-            // Cari Admin dari merchant ini
-            $admins = User::where('role', 'admin')
-                ->whereHas('merchant', function ($q) use ($product) {
-                    $q->where('id', $product->merchant_id);
-                })
-                ->whereNotNull('fcm_token')
-                ->get();
-
-            foreach ($admins as $admin) {
-                $fcmService->sendToToken(
-                    $admin->fcm_token,
-                    'Peringatan Stok Rendah!',
-                    "Stok produk {$product->name} sisa {$product->stock}. Segera lakukan restock!",
-                    [
-                        'type' => 'low_stock_alert',
-                        'product_id' => (string) $product->id,
-                        'link' => '/admin/products',
-                    ]
-                );
-            }
+        foreach ($lowStockIngredients as $branchIngredient) {
+            $ingredientName = $branchIngredient->ingredient->name ?? 'Bahan Baku';
+            $branchName = $branchIngredient->branch->name ?? 'Cabang';
+            $this->warn("Stok bahan baku menipis: {$ingredientName} di {$branchName} (Sisa: {$branchIngredient->stock})");
+            \App\Services\Notification\StockAlertService::checkAndSendIngredientAlert($branchIngredient);
         }
 
         $this->info('Selesai memeriksa stok.');
