@@ -9,7 +9,7 @@ class PosTransaction extends Model
     protected $fillable = [
         'merchant_id', 'branch_id', 'cashier_id', 'customer_id', 'shift_id',
         'transaction_number', 'payment_method', 'total', 'discount',
-        'cash_received', 'change_amount', 'transaction_at',
+        'cash_received', 'change_amount', 'transaction_at', 'notes',
     ];
 
     protected $casts = ['transaction_at' => 'datetime'];

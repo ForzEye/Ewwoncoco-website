@@ -44,6 +44,7 @@ export default function Screen({ products, categories, activeShift, promotions }
     const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
     const [usePoints, setUsePoints] = useState(false);
+    const [transactionNotes, setTransactionNotes] = useState('');
     const [activeTab, setActiveTab] = useState<'menu' | 'cart'>('menu');
 
     const { 
@@ -180,7 +181,7 @@ export default function Screen({ products, categories, activeShift, promotions }
         });
     }, [products, search, selectedCategory]);
 
-    const handleProcessPayment = async (data: { payment_method: 'cash' | 'qris', amount_paid: number }) => {
+    const handleProcessPayment = async (data: { payment_method: 'cash' | 'qris' | 'tester', amount_paid: number }) => {
         setIsProcessing(true);
         try {
             const response = await axios.post(route('pos.store'), {
@@ -189,7 +190,8 @@ export default function Screen({ products, categories, activeShift, promotions }
                 customer_id: selectedCustomer?.user_id,
                 use_points: usePoints,
                 payment_method: data.payment_method,
-                amount_paid: data.amount_paid
+                amount_paid: data.amount_paid,
+                notes: transactionNotes
             });
 
             if (response.data.success) {
@@ -198,6 +200,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                 setSelectedCustomer(null);
                 setCustomerQuery('');
                 setUsePoints(false);
+                setTransactionNotes('');
                 setIsPaymentOpen(false);
                 setIsReceiptOpen(true);
             }
@@ -540,6 +543,18 @@ export default function Screen({ products, categories, activeShift, promotions }
 
                     {/* Checkout Footer */}
                     <div className="p-5 bg-[#FAFAF8] border-t border-[#E8E4DD] space-y-4">
+                        {/* Transaction Note Input */}
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-[#8A8379] uppercase tracking-[0.1em] block">Catatan Transaksi</label>
+                            <input 
+                                type="text"
+                                placeholder="Tulis catatan (misal: Tester untuk tamu, dll)..."
+                                value={transactionNotes}
+                                onChange={(e) => setTransactionNotes(e.target.value)}
+                                className="w-full bg-white border border-[#E8E4DD] rounded-xl px-3 py-2 text-xs font-medium placeholder:text-[#C4BEB5] focus:ring-2 focus:ring-[#2D6A4F]/10 focus:border-[#2D6A4F]/30 transition-all shadow-sm"
+                            />
+                        </div>
+
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
                                 <span className="text-[10px] font-bold text-[#B5AFA6] uppercase tracking-[0.12em]">Subtotal</span>

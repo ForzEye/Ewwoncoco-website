@@ -14,12 +14,12 @@ interface PaymentModalProps {
     isOpen: boolean;
     onClose: () => void;
     total: number;
-    onConfirm: (data: { payment_method: 'cash' | 'qris', amount_paid: number }) => void;
+    onConfirm: (data: { payment_method: 'cash' | 'qris' | 'tester', amount_paid: number }) => void;
     processing: boolean;
 }
 
 export default function PaymentModal({ isOpen, onClose, total, onConfirm, processing }: PaymentModalProps) {
-    const [method, setMethod] = useState<'cash' | 'qris'>('cash');
+    const [method, setMethod] = useState<'cash' | 'qris' | 'tester'>('cash');
     const [amountPaid, setAmountPaid] = useState<string>('');
     const [change, setChange] = useState(0);
 
@@ -39,7 +39,7 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
 
     if (!isOpen) return null;
 
-    const canConfirm = method === 'qris' || (parseFloat(amountPaid) || 0) >= total;
+    const canConfirm = method === 'qris' || method === 'tester' || (parseFloat(amountPaid) || 0) >= total;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -82,6 +82,17 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
                             <QrCode size={28} />
                             <span className="text-[10px] font-black uppercase tracking-[0.1em]">QRIS</span>
                         </button>
+                        <button 
+                            onClick={() => setMethod('tester')}
+                            className={`w-full p-5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-3 ${
+                                method === 'tester' 
+                                    ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-sm' 
+                                    : 'border-[#E8E4DD] text-[#B5AFA6] hover:border-[#C4BEB5] hover:text-[#8A8379]'
+                            }`}
+                        >
+                            <span className="text-2xl">🎁</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.1em]">Tester</span>
+                        </button>
                     </div>
 
                     {/* Payment Input */}
@@ -92,7 +103,22 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
                             <h2 className="text-3xl font-poppins font-black text-[#1A1A1A] tracking-tighter">{rupiah(total)}</h2>
                         </div>
 
-                        {method === 'cash' ? (
+                        {method === 'tester' ? (
+                            <div className="flex flex-col items-center justify-center py-10 space-y-4 text-center">
+                                <div className="w-16 h-16 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center text-3xl animate-bounce">
+                                    🎁
+                                </div>
+                                <div>
+                                    <h4 className="font-poppins font-black text-[#1A1A1A] text-lg">Pesanan Gratis (Tester)</h4>
+                                    <p className="text-xs text-[#8A8379] font-medium leading-relaxed max-w-[280px] mt-1.5">
+                                        Transaksi ini bernilai Rp 0 dan akan dicatat sebagai Tester/Gratis. Stok produk & bahan baku resep tetap dikurangi secara otomatis.
+                                    </p>
+                                </div>
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-purple-50 text-purple-700 rounded-full border border-purple-100 font-bold text-[10px] uppercase tracking-wider">
+                                    Stok BOM Akan Terpotong
+                                </div>
+                            </div>
+                        ) : method === 'cash' ? (
                             <div className="space-y-5">
                                 <div>
                                     <label className="text-[10px] font-bold text-[#8A8379] uppercase tracking-[0.1em] block mb-2">Uang Diterima</label>
@@ -128,7 +154,7 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
                                 {/* Change display */}
                                 <div className={`p-4 rounded-2xl flex justify-between items-center transition-all ${
                                     change > 0 ? 'bg-amber-50 border-2 border-amber-200' : 'bg-[#F5F3EF] border border-[#E8E4DD]'
-                                }`}>
+                                }}`}>
                                     <span className={`text-[10px] font-black uppercase tracking-[0.1em] ${change > 0 ? 'text-[#D97706]' : 'text-[#B5AFA6]'}`}>Kembalian</span>
                                     <span className={`text-xl font-black ${change > 0 ? 'text-[#D97706]' : 'text-[#E8E4DD]'}`}>{rupiah(change)}</span>
                                 </div>
@@ -161,7 +187,10 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
                         Batal
                     </button>
                     <button 
-                        onClick={() => onConfirm({ payment_method: method, amount_paid: method === 'qris' ? total : (parseFloat(amountPaid) || 0) })}
+                        onClick={() => onConfirm({ 
+                            payment_method: method, 
+                            amount_paid: method === 'tester' ? 0 : (method === 'qris' ? total : (parseFloat(amountPaid) || 0)) 
+                        })}
                         disabled={processing || !canConfirm}
                         className="flex-1 bg-gradient-to-r from-[#2D6A4F] to-[#40916C] hover:from-[#1B4332] hover:to-[#2D6A4F] disabled:from-[#E8E4DD] disabled:to-[#E8E4DD] disabled:text-[#B5AFA6] text-white font-black py-3.5 rounded-2xl shadow-lg shadow-[#2D6A4F]/15 transition-all flex items-center justify-center gap-2 disabled:shadow-none group"
                     >

@@ -111,6 +111,11 @@ export default function Index({ orders }: OrdersIndexProps) {
                                                 <div>
                                                     <p className="text-[14px] font-black text-[#1A1A1A] tracking-tight">{order.customer?.name || 'Pelanggan Umum'}</p>
                                                     <p className="text-[10px] font-bold text-[#B5AFA6] mt-0.5">{order.branch?.name || 'Cabang Utama'}</p>
+                                                    {order.notes && (
+                                                        <div className="mt-1.5 max-w-[200px] truncate bg-[#FAF6F0] border border-[#F5ECE2] text-[#8C5E3C] text-[10px] font-bold px-2.5 py-1 rounded-lg inline-block" title={order.notes}>
+                                                            📝 {order.notes}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -133,8 +138,12 @@ export default function Index({ orders }: OrdersIndexProps) {
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 whitespace-nowrap">
-                                            <span className="text-[11px] font-black text-[#8A8A8A] uppercase tracking-wider bg-[#F9F9F9] px-2 py-1 rounded-lg">
-                                                {order.payment_method === 'cash' ? '💵 Tunai' : '📱 QRIS'}
+                                            <span className={`text-[11px] font-black uppercase tracking-wider px-2 py-1 rounded-lg ${
+                                                order.payment_method === 'tester' 
+                                                    ? 'bg-purple-50 text-purple-600 border border-purple-100 shadow-sm' 
+                                                    : 'bg-[#F9F9F9] text-[#8A8379]'
+                                            }`}>
+                                                {order.payment_method === 'cash' ? '💵 Tunai' : (order.payment_method === 'qris' ? '📱 QRIS' : '🎁 Tester')}
                                             </span>
                                         </td>
                                         <td className="px-8 py-6 whitespace-nowrap">

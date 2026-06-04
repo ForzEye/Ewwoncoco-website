@@ -163,14 +163,14 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
                                 <tr key={item.id} className="hover:bg-[#FAFAF8] transition-all group">
                                     <td className="px-8 py-5">
                                         <div className="flex flex-col">
-                                            <span className="font-bold text-[#1A1A1A]">{item.ingredient.name}</span>
-                                            <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black mt-0.5">{item.ingredient.unit}</span>
+                                            <span className="font-bold text-[#1A1A1A]">{item.ingredient?.name ?? 'Tidak Ada'}</span>
+                                            <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black mt-0.5">{item.ingredient?.unit ?? ''}</span>
                                         </div>
                                     </td>
                                     <td className="px-8 py-5 text-center">
                                         <div className="flex flex-col items-center">
                                             <span className="font-mono font-black text-lg text-[#1A1A1A] leading-none">{qty(item.stock)}</span>
-                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">{item.ingredient.unit}</span>
+                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">{item.ingredient?.unit ?? ''}</span>
                                         </div>
                                     </td>
                                     <td className="px-8 py-5 text-right">
@@ -304,8 +304,8 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
                         <form onSubmit={handleAdjustSubmit} className="p-8 space-y-6">
                             <div className="bg-[#F5F3EF] p-4 rounded-2xl mb-4">
                                 <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-widest">Bahan Baku</p>
-                                <p className="text-sm font-bold text-[#1A1A1A] mt-1">{selectedIngredient.ingredient.name}</p>
-                                <p className="text-[10px] text-gray-400 mt-0.5">Stok Saat Ini (Sistem): {qty(selectedIngredient.stock)} {selectedIngredient.ingredient.unit}</p>
+                                <p className="text-sm font-bold text-[#1A1A1A] mt-1">{selectedIngredient.ingredient?.name ?? 'Tidak Ada'}</p>
+                                <p className="text-[10px] text-gray-400 mt-0.5">Stok Saat Ini (Sistem): {qty(selectedIngredient.stock)} {selectedIngredient.ingredient?.unit ?? ''}</p>
                             </div>
 
                             <div className="space-y-2">

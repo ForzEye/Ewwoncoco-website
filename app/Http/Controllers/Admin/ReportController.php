@@ -129,19 +129,42 @@ class ReportController extends Controller
         $onlineRecent = Order::where('merchant_id', $merchantId)
             ->where('payment_status', 'confirmed')
             ->whereBetween('created_at', [$startDateTime, $endDateTime])
-            ->select('order_number as trx_no', 'created_at as date', 'payment_method', 'total', DB::raw("'ONLINE' as type"))
             ->orderByDesc('created_at')
             ->limit(15)
-            ->get();
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'trx_no' => $order->order_number,
+                    'date' => $order->created_at,
+                    'payment_method' => $order->payment_method,
+                    'total' => $order->total,
+                    'type' => 'ONLINE',
+                ];
+            });
 
         $posRecent = PosTransaction::where('merchant_id', $merchantId)
             ->whereBetween('transaction_at', [$startDateTime, $endDateTime])
-            ->select('transaction_number as trx_no', 'transaction_at as date', 'payment_method', 'total', DB::raw("'POS' as type"))
             ->orderByDesc('transaction_at')
             ->limit(15)
-            ->get();
+            ->get()
+            ->map(function ($pos) {
+                return [
+                    'trx_no' => $pos->transaction_number,
+                    'date' => $pos->transaction_at ?: $pos->created_at,
+                    'payment_method' => $pos->payment_method,
+                    'total' => $pos->total,
+                    'type' => 'POS',
+                ];
+            });
 
-        $recentTransactions = $onlineRecent->concat($posRecent)->sortByDesc('date')->values()->all();
+        $recentTransactions = $onlineRecent->concat($posRecent)
+            ->sortByDesc('date')
+            ->values()
+            ->map(function ($item) {
+                $item['date'] = $item['date']->toIso8601String();
+                return $item;
+            })
+            ->all();
 
         // 5. BI: HPP & Profitability Analysis
         $totalHpp = 0;
@@ -232,7 +255,13 @@ class ReportController extends Controller
                 ->get();
 
             foreach ($online as $row) {
-                fputcsv($file, [$row->created_at, $row->order_number, 'Online', $row->payment_method, $row->total]);
+                fputcsv($file, [
+                    $row->created_at->timezone('Asia/Jakarta')->toDateTimeString(), 
+                    $row->order_number, 
+                    'Online', 
+                    $row->payment_method, 
+                    $row->total
+                ]);
             }
 
             // POS Transactions
@@ -241,7 +270,14 @@ class ReportController extends Controller
                 ->get();
 
             foreach ($pos as $row) {
-                fputcsv($file, [$row->transaction_at, $row->transaction_number, 'POS', $row->payment_method, $row->total]);
+                $date = $row->transaction_at ?: $row->created_at;
+                fputcsv($file, [
+                    $date->timezone('Asia/Jakarta')->toDateTimeString(), 
+                    $row->transaction_number, 
+                    'POS', 
+                    $row->payment_method, 
+                    $row->total
+                ]);
             }
 
             fclose($file);

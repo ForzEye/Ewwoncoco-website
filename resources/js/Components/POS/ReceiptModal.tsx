@@ -40,7 +40,7 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
     const displayCashier = isOnline ? 'ONLINE' : (order.cashier?.name?.toUpperCase() || 'KASIR');
     const displayPayment = isOnline 
         ? (order.payment_method === 'manual_transfer' ? 'TRANSFER' : 'ONLINE') 
-        : (order.payment_method === 'cash' ? 'TUNAI' : 'QRIS');
+        : (order.payment_method === 'cash' ? 'TUNAI' : (order.payment_method === 'qris' ? 'QRIS' : 'TESTER'));
 
     // Extract print settings from database (with standard fallbacks)
     const merchantSettings = order.merchant || {};
@@ -164,7 +164,7 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                         <div className="border-t border-dashed border-gray-400 pt-3 space-y-1.5 w-full">
                             {(order.discount > 0) && (
                                 <div className="flex justify-between opacity-80 italic" style={{ fontSize: `${baseFontSize}px` }}>
-                                    <span>POTONGAN POIN</span>
+                                    <span>{order.payment_method === 'tester' ? 'DISKON TESTER' : 'POTONGAN POIN'}</span>
                                     <span>-{rupiah(order.discount)}</span>
                                 </div>
                             )}

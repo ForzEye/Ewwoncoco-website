@@ -22,6 +22,7 @@ class StockManagementController extends Controller
         $ingredients = Ingredient::where('merchant_id', $merchantId)->get();
 
         $stockData = BranchIngredient::where('branch_id', $selectedBranchId)
+            ->whereHas('ingredient')
             ->with('ingredient')
             ->get();
 

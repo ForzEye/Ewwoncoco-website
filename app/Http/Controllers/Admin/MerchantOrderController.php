@@ -53,6 +53,7 @@ class MerchantOrderController extends Controller
                 'delivery_fee' => (float)$order->delivery_fee,
                 'discount' => (float)$order->discount,
                 'total' => (float)$order->total,
+                'notes' => $order->notes,
                 'created_at' => $order->created_at->toIso8601String(),
                 'updated_at' => $order->updated_at->toIso8601String(),
                 'customer' => $order->customer,
@@ -76,6 +77,7 @@ class MerchantOrderController extends Controller
                 'delivery_fee' => 0.0,
                 'discount' => (float)$pos->discount,
                 'total' => (float)$pos->total,
+                'notes' => $pos->notes,
                 'created_at' => $pos->transaction_at ? $pos->transaction_at->toIso8601String() : $pos->created_at->toIso8601String(),
                 'updated_at' => $pos->updated_at->toIso8601String(),
                 'customer' => $pos->customer,
@@ -208,7 +210,7 @@ class MerchantOrderController extends Controller
             'discount' => (float)$pos->discount,
             'total' => (float)$pos->total,
             'delivery_address' => null,
-            'notes' => null,
+            'notes' => $pos->notes,
             'items' => $pos->items->map(function ($item) {
                 return [
                     'id' => $item->id,

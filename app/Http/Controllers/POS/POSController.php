@@ -58,9 +58,10 @@ class POSController extends Controller
     {
         $request->validate([
             'customer_name' => 'nullable|string',
-            'payment_method' => 'required|in:cash,qris',
+            'payment_method' => 'required|in:cash,qris,tester',
             'items' => 'required|array|min:1',
             'amount_paid' => 'nullable|numeric',
+            'notes' => 'nullable|string',
         ]);
 
         $user = $request->user();
@@ -114,6 +115,8 @@ class POSController extends Controller
             // Global BOGO (applies to "all menus")
             $globalBogoPromo = $bogoPromosCollection->whereNull('buy_product_id')->first();
 
+            $isTester = $request->payment_method === 'tester';
+
             $transaction = PosTransaction::create([
                 'merchant_id' => $merchantId,
                 'branch_id' => $branchId,
@@ -122,15 +125,16 @@ class POSController extends Controller
                 'shift_id' => $activeShift->id,
                 'transaction_number' => 'POS-'.date('Ymd').'-'.strtoupper(bin2hex(random_bytes(3))),
                 'payment_method' => $request->payment_method,
-                'total' => $subtotal,
-                'discount' => 0,
-                'cash_received' => $request->amount_paid ?? $subtotal,
-                'change_amount' => ($request->amount_paid ?? $subtotal) - $subtotal,
+                'total' => $isTester ? 0 : $subtotal,
+                'discount' => $isTester ? $subtotal : 0,
+                'cash_received' => $isTester ? 0 : ($request->amount_paid ?? $subtotal),
+                'change_amount' => $isTester ? 0 : (($request->amount_paid ?? $subtotal) - $subtotal),
                 'transaction_at' => now(),
+                'notes' => $request->notes,
             ]);
 
-            // Handle Point Redemption if customer is selected
-            if ($request->customer_id && $request->boolean('use_points', false)) {
+            // Handle Point Redemption if customer is selected and not a tester
+            if ($request->customer_id && $request->boolean('use_points', false) && ! $isTester) {
                 PointsService::redeemPoints($request->customer_id, $transaction->id, 'pos_transaction');
                 $transaction->refresh();
             }
@@ -212,8 +216,8 @@ class POSController extends Controller
                 }
             }
 
-            // Award points for this purchase if customer is selected
-            if ($transaction->customer_id) {
+            // Award points for this purchase if customer is selected and not a tester
+            if ($transaction->customer_id && $transaction->payment_method !== 'tester') {
                 PointsService::earnPoints($transaction->customer_id, $transaction->id, 'pos_transaction');
 
                 // Send premium WhatsApp receipt
