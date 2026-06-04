@@ -27,18 +27,31 @@ class ShiftController extends Controller
         ];
 
         if ($activeShift) {
-            $breakdown['expected_cash'] = $activeShift->opening_cash + PosTransaction::where('shift_id', $activeShift->id)
+            // Find all shifts opened today for this branch
+            $todayShifts = PosShift::where('branch_id', $activeShift->branch_id)
+                ->whereDate('opened_at', today())
+                ->get();
+                
+            $todayShiftIds = $todayShifts->pluck('id');
+            if ($todayShiftIds->isEmpty()) {
+                $todayShiftIds = collect([$activeShift->id]);
+            }
+
+            // Expected cash is the current shift's opening cash + cash sales from all shifts today
+            $breakdown['expected_cash'] = $activeShift->opening_cash + PosTransaction::whereIn('shift_id', $todayShiftIds)
                 ->where('payment_method', 'cash')
                 ->sum('total');
 
-            $breakdown['expected_qris'] = PosTransaction::where('shift_id', $activeShift->id)
+            // Expected qris is qris sales from all shifts today
+            $breakdown['expected_qris'] = PosTransaction::whereIn('shift_id', $todayShiftIds)
                 ->where('payment_method', 'qris')
                 ->sum('total');
 
-            // Online Orders from 'orders' table
+            // Expected online is online orders since the earliest shift today
+            $firstShiftOpenedAt = $todayShifts->min('opened_at') ?? $activeShift->opened_at;
             $breakdown['expected_online'] = Order::where('merchant_id', $activeShift->merchant_id ?? 1)
                 ->where('branch_id', $activeShift->branch_id)
-                ->whereBetween('created_at', [$activeShift->opened_at, now()])
+                ->whereBetween('created_at', [$firstShiftOpenedAt, now()])
                 ->whereIn('status', ['completed', 'delivered', 'ready_for_pickup'])
                 ->sum('total');
         }
