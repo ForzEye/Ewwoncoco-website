@@ -38,8 +38,8 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE || '' }}
           script: |
             # Masuk ke direktori project di server
             cd ${{ secrets.DEPLOY_PATH }}
