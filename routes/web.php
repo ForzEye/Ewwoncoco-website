@@ -227,6 +227,8 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     Route::get('/inventory/stock', [StockManagementController::class, 'index'])->name('inventory.stock.index');
     Route::post('/inventory/stock/in', [StockManagementController::class, 'stockIn'])->name('inventory.stock.in');
     Route::post('/inventory/stock/adjust', [StockManagementController::class, 'stockAdjust'])->name('inventory.stock.adjust');
+    Route::post('/inventory/stock/{id}', [StockManagementController::class, 'update'])->name('inventory.stock.update');
+    Route::delete('/inventory/stock/{id}', [StockManagementController::class, 'destroy'])->name('inventory.stock.destroy');
 
     Route::get('/inventory/recipes', [RecipeController::class, 'index'])->name('inventory.recipes.index');
     Route::post('/inventory/recipes', [RecipeController::class, 'store'])->name('inventory.recipes.store');
@@ -263,6 +265,11 @@ Route::middleware(['auth', 'role:kasir,super_admin'])->prefix('pos')->name('pos.
     Route::post('/online-orders/{id}/accept', [OnlineOrderController::class, 'accept'])->name('online_orders.accept');
     Route::post('/online-orders/{id}/reject', [OnlineOrderController::class, 'reject'])->name('online_orders.reject');
     Route::post('/online-orders/{id}/status', [OnlineOrderController::class, 'updateStatus'])->name('online_orders.status');
+
+    // Inventory & Stock Management (POS)
+    Route::get('/inventory/stock', [StockManagementController::class, 'index'])->name('inventory.stock.index');
+    Route::post('/inventory/stock/in', [StockManagementController::class, 'stockIn'])->name('inventory.stock.in');
+    Route::post('/inventory/stock/adjust', [StockManagementController::class, 'stockAdjust'])->name('inventory.stock.adjust');
 });
 
 /*

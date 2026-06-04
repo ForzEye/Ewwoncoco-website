@@ -45,6 +45,7 @@ export default function Sidebar() {
         { name: 'Dashboard Kasir', icon: LayoutDashboard, href: '/pos/dashboard', active: url === '/pos/dashboard', roles: ['kasir', 'super_admin'] },
         { name: 'Buka POS', icon: Sparkles, href: '/pos', active: url === '/pos', roles: ['kasir', 'super_admin'] },
         { name: 'Pesanan Masuk', icon: ShoppingBag, href: '/pos/online-orders', active: url === '/pos/online-orders', roles: ['kasir', 'super_admin'] },
+        { name: 'Stok Cabang', icon: Box, href: '/pos/inventory/stock', active: url === '/pos/inventory/stock', roles: ['kasir'] },
         { name: 'Manajemen Shift', icon: Clock, href: '/pos/shifts', active: url === '/pos/shifts', roles: ['kasir', 'super_admin'] },
         { name: 'Riwayat POS', icon: FileSpreadsheet, href: '/pos/history', active: url.startsWith('/pos/history'), roles: ['kasir', 'super_admin'] },
 
