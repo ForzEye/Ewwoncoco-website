@@ -18,11 +18,11 @@ class StockAlertService
             try {
                 $fcmService = app(FCMService::class);
                 
-                // Find Admins of this merchant + all Super Admins
+                // Find Admins and Cashiers of this merchant + all Super Admins
                 $admins = User::whereNotNull('fcm_token')
                     ->where(function($query) use ($product) {
                         $query->where(function($q) use ($product) {
-                            $q->where('role', 'admin')
+                            $q->whereIn('role', ['admin', 'kasir'])
                               ->where('merchant_id', $product->merchant_id);
                         })->orWhere('role', 'super_admin');
                     })
@@ -68,11 +68,11 @@ class StockAlertService
                     return;
                 }
 
-                // Find Admins of this branch's merchant + all Super Admins
+                // Find Admins and Cashiers of this branch's merchant + all Super Admins
                 $admins = User::whereNotNull('fcm_token')
                     ->where(function($query) use ($branch) {
                         $query->where(function($q) use ($branch) {
-                            $q->where('role', 'admin')
+                            $q->whereIn('role', ['admin', 'kasir'])
                               ->where('merchant_id', $branch->merchant_id);
                         })->orWhere('role', 'super_admin');
                     })
