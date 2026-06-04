@@ -22,7 +22,15 @@ class MerchantProductController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        $products = Product::where('merchant_id', $merchant->id)->with('category')->latest()->get();
+        $products = Product::where('merchant_id', $merchant->id)
+            ->with(['category', 'recipes.ingredient.branchStocks'])
+            ->latest()
+            ->get();
+
+        $products->transform(function ($product) {
+            $product->stock = $product->getGlobalDynamicStock();
+            return $product;
+        });
 
         return Inertia::render('Admin/Products/Index', [
             'products' => $products,

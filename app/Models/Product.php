@@ -59,4 +59,68 @@ class Product extends Model
     {
         return $this->belongsToMany(Customization::class, 'product_customizations');
     }
+
+    /**
+     * Calculate dynamic stock of this product at a specific branch based on recipes and branch ingredient stocks.
+     */
+    public function calculateDynamicStock($branchId)
+    {
+        if (!$branchId) {
+            return (float) $this->stock;
+        }
+
+        // If the product has no recipes (BOM), return the static stock column
+        if ($this->recipes->isEmpty()) {
+            return (float) $this->stock;
+        }
+
+        $maxPossible = null;
+
+        foreach ($this->recipes as $recipe) {
+            if (!$recipe->ingredient) {
+                continue;
+            }
+
+            // Find the branch stock for this ingredient
+            $branchStock = $recipe->ingredient->branchStocks
+                ->where('branch_id', $branchId)
+                ->first();
+
+            $available = $branchStock ? (float) $branchStock->stock : 0;
+            $needed = (float) $recipe->quantity;
+
+            if ($needed <= 0) {
+                continue;
+            }
+
+            $possible = floor($available / $needed);
+
+            if ($maxPossible === null || $possible < $maxPossible) {
+                $maxPossible = $possible;
+            }
+        }
+
+        return $maxPossible !== null ? (int) $maxPossible : 0;
+    }
+
+    /**
+     * Calculate dynamic stock of this product across all active branches of the merchant.
+     */
+    public function getGlobalDynamicStock()
+    {
+        $branches = \App\Models\Branch::where('merchant_id', $this->merchant_id)
+            ->where('is_active', true)
+            ->get();
+
+        if ($branches->isEmpty()) {
+            return (float) $this->stock;
+        }
+
+        $totalStock = 0;
+        foreach ($branches as $branch) {
+            $totalStock += $this->calculateDynamicStock($branch->id);
+        }
+
+        return $totalStock;
+    }
 }

@@ -48,4 +48,42 @@ class StockService
             ]);
         }
     }
+
+    /**
+     * Restore stock based on recipe for a given product and branch.
+     */
+    public static function restoreToRecipe($productId, $branchId, $quantity = 1, $referenceId = null, $referenceType = null)
+    {
+        $product = Product::with('recipes')->findOrFail($productId);
+
+        if ($product->recipes->isEmpty()) {
+            return; // No recipe, no stock restore for ingredients
+        }
+
+        foreach ($product->recipes as $recipe) {
+            $totalNeeded = $recipe->quantity * $quantity;
+
+            $branchIngredient = BranchIngredient::where('branch_id', $branchId)
+                ->where('ingredient_id', $recipe->ingredient_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($branchIngredient) {
+                $branchIngredient->increment('stock', $totalNeeded);
+                $branchIngredient->refresh();
+
+                // Record Movement
+                StockMovement::create([
+                    'branch_id' => $branchId,
+                    'ingredient_id' => $recipe->ingredient_id,
+                    'type' => 'IN',
+                    'quantity' => $totalNeeded,
+                    'reference_id' => $referenceId,
+                    'reference_type' => $referenceType,
+                    'notes' => "Pengembalian otomatis dari void {$referenceType} #{$referenceId}",
+                ]);
+            }
+        }
+    }
 }
+

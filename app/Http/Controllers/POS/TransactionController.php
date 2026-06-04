@@ -118,7 +118,21 @@ class TransactionController extends Controller
         return DB::transaction(function () use ($transaction, $activeShift, $request) {
             // Restore Stock
             foreach ($transaction->items as $item) {
-                Product::where('id', $item->product_id)->increment('stock', $item->quantity);
+                $product = Product::with('recipes')->find($item->product_id);
+                if ($product) {
+                    if ($product->recipes->isEmpty()) {
+                        $product->increment('stock', $item->quantity);
+                        $product->refresh();
+                    } else {
+                        \App\Services\StockService::restoreToRecipe(
+                            $item->product_id,
+                            $transaction->branch_id,
+                            $item->quantity,
+                            $transaction->transaction_number,
+                            'PosTransaction'
+                        );
+                    }
+                }
             }
 
             // Mark as voided (Assuming we add a status column or just delete?)

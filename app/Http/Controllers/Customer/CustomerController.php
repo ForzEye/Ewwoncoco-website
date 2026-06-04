@@ -13,10 +13,22 @@ class CustomerController extends Controller
 {
     public function shop(Request $request)
     {
-        // Simple placeholder for shop
-        // We'll fetch active merchants and products later as needed
         $merchants = Merchant::where('is_active', true)->get();
-        $products = Product::where('is_available', true)->with('merchant')->paginate(12);
+        $products = Product::where('is_available', true)
+            ->with([
+                'merchant.branches' => function ($query) {
+                    $query->where('is_active', true);
+                },
+                'recipes.ingredient.branchStocks'
+            ])
+            ->paginate(12);
+
+        $products->getCollection()->transform(function ($product) {
+            $branch = $product->merchant ? $product->merchant->branches->first() : null;
+            $branchId = $branch ? $branch->id : null;
+            $product->stock = $product->calculateDynamicStock($branchId);
+            return $product;
+        });
 
         return Inertia::render('Customer/Shop', [
             'merchants' => $merchants,
@@ -27,7 +39,24 @@ class CustomerController extends Controller
     public function merchant(Request $request, $slug)
     {
         $merchant = Merchant::where('slug', $slug)->firstOrFail();
-        $products = Product::where('merchant_id', $merchant->id)->where('is_available', true)->get();
+        $firstActiveBranch = $merchant->branches()->where('is_active', true)->first();
+        $branchId = $firstActiveBranch ? $firstActiveBranch->id : null;
+
+        $products = Product::where('merchant_id', $merchant->id)
+            ->where('is_available', true)
+            ->with([
+                'recipes.ingredient.branchStocks' => function ($query) use ($branchId) {
+                    if ($branchId) {
+                        $query->where('branch_id', $branchId);
+                    }
+                }
+            ])
+            ->get();
+
+        $products->transform(function ($product) use ($branchId) {
+            $product->stock = $product->calculateDynamicStock($branchId);
+            return $product;
+        });
 
         return Inertia::render('Customer/MerchantDetail', [
             'merchant' => $merchant,
@@ -37,7 +66,20 @@ class CustomerController extends Controller
 
     public function product(Request $request, $slug)
     {
-        $product = Product::where('slug', $slug)->with(['merchant', 'category', 'customizations.options'])->firstOrFail();
+        $product = Product::where('slug', $slug)
+            ->with([
+                'merchant.branches' => function ($query) {
+                    $query->where('is_active', true);
+                },
+                'category',
+                'customizations.options',
+                'recipes.ingredient.branchStocks'
+            ])
+            ->firstOrFail();
+
+        $branch = $product->merchant ? $product->merchant->branches->first() : null;
+        $branchId = $branch ? $branch->id : null;
+        $product->stock = $product->calculateDynamicStock($branchId);
 
         $reviews = Review::with('customer:id,name,avatar_url')
             ->where('product_id', $product->id)

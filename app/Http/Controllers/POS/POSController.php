@@ -36,7 +36,22 @@ class POSController extends Controller
             ]);
         }
 
-        $products = Product::where('is_available', true)->with(['category', 'customizations.options'])->get();
+        $branchId = $activeShift->branch_id;
+        $products = Product::where('is_available', true)
+            ->with([
+                'category', 
+                'customizations.options',
+                'recipes.ingredient.branchStocks' => function ($query) use ($branchId) {
+                    $query->where('branch_id', $branchId);
+                }
+            ])
+            ->get();
+
+        $products->transform(function ($product) use ($branchId) {
+            $product->stock = $product->calculateDynamicStock($branchId);
+            return $product;
+        });
+
         $categories = ProductCategory::all();
 
         $merchantId = $user->merchant_id ?? 1;
@@ -156,10 +171,14 @@ class POSController extends Controller
                     'customizations' => $item['customizations'] ?? null,
                 ]);
 
-                $product = Product::find($productId);
-                $product->decrement('stock', $qty);
-                $product->refresh();
-                \App\Services\Notification\StockAlertService::checkAndSendProductAlert($product);
+                $product = Product::with('recipes')->find($productId);
+                if ($product) {
+                    if ($product->recipes->isEmpty()) {
+                        $product->decrement('stock', $qty);
+                        $product->refresh();
+                        \App\Services\Notification\StockAlertService::checkAndSendProductAlert($product);
+                    }
+                }
 
                 // Deduct Ingredients based on Recipe (blocking)
                 StockService::deductFromRecipe(
@@ -199,11 +218,13 @@ class POSController extends Controller
                             'notes' => 'PROMO BOGO: '.$promo->name,
                         ]);
 
-                        $freeProduct = Product::find($freeProductId);
+                        $freeProduct = Product::with('recipes')->find($freeProductId);
                         if ($freeProduct) {
-                            $freeProduct->decrement('stock', $freeQty);
-                            $freeProduct->refresh();
-                            \App\Services\Notification\StockAlertService::checkAndSendProductAlert($freeProduct);
+                            if ($freeProduct->recipes->isEmpty()) {
+                                $freeProduct->decrement('stock', $freeQty);
+                                $freeProduct->refresh();
+                                \App\Services\Notification\StockAlertService::checkAndSendProductAlert($freeProduct);
+                            }
 
                             // Deduct Ingredients for free BOGO product (blocking)
                             StockService::deductFromRecipe(

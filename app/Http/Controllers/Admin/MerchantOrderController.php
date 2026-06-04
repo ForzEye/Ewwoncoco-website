@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\PosTransaction;
 use App\Models\Promotion;
 use App\Models\UserPointsBalance;
+use App\Models\Product;
 use App\Services\PointsService;
 use App\Services\StockService;
 use Illuminate\Http\Request;
@@ -156,17 +157,45 @@ class MerchantOrderController extends Controller
                 }
                 $order->update($updateData);
 
-                // Trigger simulation if status changes to preparing or on_delivery
+                // Trigger stock deduction if status changes to confirmed
                 if ($oldStatus !== 'confirmed' && $request->status === 'confirmed') {
                     // Deduct Stock for all items in order
                     foreach ($order->items as $item) {
-                        StockService::deductFromRecipe(
-                            $item->product_id,
-                            $order->branch_id,
-                            $item->quantity,
-                            $order->order_number,
-                            'OnlineOrder'
-                        );
+                        $product = Product::with('recipes')->find($item->product_id);
+                        if ($product) {
+                            if ($product->recipes->isEmpty()) {
+                                $product->decrement('stock', $item->quantity);
+                                $product->refresh();
+                            }
+                            StockService::deductFromRecipe(
+                                $item->product_id,
+                                $order->branch_id,
+                                $item->quantity,
+                                $order->order_number,
+                                'OnlineOrder'
+                            );
+                        }
+                    }
+                }
+
+                // Restore stock if a confirmed/preparing/ready/delivery order gets cancelled
+                if ($oldStatus !== 'pending' && $oldStatus !== 'cancelled' && $request->status === 'cancelled') {
+                    foreach ($order->items as $item) {
+                        $product = Product::with('recipes')->find($item->product_id);
+                        if ($product) {
+                            if ($product->recipes->isEmpty()) {
+                                $product->increment('stock', $item->quantity);
+                                $product->refresh();
+                            } else {
+                                StockService::restoreToRecipe(
+                                    $item->product_id,
+                                    $order->branch_id,
+                                    $item->quantity,
+                                    $order->order_number,
+                                    'OnlineOrder'
+                                );
+                            }
+                        }
                     }
                 }
             });
