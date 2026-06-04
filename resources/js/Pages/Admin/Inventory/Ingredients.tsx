@@ -25,10 +25,14 @@ interface IngredientsProps {
 
 import { confirmAction, toastSuccess } from '@/lib/swal';
 
+const PRESET_UNITS = ['pcs', 'ml', 'gr', 'kg', 'liter', 'box'];
+
 export default function Ingredients({ ingredients }: IngredientsProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectUnitType, setSelectUnitType] = useState<string>('preset');
+    const [customUnit, setCustomUnit] = useState<string>('');
 
     const { data, setData, post, delete: destroy, processing, reset, errors } = useForm({
         name: '',
@@ -42,15 +46,20 @@ export default function Ingredients({ ingredients }: IngredientsProps) {
     const openCreateModal = () => {
         setEditingIngredient(null);
         reset();
+        setSelectUnitType('preset');
+        setCustomUnit('');
         setIsModalOpen(true);
     };
 
     const openEditModal = (ingredient: Ingredient) => {
         setEditingIngredient(ingredient);
+        const isPreset = PRESET_UNITS.includes(ingredient.unit.toLowerCase());
         setData({
             name: ingredient.name,
             unit: ingredient.unit,
         });
+        setSelectUnitType(isPreset ? 'preset' : 'custom');
+        setCustomUnit(isPreset ? '' : ingredient.unit);
         setIsModalOpen(true);
     };
 
@@ -216,20 +225,47 @@ export default function Ingredients({ ingredients }: IngredientsProps) {
                                 {errors.name && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.name}</p>}
                             </div>
 
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] ml-1">Satuan</label>
-                                <select 
-                                    className="w-full px-5 py-4 bg-[#F5F3EF] border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#2D6A4F]/20 outline-none appearance-none"
-                                    value={data.unit}
-                                    onChange={e => setData('unit', e.target.value)}
-                                >
-                                    <option value="pcs">Pcs (Buah)</option>
-                                    <option value="ml">ml (Mililiter)</option>
-                                    <option value="gr">gr (Gram)</option>
-                                    <option value="kg">kg (Kilogram)</option>
-                                    <option value="liter">Liter</option>
-                                    <option value="box">Box / Dus</option>
-                                </select>
+                                <div className="space-y-3">
+                                    <select 
+                                        className="w-full px-5 py-4 bg-[#F5F3EF] border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#2D6A4F]/20 outline-none appearance-none cursor-pointer"
+                                        value={selectUnitType === 'preset' ? data.unit : 'custom'}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === 'custom') {
+                                                setSelectUnitType('custom');
+                                                setData('unit', customUnit || '');
+                                            } else {
+                                                setSelectUnitType('preset');
+                                                setData('unit', val);
+                                            }
+                                        }}
+                                    >
+                                        <option value="pcs">Pcs (Buah)</option>
+                                        <option value="ml">ml (Mililiter)</option>
+                                        <option value="gr">gr (Gram)</option>
+                                        <option value="kg">kg (Kilogram)</option>
+                                        <option value="liter">Liter</option>
+                                        <option value="box">Box / Dus</option>
+                                        <option value="custom">Lainnya (Tulis Sendiri...)</option>
+                                    </select>
+                                    
+                                    {selectUnitType === 'custom' && (
+                                        <input 
+                                            type="text"
+                                            className="w-full px-5 py-4 bg-[#F5F3EF] border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#2D6A4F]/20 outline-none animate-in slide-in-from-top-2 duration-200"
+                                            placeholder="Masukkan satuan baru (misal: butir, botol)..."
+                                            value={customUnit}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                setCustomUnit(val);
+                                                setData('unit', val);
+                                            }}
+                                            required
+                                        />
+                                    )}
+                                </div>
                             </div>
 
                             <button 
