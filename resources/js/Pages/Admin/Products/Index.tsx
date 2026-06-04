@@ -103,10 +103,10 @@ export default function Index({ products = [] }: ProductsIndexProps) {
                                     </td>
                                     <td className="px-8 py-6 whitespace-nowrap">
                                         <div className="flex flex-col">
-                                            <span className={`text-[13px] font-black ${product.stock <= product.min_stock ? 'text-red-500' : 'text-[#1A1A1A]'}`}>
+                                            <span className={`text-[13px] font-black ${Number(product.stock) <= Number(product.min_stock) ? 'text-red-500' : 'text-[#1A1A1A]'}`}>
                                                 {qty(product.stock)} <span className="text-[10px] text-[#B5AFA6] ml-0.5">unit</span>
                                             </span>
-                                            {product.stock <= product.min_stock && (
+                                            {Number(product.stock) <= Number(product.min_stock) && (
                                                 <div className="flex items-center gap-1 mt-1 text-red-500">
                                                     <AlertTriangle size={10} />
                                                     <span className="text-[9px] font-black uppercase tracking-tighter">Stok Limit!</span>

@@ -454,8 +454,8 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                             </thead>
                                             <tbody className="divide-y divide-gray-50">
                                                 {branchDetail.stockData.map((sd) => {
-                                                    const isLow = sd.stock <= sd.min_stock;
-                                                    const isCritical = sd.stock === 0;
+                                                    const isLow = Number(sd.stock) <= Number(sd.min_stock);
+                                                    const isCritical = Number(sd.stock) === 0;
                                                     return (
                                                         <tr key={sd.id} className="hover:bg-gray-50/50 transition-colors">
                                                             <td className="px-6 py-5">

@@ -276,7 +276,7 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
                                         </td>
                                         <td className="px-8 py-5">
                                             <div className="flex justify-center">
-                                                {item.stock <= item.min_stock ? (
+                                                {Number(item.stock) <= Number(item.min_stock) ? (
                                                     <span className="px-3 py-1 bg-red-50 text-red-500 text-[9px] font-black rounded-full border border-red-100 flex items-center gap-1">
                                                         <AlertTriangle size={12} /> MENIPIS
                                                     </span>
