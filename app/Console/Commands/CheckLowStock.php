@@ -28,9 +28,10 @@ class CheckLowStock extends Command
      */
     public function handle(FCMService $fcmService)
     {
-        // 1. Check Finished Products
+        // 1. Check Finished Products (Only products without recipes/BOM)
         $lowStockProducts = Product::whereColumn('stock', '<=', 'min_stock')
             ->where('is_available', true)
+            ->doesntHave('recipes')
             ->get();
 
         foreach ($lowStockProducts as $product) {

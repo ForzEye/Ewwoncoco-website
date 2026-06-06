@@ -15,6 +15,11 @@ class StockAlertService
      */
     public static function checkAndSendProductAlert(Product $product)
     {
+        // Skip products that have recipes/BOM (their stock is managed at ingredient level)
+        if ($product->recipes()->exists()) {
+            return;
+        }
+
         if ($product->stock <= $product->min_stock && $product->is_available) {
             $isOutOfStock = $product->stock <= 0;
             $state = $isOutOfStock ? 'out' : 'low';

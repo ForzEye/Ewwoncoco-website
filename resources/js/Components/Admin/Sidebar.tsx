@@ -17,10 +17,16 @@ import {
     Box,
     FileSpreadsheet,
     Clock,
-    Sliders
+    Sliders,
+    X
 } from 'lucide-react';
 
-export default function Sidebar() {
+interface SidebarProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const { url } = usePage();
     const { auth } = usePage<PageProps>().props;
     const user = auth.user;
@@ -60,16 +66,25 @@ export default function Sidebar() {
     });
 
     return (
-        <aside className="w-[280px] bg-white border-r border-[#F0F0F0] flex flex-col h-screen sticky top-0 z-40">
+        <aside className={`w-[280px] bg-white border-r border-[#F0F0F0] flex flex-col h-screen fixed lg:sticky top-0 left-0 z-50 lg:z-40 transition-transform duration-300 ease-in-out ${
+            isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}>
             {/* Logo Section */}
-            <div className="p-8 pb-10 flex items-center gap-3.5">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#2D6A4F] to-[#40916C] rounded-2xl flex items-center justify-center shadow-lg shadow-[#2D6A4F]/20 rotate-[-4deg]">
-                    <Sparkles className="w-6 h-6 text-white" />
+            <div className="p-8 pb-10 flex items-center justify-between">
+                <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#2D6A4F] to-[#40916C] rounded-2xl flex items-center justify-center shadow-lg shadow-[#2D6A4F]/20 rotate-[-4deg]">
+                        <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-poppins font-black text-[18px] tracking-tight text-[#1A1A1A] leading-none">EWWON</span>
+                        <span className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.25em] mt-1">Merchant Hub</span>
+                    </div>
                 </div>
-                <div className="flex flex-col">
-                    <span className="font-poppins font-black text-[18px] tracking-tight text-[#1A1A1A] leading-none">EWWON</span>
-                    <span className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.25em] mt-1">Merchant Hub</span>
-                </div>
+                {onClose && (
+                    <button onClick={onClose} className="lg:hidden p-2 hover:bg-gray-100 rounded-xl text-gray-500 transition-all">
+                        <X size={18} />
+                    </button>
+                )}
             </div>
 
             {/* Navigation */}

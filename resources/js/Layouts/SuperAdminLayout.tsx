@@ -12,7 +12,9 @@ import {
     ShieldCheck,
     Bell,
     Globe,
-    ShoppingBag
+    ShoppingBag,
+    Menu,
+    X
 } from 'lucide-react';
 import { PageProps } from '../types';
 import { requestNotificationPermission, onMessageListener } from '../lib/firebase-setup';
@@ -25,6 +27,7 @@ interface SuperAdminLayoutProps {
 export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     const { auth } = usePage<PageProps>().props;
     const { url } = usePage();
+    const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
     React.useEffect(() => {
         if (auth.user) {
@@ -61,10 +64,20 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     ];
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <div className="flex h-screen bg-gray-50 overflow-hidden relative">
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-45 lg:hidden backdrop-blur-sm transition-all duration-300"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-64 bg-[#1A1A1A] text-white flex flex-col flex-shrink-0">
-                <div className="p-6 border-b border-white/5">
+            <aside className={`w-64 bg-[#1A1A1A] text-white flex flex-col flex-shrink-0 fixed lg:sticky top-0 left-0 h-screen z-50 lg:z-40 transition-transform duration-300 ease-in-out ${
+                isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+            }`}>
+                <div className="p-6 border-b border-white/5 flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-[#00C48C] rounded-xl flex items-center justify-center shadow-lg shadow-[#00C48C]/20">
                             <ShieldCheck className="text-white" size={24} />
@@ -74,6 +87,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                             <p className="text-[10px] text-gray-400 mt-1 tracking-widest uppercase">Ewwon Coco Central</p>
                         </div>
                     </div>
+                    <button 
+                        onClick={() => setIsSidebarOpen(false)} 
+                        className="lg:hidden p-2 hover:bg-white/5 rounded-xl text-gray-400 hover:text-white transition-all"
+                    >
+                        <X size={18} />
+                    </button>
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -109,10 +128,18 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Header */}
-                <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 flex-shrink-0">
-                    <div className="flex items-center space-x-2 text-gray-400 text-xs font-bold uppercase tracking-widest">
-                        <Globe size={14} />
-                        <span>Global System Control</span>
+                <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 lg:px-8 flex-shrink-0">
+                    <div className="flex items-center space-x-4">
+                        <button 
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="lg:hidden p-2 hover:bg-gray-50 rounded-xl text-charcoal transition-all"
+                        >
+                            <Menu size={20} />
+                        </button>
+                        <div className="flex items-center space-x-2 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                            <Globe size={14} />
+                            <span>Global System Control</span>
+                        </div>
                     </div>
 
                     <div className="flex items-center space-x-6">
@@ -139,7 +166,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-8">
+                <main className="flex-1 overflow-y-auto p-4 sm:p-8">
                     {children}
                 </main>
             </div>

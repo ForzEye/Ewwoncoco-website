@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { usePage, Link } from '@inertiajs/react';
 import Sidebar from '../Components/Admin/Sidebar';
-import { Bell, Search, User, ChevronDown } from 'lucide-react';
+import { Bell, Search, User, ChevronDown, Menu } from 'lucide-react';
 import { PageProps } from '../types';
 import { requestNotificationPermission, onMessageListener } from '../lib/firebase-setup';
 import { toastWarning } from '../lib/swal';
@@ -13,6 +13,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
     const { auth } = usePage<PageProps>().props;
+    const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
     React.useEffect(() => {
         if (auth.user) {
@@ -38,16 +39,32 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     }, [auth.user]);
 
     return (
-        <div className="min-h-screen bg-[#FDFDFD] flex font-inter text-[#1A1A1A]">
+        <div className="min-h-screen bg-[#FDFDFD] flex font-inter text-[#1A1A1A] relative">
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/40 z-45 lg:hidden backdrop-blur-sm transition-all duration-300"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <Sidebar />
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Header — Sophisticated & Clean */}
-                <header className="h-[72px] bg-white/80 backdrop-blur-md border-b border-[#F0F0F0] px-8 flex items-center justify-between sticky top-0 z-30">
-                    <div className="flex items-center gap-8 flex-1">
-                        <h2 className="font-poppins font-black text-[20px] tracking-tight text-[#1A1A1A]">
+                <header className="h-[72px] bg-white/80 backdrop-blur-md border-b border-[#F0F0F0] px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30">
+                    <div className="flex items-center gap-4 lg:gap-8 flex-1">
+                        {/* Hamburger Button */}
+                        <button 
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="lg:hidden p-2 hover:bg-[#F5F5F5] rounded-xl text-[#1A1A1A] transition-all"
+                        >
+                            <Menu size={20} />
+                        </button>
+
+                        <h2 className="font-poppins font-black text-[18px] lg:text-[20px] tracking-tight text-[#1A1A1A]">
                             {title || 'Ringkasan'}
                         </h2>
                         
@@ -94,7 +111,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                 </header>
 
                 {/* Content Area */}
-                <main className="p-8 lg:p-10 max-w-[1600px]">
+                <main className="p-4 sm:p-8 lg:p-10 max-w-[1600px]">
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
                         {children}
                     </div>
