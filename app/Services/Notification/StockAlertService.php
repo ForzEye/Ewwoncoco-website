@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\BranchIngredient;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class StockAlertService
 {
@@ -15,6 +16,14 @@ class StockAlertService
     public static function checkAndSendProductAlert(Product $product)
     {
         if ($product->stock <= $product->min_stock && $product->is_available) {
+            $isOutOfStock = $product->stock <= 0;
+            $state = $isOutOfStock ? 'out' : 'low';
+            $cacheKey = "stock_alert_product_{$product->id}_{$state}";
+
+            if (Cache::has($cacheKey)) {
+                return;
+            }
+
             try {
                 $fcmService = app(FCMService::class);
                 
@@ -28,21 +37,40 @@ class StockAlertService
                     })
                     ->get();
 
-                foreach ($admins as $admin) {
+                $title = $isOutOfStock ? 'Stok Produk Habis!' : 'Peringatan Stok Produk Rendah!';
+                $body = $isOutOfStock 
+                    ? "Stok produk {$product->name} telah habis (sisa 0). Segera lakukan restock!" 
+                    : "Stok produk {$product->name} hampir habis (sisa " . self::formatNumber($product->stock) . "). Segera lakukan restock!";
+
+                $sent = false;
+                $tokens = $admins->pluck('fcm_token')->filter()->unique()->values();
+                foreach ($tokens as $token) {
                     $fcmService->sendToToken(
-                        $admin->fcm_token,
-                        'Peringatan Stok Produk Rendah!',
-                        "Stok produk {$product->name} sisa " . self::formatNumber($product->stock) . ". Segera lakukan restock!",
+                        $token,
+                        $title,
+                        $body,
                         [
                             'type' => 'low_stock_alert',
                             'product_id' => (string) $product->id,
                             'link' => '/admin/products',
                         ]
                     );
+                    $sent = true;
+                }
+
+                if ($sent) {
+                    Cache::put($cacheKey, true, now()->addHours(2));
+                    // Clear opposite state key to allow immediate toggle alert
+                    $oppositeState = $isOutOfStock ? 'low' : 'out';
+                    Cache::forget("stock_alert_product_{$product->id}_{$oppositeState}");
                 }
             } catch (\Exception $e) {
                 Log::error('Failed to send product low stock notification: ' . $e->getMessage());
             }
+        } else {
+            // Clear all alert cache keys when stock is healthy
+            Cache::forget("stock_alert_product_{$product->id}_low");
+            Cache::forget("stock_alert_product_{$product->id}_out");
         }
     }
 
@@ -52,6 +80,14 @@ class StockAlertService
     public static function checkAndSendIngredientAlert(BranchIngredient $branchIngredient)
     {
         if ($branchIngredient->stock <= $branchIngredient->min_stock) {
+            $isOutOfStock = $branchIngredient->stock <= 0;
+            $state = $isOutOfStock ? 'out' : 'low';
+            $cacheKey = "stock_alert_ingredient_{$branchIngredient->id}_{$state}";
+
+            if (Cache::has($cacheKey)) {
+                return;
+            }
+
             try {
                 $fcmService = app(FCMService::class);
                 $ingredient = $branchIngredient->ingredient;
@@ -78,11 +114,18 @@ class StockAlertService
                     })
                     ->get();
 
-                foreach ($admins as $admin) {
+                $title = $isOutOfStock ? 'Stok Bahan Baku Habis!' : 'Peringatan Stok Bahan Baku Rendah!';
+                $body = $isOutOfStock 
+                    ? "Bahan baku {$ingredient->name} di {$branch->name} telah habis (sisa 0 {$ingredient->unit}). Segera lakukan restock!" 
+                    : "Bahan baku {$ingredient->name} di {$branch->name} hampir habis (sisa " . self::formatNumber($branchIngredient->stock) . " {$ingredient->unit}). Segera lakukan restock!";
+
+                $sent = false;
+                $tokens = $admins->pluck('fcm_token')->filter()->unique()->values();
+                foreach ($tokens as $token) {
                     $fcmService->sendToToken(
-                        $admin->fcm_token,
-                        'Peringatan Stok Bahan Baku Rendah!',
-                        "Stok {$ingredient->name} di {$branch->name} sisa " . self::formatNumber($branchIngredient->stock) . " {$ingredient->unit}. Segera lakukan restock!",
+                        $token,
+                        $title,
+                        $body,
                         [
                             'type' => 'low_ingredient_alert',
                             'ingredient_id' => (string) $ingredient->id,
@@ -90,10 +133,22 @@ class StockAlertService
                             'link' => '/admin/inventory/stock',
                         ]
                     );
+                    $sent = true;
+                }
+
+                if ($sent) {
+                    Cache::put($cacheKey, true, now()->addHours(2));
+                    // Clear opposite state key to allow immediate toggle alert
+                    $oppositeState = $isOutOfStock ? 'low' : 'out';
+                    Cache::forget("stock_alert_ingredient_{$branchIngredient->id}_{$oppositeState}");
                 }
             } catch (\Exception $e) {
                 Log::error('Failed to send ingredient low stock notification: ' . $e->getMessage());
             }
+        } else {
+            // Clear all alert cache keys when stock is healthy
+            Cache::forget("stock_alert_ingredient_{$branchIngredient->id}_low");
+            Cache::forget("stock_alert_ingredient_{$branchIngredient->id}_out");
         }
     }
 

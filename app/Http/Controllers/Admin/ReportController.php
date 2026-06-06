@@ -48,6 +48,15 @@ class ReportController extends Controller
             'pos_qris_revenue' => (float) PosTransaction::where('merchant_id', $merchantId)
                 ->where('payment_method', 'qris')
                 ->whereBetween('transaction_at', [$startDateTime, $endDateTime])->sum('total'),
+            'pos_gofood_revenue' => (float) PosTransaction::where('merchant_id', $merchantId)
+                ->where('payment_method', 'gofood')
+                ->whereBetween('transaction_at', [$startDateTime, $endDateTime])->sum('total'),
+            'pos_grabfood_revenue' => (float) PosTransaction::where('merchant_id', $merchantId)
+                ->where('payment_method', 'grabfood')
+                ->whereBetween('transaction_at', [$startDateTime, $endDateTime])->sum('total'),
+            'pos_shopeefood_revenue' => (float) PosTransaction::where('merchant_id', $merchantId)
+                ->where('payment_method', 'shopeefood')
+                ->whereBetween('transaction_at', [$startDateTime, $endDateTime])->sum('total'),
             'online_qris_revenue' => (float) Order::where('merchant_id', $merchantId)
                 ->where('payment_status', 'confirmed')
                 ->where('payment_method', 'qris')

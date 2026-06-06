@@ -40,7 +40,12 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
     const displayCashier = isOnline ? 'ONLINE' : (order.cashier?.name?.toUpperCase() || 'KASIR');
     const displayPayment = isOnline 
         ? (order.payment_method === 'manual_transfer' ? 'TRANSFER' : 'ONLINE') 
-        : (order.payment_method === 'cash' ? 'TUNAI' : (order.payment_method === 'qris' ? 'QRIS' : 'TESTER'));
+        : (order.payment_method === 'cash' ? 'TUNAI' : 
+          (order.payment_method === 'qris' ? 'QRIS' : 
+          (order.payment_method === 'tester' ? 'TESTER' : 
+          (order.payment_method === 'gofood' ? 'GOFOOD' : 
+          (order.payment_method === 'grabfood' ? 'GRABFOOD' : 'SHOPEEFOOD')))));
+    const displayCustomerName = order.customer_name || order.customer?.name || 'PELANGGAN UMUM';
 
     // Extract print settings from database (with standard fallbacks)
     const merchantSettings = order.merchant || {};
@@ -102,6 +107,10 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                             <div className="flex justify-between">
                                 <span className="opacity-60">NO:</span>
                                 <span>{displayId}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="opacity-60">PELANGGAN:</span>
+                                <span className="font-bold uppercase">{displayCustomerName}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="opacity-60">KASIR:</span>

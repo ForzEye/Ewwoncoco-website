@@ -15,6 +15,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 
 class SuperAdminController extends Controller
 {
@@ -55,49 +57,86 @@ class SuperAdminController extends Controller
     {
         $branches = \App\Models\Branch::with('merchant')->get();
         $selectedBranchId = $request->input('branch_id');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $search = $request->input('search');
 
         if ($selectedBranchId) {
             $branch = \App\Models\Branch::with('merchant')->findOrFail($selectedBranchId);
 
-            // Fetch Online Orders (limit 50)
-            $onlineOrders = Order::where('branch_id', $selectedBranchId)
+            // Fetch Online Orders
+            $onlineOrdersQuery = Order::where('branch_id', $selectedBranchId)
                 ->with(['customer', 'cashier'])
-                ->orderBy('created_at', 'desc')
-                ->limit(50)
-                ->get()
-                ->map(function ($order) {
-                    return [
-                        'id' => $order->id,
-                        'order_number' => $order->order_number,
-                        'total' => (float)$order->total,
-                        'status' => $order->status,
-                        'payment_status' => $order->payment_status,
-                        'payment_method' => $order->payment_method,
-                        'created_at' => $order->created_at->toIso8601String(),
-                        'customer_name' => $order->customer?->name ?? 'Guest',
-                        'type' => 'ONLINE',
-                    ];
-                });
+                ->orderBy('created_at', 'desc');
 
-            // Fetch POS Transactions (limit 50)
-            $posTransactions = PosTransaction::where('branch_id', $selectedBranchId)
+            // Fetch POS Transactions
+            $posTransactionsQuery = PosTransaction::where('branch_id', $selectedBranchId)
                 ->with(['customer', 'cashier'])
-                ->orderBy('transaction_at', 'desc')
-                ->limit(50)
-                ->get()
-                ->map(function ($pos) {
-                    return [
-                        'id' => $pos->id,
-                        'order_number' => $pos->transaction_number,
-                        'total' => (float)$pos->total,
-                        'status' => 'delivered',
-                        'payment_status' => 'confirmed',
-                        'payment_method' => $pos->payment_method,
-                        'created_at' => ($pos->transaction_at ?: $pos->created_at)->toIso8601String(),
-                        'customer_name' => $pos->customer?->name ?? 'POS Customer',
-                        'type' => 'POS',
-                    ];
+                ->orderBy('transaction_at', 'desc');
+
+            if ($startDate) {
+                $onlineOrdersQuery->where('created_at', '>=', $startDate . ' 00:00:00');
+                $posTransactionsQuery->where(function($q) use ($startDate) {
+                    $q->where('transaction_at', '>=', $startDate . ' 00:00:00')
+                      ->orWhere(function($sq) use ($startDate) {
+                          $sq->whereNull('transaction_at')->where('created_at', '>=', $startDate . ' 00:00:00');
+                      });
                 });
+            }
+
+            if ($endDate) {
+                $onlineOrdersQuery->where('created_at', '<=', $endDate . ' 23:59:59');
+                $posTransactionsQuery->where(function($q) use ($endDate) {
+                    $q->where('transaction_at', '<=', $endDate . ' 23:59:59')
+                      ->orWhere(function($sq) use ($endDate) {
+                          $sq->whereNull('transaction_at')->where('created_at', '<=', $endDate . ' 23:59:59');
+                      });
+                });
+            }
+
+            if ($search) {
+                $onlineOrdersQuery->where(function($q) use ($search) {
+                    $q->where('order_number', 'like', "%{$search}%")
+                      ->orWhereHas('customer', function($cq) use ($search) {
+                          $cq->where('name', 'like', "%{$search}%");
+                      });
+                });
+                $posTransactionsQuery->where(function($q) use ($search) {
+                    $q->where('transaction_number', 'like', "%{$search}%")
+                      ->orWhere('customer_name', 'like', "%{$search}%")
+                      ->orWhereHas('customer', function($cq) use ($search) {
+                          $cq->where('name', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            $onlineOrders = $onlineOrdersQuery->get()->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'total' => (float)$order->total,
+                    'status' => $order->status,
+                    'payment_status' => $order->payment_status,
+                    'payment_method' => $order->payment_method,
+                    'created_at' => $order->created_at->toIso8601String(),
+                    'customer_name' => $order->customer?->name ?? 'Guest',
+                    'type' => 'ONLINE',
+                ];
+            });
+
+            $posTransactions = $posTransactionsQuery->get()->map(function ($pos) {
+                return [
+                    'id' => $pos->id,
+                    'order_number' => $pos->transaction_number,
+                    'total' => (float)$pos->total,
+                    'status' => 'delivered',
+                    'payment_status' => 'confirmed',
+                    'payment_method' => $pos->payment_method,
+                    'created_at' => ($pos->transaction_at ?: $pos->created_at)->toIso8601String(),
+                    'customer_name' => $pos->customer_name ?? ($pos->customer?->name ?? 'Pelanggan Umum'),
+                    'type' => 'POS',
+                ];
+            });
 
             // Combine and sort
             $combinedOrders = $onlineOrders->concat($posTransactions)
@@ -105,9 +144,23 @@ class SuperAdminController extends Controller
                 ->values()
                 ->all();
 
+            $perPage = 15;
+            $page = Paginator::resolveCurrentPage() ?: 1;
+            $allOrdersCollection = collect($combinedOrders);
+            $paginatedCombinedOrders = new LengthAwarePaginator(
+                $allOrdersCollection->forPage($page, $perPage)->values()->all(),
+                $allOrdersCollection->count(),
+                $perPage,
+                $page,
+                [
+                    'path' => Paginator::resolveCurrentPath(),
+                    'query' => $request->query(),
+                ]
+            );
+
             // Fetch Stock Movements with filters
             $stockMovementsQuery = \App\Models\StockMovement::where('branch_id', $selectedBranchId)
-                ->with('ingredient')
+                ->with(['ingredient', 'user'])
                 ->orderBy('created_at', 'desc');
 
             if ($request->input('stock_type')) {
@@ -115,9 +168,9 @@ class SuperAdminController extends Controller
             }
 
             if ($request->input('stock_search')) {
-                $search = $request->input('stock_search');
-                $stockMovementsQuery->whereHas('ingredient', function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%");
+                $searchStock = $request->input('stock_search');
+                $stockMovementsQuery->whereHas('ingredient', function ($q) use ($searchStock) {
+                    $q->where('name', 'like', "%{$searchStock}%");
                 });
             }
 
@@ -132,6 +185,9 @@ class SuperAdminController extends Controller
                         'id' => $sm->ingredient->id,
                         'name' => $sm->ingredient->name,
                         'unit' => $sm->ingredient->unit,
+                    ] : null,
+                    'user' => $sm->user ? [
+                        'name' => $sm->user->name,
                     ] : null,
                 ];
             });
@@ -169,6 +225,18 @@ class SuperAdminController extends Controller
                         ->where('payment_method', 'qris')
                         ->sum('total');
 
+                    $expectedGofoodSales = PosTransaction::where('shift_id', $shift->id)
+                        ->where('payment_method', 'gofood')
+                        ->sum('total');
+
+                    $expectedGrabfoodSales = PosTransaction::where('shift_id', $shift->id)
+                        ->where('payment_method', 'grabfood')
+                        ->sum('total');
+
+                    $expectedShopeefoodSales = PosTransaction::where('shift_id', $shift->id)
+                        ->where('payment_method', 'shopeefood')
+                        ->sum('total');
+
                     return [
                         'id' => $shift->id,
                         'cashier_name' => $shift->cashier?->name ?? 'Unknown',
@@ -179,6 +247,12 @@ class SuperAdminController extends Controller
                         'actual_cash' => $shift->closing_cash !== null ? (float)$shift->closing_cash : null,
                         'expected_qris' => (float)$expectedQrisSales,
                         'actual_qris' => $shift->closing_qris !== null ? (float)$shift->closing_qris : null,
+                        'expected_gofood' => (float)$expectedGofoodSales,
+                        'actual_gofood' => $shift->closing_gojek !== null ? (float)$shift->closing_gojek : null,
+                        'expected_grabfood' => (float)$expectedGrabfoodSales,
+                        'actual_grabfood' => $shift->closing_grab !== null ? (float)$shift->closing_grab : null,
+                        'expected_shopeefood' => (float)$expectedShopeefoodSales,
+                        'actual_shopeefood' => $shift->closing_shopeefood !== null ? (float)$shift->closing_shopeefood : null,
                         'notes' => $shift->notes,
                     ];
                 });
@@ -188,7 +262,7 @@ class SuperAdminController extends Controller
                 'selectedBranchId' => (int) $selectedBranchId,
                 'branchDetail' => [
                     'branch' => $branch,
-                    'combinedOrders' => $combinedOrders,
+                    'combinedOrders' => $paginatedCombinedOrders,
                     'stockMovements' => $stockMovements,
                     'stockData' => $stockData,
                     'shifts' => $shifts,
@@ -196,20 +270,47 @@ class SuperAdminController extends Controller
                 'filters' => [
                     'stock_type' => $request->input('stock_type', ''),
                     'stock_search' => $request->input('stock_search', ''),
+                    'start_date' => $startDate ?? '',
+                    'end_date' => $endDate ?? '',
+                    'search' => $search ?? '',
                 ]
             ]);
         }
 
         // Global Orders (Default)
-        $orders = Order::with(['merchant', 'customer', 'branch'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20)
+        $ordersQuery = Order::with(['merchant', 'customer', 'branch'])
+            ->orderBy('created_at', 'desc');
+
+        if ($startDate) {
+            $ordersQuery->where('created_at', '>=', $startDate . ' 00:00:00');
+        }
+        if ($endDate) {
+            $ordersQuery->where('created_at', '<=', $endDate . ' 23:59:59');
+        }
+        if ($search) {
+            $ordersQuery->where(function($q) use ($search) {
+                $q->where('order_number', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('merchant', function($mq) use ($search) {
+                      $mq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $orders = $ordersQuery->paginate(20)
             ->withQueryString();
 
         return Inertia::render('SuperAdmin/Orders', [
             'branches' => $branches,
             'selectedBranchId' => null,
             'orders' => $orders,
+            'filters' => [
+                'start_date' => $startDate ?? '',
+                'end_date' => $endDate ?? '',
+                'search' => $search ?? '',
+            ],
         ]);
     }
 

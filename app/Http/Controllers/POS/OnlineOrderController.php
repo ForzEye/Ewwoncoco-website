@@ -26,7 +26,7 @@ class OnlineOrderController extends Controller
 
         $orders = Order::where('merchant_id', $merchantId)
             ->whereIn('status', ['pending', 'confirmed', 'preparing', 'ready_for_pickup'])
-            ->with(['customer', 'items.product', 'branch'])
+            ->with(['customer', 'items.product', 'branch', 'merchant'])
             ->latest()
             ->get();
 

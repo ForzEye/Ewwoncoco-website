@@ -17,6 +17,7 @@ class StockMovement extends Model
         'reference_id',
         'reference_type',
         'notes',
+        'user_id',
     ];
 
     public function branch()
@@ -27,5 +28,10 @@ class StockMovement extends Model
     public function ingredient()
     {
         return $this->belongsTo(Ingredient::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

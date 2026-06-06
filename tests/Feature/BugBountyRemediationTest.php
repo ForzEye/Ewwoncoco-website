@@ -329,7 +329,7 @@ class BugBountyRemediationTest extends TestCase
             });
         } catch (\Exception $e) {
             $exceptionThrown = true;
-            $this->assertStringContainsString('Stok tidak mencukupi untuk bahan: Kelapa Organik', $e->getMessage());
+            $this->assertStringContainsString('Stok bahan baku tidak mencukupi: Kelapa Organik', $e->getMessage());
         }
 
         $this->assertTrue($exceptionThrown);
@@ -667,5 +667,455 @@ class BugBountyRemediationTest extends TestCase
 
         $user->refresh();
         $this->assertEquals('new-device-token', $user->fcm_token);
+    }
+
+    /** @test */
+    public function it_requires_customer_name_on_pos_checkout_and_saves_it()
+    {
+        $cashier = User::factory()->create(['role' => 'kasir', 'is_active' => true, 'merchant_id' => null]);
+
+        $merchant = Merchant::create([
+            'id' => 1,
+            'owner_id' => $cashier->id,
+            'name' => 'EWWON COCO Test',
+            'slug' => 'ewwon-coco-test',
+            'category' => 'F&B',
+            'address' => 'Test Address',
+            'phone' => '0215551234',
+            'operational_hours' => [],
+            'is_active' => true,
+        ]);
+
+        $cashier->update(['merchant_id' => $merchant->id]);
+
+        $branch = Branch::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Cabang Test',
+            'address' => 'Test Cabang Address',
+            'phone' => '0215551234',
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Es Kelapa Original',
+            'slug' => 'es-kelapa-original',
+            'price' => 15000,
+            'stock' => 10,
+            'is_available' => true,
+        ]);
+
+        \App\Models\PosShift::create([
+            'cashier_id' => $cashier->id,
+            'branch_id' => $branch->id,
+            'opened_at' => now(),
+            'opening_cash' => 100000,
+        ]);
+
+        // 1. Verify checkout fails validation if customer_name is missing
+        $response = $this->actingAs($cashier)
+            ->postJson('/pos/store', [
+                'payment_method' => 'cash',
+                'items' => [
+                    [
+                        'product' => ['id' => $product->id, 'price' => 15000],
+                        'quantity' => 1,
+                    ]
+                ]
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['customer_name']);
+
+        // 2. Verify checkout succeeds and stores customer_name when customer_name is provided
+        $response = $this->actingAs($cashier)
+            ->postJson('/pos/store', [
+                'customer_name' => 'Budi POS Customer',
+                'payment_method' => 'cash',
+                'items' => [
+                    [
+                        'product' => ['id' => $product->id, 'price' => 15000],
+                        'quantity' => 1,
+                    ]
+                ]
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('pos_transactions', [
+            'customer_name' => 'Budi POS Customer',
+            'payment_method' => 'cash',
+            'total' => 15000,
+        ]);
+    }
+
+    /** @test */
+    public function it_throttles_low_stock_alerts_correctly_but_allows_immediate_state_transition_alerts()
+    {
+        $owner = User::factory()->create();
+        $merchant = Merchant::create([
+            'id' => 1,
+            'owner_id' => $owner->id,
+            'name' => 'EWWON COCO Test',
+            'slug' => 'ewwon-coco-test',
+            'category' => 'F&B',
+            'address' => 'Test Address',
+            'phone' => '0215551234',
+            'operational_hours' => [],
+            'is_active' => true,
+        ]);
+        
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'merchant_id' => $merchant->id,
+            'fcm_token' => 'admin-fcm-token',
+        ]);
+
+        $product = Product::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Coco Drink',
+            'slug' => 'coco-drink',
+            'price' => 10000,
+            'stock' => 10,
+            'min_stock' => 5,
+            'is_available' => true,
+        ]);
+
+        // Mock FCMService to expect sendToToken twice (once for low stock, once for out of stock)
+        $mockFCM = $this->mock(FCMService::class);
+        $mockFCM->shouldReceive('sendToToken')
+            ->twice()
+            ->andReturn(true);
+
+        // 1. Trigger low stock alert (stock = 4 <= min_stock) -> Should send 1st notification
+        $product->stock = 4;
+        \App\Services\Notification\StockAlertService::checkAndSendProductAlert($product);
+
+        // 2. Trigger low stock alert again immediately -> Should be throttled (not sent)
+        \App\Services\Notification\StockAlertService::checkAndSendProductAlert($product);
+
+        // 3. Trigger out of stock alert (stock = 0 <= 0) -> Should bypass throttle and send 2nd notification immediately
+        $product->stock = 0;
+        \App\Services\Notification\StockAlertService::checkAndSendProductAlert($product);
+
+        // 4. Trigger out of stock alert again -> Should be throttled (not sent)
+        \App\Services\Notification\StockAlertService::checkAndSendProductAlert($product);
+    }
+
+    /** @test */
+    public function it_filters_orders_by_date_range_and_search_query_on_merchant_orders_index_page()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $merchant = Merchant::create([
+            'id' => 2,
+            'owner_id' => $admin->id,
+            'name' => 'EWWON COCO Branch Test',
+            'slug' => 'ewwon-coco-branch-test',
+            'category' => 'F&B',
+            'address' => 'Test Address',
+            'phone' => '0215551234',
+            'operational_hours' => [],
+            'is_active' => true,
+        ]);
+        $admin->update(['merchant_id' => $merchant->id]);
+        $admin->refresh();
+
+        $branch = Branch::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Cabang Test',
+            'address' => 'Test Cabang Address',
+            'phone' => '0215551234',
+            'is_active' => true,
+        ]);
+
+        // 1. Order within date range and matches search (Online)
+        $order1 = Order::create([
+            'customer_id' => User::factory()->create()->id,
+            'merchant_id' => $merchant->id,
+            'branch_id' => $branch->id,
+            'order_number' => 'ORD-MATCHING-1',
+            'total' => 20000,
+            'subtotal' => 20000,
+            'discount' => 0,
+            'status' => 'pending',
+            'payment_method' => 'qris',
+            'created_at' => '2026-06-06 12:00:00',
+        ]);
+
+        // 2. Order within date range but does NOT match search (Online)
+        $order2 = Order::create([
+            'customer_id' => User::factory()->create()->id,
+            'merchant_id' => $merchant->id,
+            'branch_id' => $branch->id,
+            'order_number' => 'ORD-OTHER-2',
+            'total' => 25000,
+            'subtotal' => 25000,
+            'discount' => 0,
+            'status' => 'pending',
+            'payment_method' => 'qris',
+            'created_at' => '2026-06-06 13:00:00',
+        ]);
+
+        // 3. Order outside date range but matches search (POS)
+        $order3 = \App\Models\PosTransaction::create([
+            'cashier_id' => $admin->id,
+            'customer_id' => null,
+            'merchant_id' => $merchant->id,
+            'branch_id' => $branch->id,
+            'transaction_number' => 'POS-MATCHING-3',
+            'total' => 30000,
+            'discount' => 0,
+            'payment_method' => 'cash',
+            'customer_name' => 'Budi Walk-in',
+            'transaction_at' => '2026-06-04 12:00:00',
+            'created_at' => '2026-06-04 12:00:00',
+        ]);
+
+        // 4. POS Transaction matching search & inside date range
+        $order4 = \App\Models\PosTransaction::create([
+            'cashier_id' => $admin->id,
+            'customer_id' => null,
+            'merchant_id' => $merchant->id,
+            'branch_id' => $branch->id,
+            'transaction_number' => 'POS-MATCHING-4',
+            'total' => 40000,
+            'discount' => 0,
+            'payment_method' => 'cash',
+            'customer_name' => 'Budi Walk-in',
+            'transaction_at' => '2026-06-06 14:00:00',
+            'created_at' => '2026-06-06 14:00:00',
+        ]);
+
+        // Scenario A: Filter only by search = 'MATCHING'
+        $response = $this->actingAs($admin)
+            ->get(route('admin.orders.index', ['search' => 'MATCHING']));
+
+        $response->assertStatus(200);
+        $orders = $response->original->getData()['page']['props']['orders']['data'];
+        $this->assertCount(3, $orders); // Should return ORD-MATCHING-1, POS-MATCHING-3, POS-MATCHING-4
+
+        // Scenario B: Filter by date range = '2026-06-05' to '2026-06-07'
+        $response = $this->actingAs($admin)
+            ->get(route('admin.orders.index', ['start_date' => '2026-06-05', 'end_date' => '2026-06-07']));
+
+        $response->assertStatus(200);
+        $orders = $response->original->getData()['page']['props']['orders']['data'];
+        $this->assertCount(3, $orders); // Should return ORD-MATCHING-1, ORD-OTHER-2, POS-MATCHING-4 (not POS-MATCHING-3)
+
+        // Scenario C: Filter by date range and search combined
+        $response = $this->actingAs($admin)
+            ->get(route('admin.orders.index', [
+                'start_date' => '2026-06-05',
+                'end_date' => '2026-06-07',
+                'search' => 'MATCHING'
+            ]));
+
+        $response->assertStatus(200);
+        $orders = $response->original->getData()['page']['props']['orders']['data'];
+        $this->assertCount(2, $orders); // Should return ORD-MATCHING-1, POS-MATCHING-4
+    }
+
+    /** @test */
+    public function it_filters_orders_by_date_range_and_search_query_on_super_admin_orders_page()
+    {
+        $superAdmin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        
+        $merchant = Merchant::create([
+            'id' => 10,
+            'owner_id' => User::factory()->create()->id,
+            'name' => 'EWWON COCO Super Test',
+            'slug' => 'ewwon-coco-super-test',
+            'category' => 'F&B',
+            'address' => 'Test Address',
+            'phone' => '0215551234',
+            'operational_hours' => [],
+            'is_active' => true,
+        ]);
+
+        $branch = Branch::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Cabang Super Test',
+            'address' => 'Test Cabang Address',
+            'phone' => '0215551234',
+            'is_active' => true,
+        ]);
+
+        // 1. Order inside date range, matches search
+        $order1 = Order::create([
+            'customer_id' => User::factory()->create()->id,
+            'merchant_id' => $merchant->id,
+            'branch_id' => $branch->id,
+            'order_number' => 'ORD-SUPER-1',
+            'total' => 20000,
+            'subtotal' => 20000,
+            'discount' => 0,
+            'status' => 'pending',
+            'payment_method' => 'qris',
+        ]);
+        $order1->created_at = '2026-06-06 12:00:00';
+        $order1->save();
+
+        // 2. Order inside date range, does NOT match search
+        $order2 = Order::create([
+            'customer_id' => User::factory()->create()->id,
+            'merchant_id' => $merchant->id,
+            'branch_id' => $branch->id,
+            'order_number' => 'ORD-OTHER-SUPER-2',
+            'total' => 25000,
+            'subtotal' => 25000,
+            'discount' => 0,
+            'status' => 'pending',
+            'payment_method' => 'qris',
+        ]);
+        $order2->created_at = '2026-06-06 13:00:00';
+        $order2->save();
+
+        // 3. Order outside date range, matches search
+        $order3 = Order::create([
+            'customer_id' => User::factory()->create()->id,
+            'merchant_id' => $merchant->id,
+            'branch_id' => $branch->id,
+            'order_number' => 'ORD-SUPER-3',
+            'total' => 30000,
+            'subtotal' => 30000,
+            'discount' => 0,
+            'status' => 'pending',
+            'payment_method' => 'qris',
+        ]);
+        $order3->created_at = '2026-06-04 12:00:00';
+        $order3->save();
+
+        // Test Global Orders View Filters (selectedBranchId is null)
+        // Scenario A: Filter by search
+        $response = $this->actingAs($superAdmin)
+            ->get(route('superadmin.orders', ['search' => 'ORD-SUPER']));
+        
+        $response->assertStatus(200);
+        $orders = $response->original->getData()['page']['props']['orders']['data'];
+        $this->assertCount(2, $orders); // Should return ORD-SUPER-1, ORD-SUPER-3
+
+        // Scenario B: Filter by date range
+        $response = $this->actingAs($superAdmin)
+            ->get(route('superadmin.orders', ['start_date' => '2026-06-05', 'end_date' => '2026-06-07']));
+        
+        $response->assertStatus(200);
+        $orders = $response->original->getData()['page']['props']['orders']['data'];
+        $this->assertCount(2, $orders); // Should return ORD-SUPER-1, ORD-OTHER-SUPER-2
+
+        // Test Branch Detailed Orders View Filters (selectedBranchId is active)
+        // Scenario C: Combined filter with branch
+        $response = $this->actingAs($superAdmin)
+            ->get(route('superadmin.orders', [
+                'branch_id' => $branch->id,
+                'start_date' => '2026-06-05',
+                'end_date' => '2026-06-07',
+                'search' => 'ORD-SUPER'
+            ]));
+        
+        $response->assertStatus(200);
+        $combinedOrders = $response->original->getData()['page']['props']['branchDetail']['combinedOrders']['data'];
+        $this->assertCount(1, $combinedOrders); // Should return ORD-SUPER-1 only
+        $this->assertEquals('ORD-SUPER-1', $combinedOrders[0]['order_number']);
+    }
+
+    /** @test */
+    public function it_allows_pos_checkout_when_stock_is_depleted()
+    {
+        $cashier = User::factory()->create(['role' => 'kasir', 'is_active' => true, 'merchant_id' => null]);
+
+        $merchant = Merchant::create([
+            'id' => 3,
+            'owner_id' => $cashier->id,
+            'name' => 'EWWON COCO POS Stock Test',
+            'slug' => 'ewwon-coco-pos-stock-test',
+            'category' => 'F&B',
+            'address' => 'Test Address',
+            'phone' => '0215551234',
+            'operational_hours' => [],
+            'is_active' => true,
+        ]);
+
+        $cashier->update(['merchant_id' => $merchant->id]);
+
+        $branch = Branch::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Cabang POS Stock Test',
+            'address' => 'Test Cabang Address',
+            'phone' => '0215551234',
+            'is_active' => true,
+        ]);
+
+        \App\Models\PosShift::create([
+            'cashier_id' => $cashier->id,
+            'branch_id' => $branch->id,
+            'opened_at' => now(),
+            'opening_cash' => 100000,
+        ]);
+
+        // 1. Product without recipe, starting stock = 0
+        $productNoRecipe = Product::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Es Kelapa No Recipe',
+            'slug' => 'es-kelapa-no-recipe',
+            'price' => 15000,
+            'stock' => 0,
+            'is_available' => true,
+        ]);
+
+        // 2. Product with recipe, ingredient stock = 0
+        $productWithRecipe = Product::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Es Kelapa With Recipe',
+            'slug' => 'es-kelapa-with-recipe',
+            'price' => 20000,
+            'is_available' => true,
+        ]);
+
+        $ingredient = Ingredient::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Kelapa POS',
+            'unit' => 'gram',
+        ]);
+
+        Recipe::create([
+            'product_id' => $productWithRecipe->id,
+            'ingredient_id' => $ingredient->id,
+            'quantity' => 100, // Needs 100g
+        ]);
+
+        $branchIngredient = BranchIngredient::create([
+            'branch_id' => $branch->id,
+            'ingredient_id' => $ingredient->id,
+            'stock' => 0, // 0 stock
+        ]);
+
+        // Place transaction in POS
+        $response = $this->actingAs($cashier)
+            ->postJson('/pos/store', [
+                'customer_name' => 'Budi POS Customer',
+                'payment_method' => 'cash',
+                'items' => [
+                    [
+                        'product' => ['id' => $productNoRecipe->id, 'price' => 15000],
+                        'quantity' => 1,
+                    ],
+                    [
+                        'product' => ['id' => $productWithRecipe->id, 'price' => 20000],
+                        'quantity' => 1,
+                    ]
+                ]
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        // Assert no-recipe product stock is now negative (-1)
+        $productNoRecipe->refresh();
+        $this->assertEquals(-1, $productNoRecipe->stock);
+
+        // Assert recipe ingredient stock is now negative (-100)
+        $branchIngredient->refresh();
+        $this->assertEquals(-100, $branchIngredient->stock);
     }
 }

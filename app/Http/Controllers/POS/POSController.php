@@ -72,8 +72,8 @@ class POSController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'customer_name' => 'nullable|string',
-            'payment_method' => 'required|in:cash,qris,tester',
+            'customer_name' => 'required|string|min:1',
+            'payment_method' => 'required|in:cash,qris,tester,gofood,grabfood,shopeefood',
             'items' => 'required|array|min:1',
             'amount_paid' => 'nullable|numeric',
             'notes' => 'nullable|string',
@@ -137,6 +137,7 @@ class POSController extends Controller
                 'branch_id' => $branchId,
                 'cashier_id' => $user->id,
                 'customer_id' => $request->customer_id, // Add customer support
+                'customer_name' => $request->customer_name, // Save custom customer name
                 'shift_id' => $activeShift->id,
                 'transaction_number' => 'POS-'.date('Ymd').'-'.strtoupper(bin2hex(random_bytes(3))),
                 'payment_method' => $request->payment_method,

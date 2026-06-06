@@ -20,6 +20,9 @@ interface ShiftsProps {
         expected_cash: number;
         expected_qris: number;
         expected_online: number;
+        expected_gofood: number;
+        expected_grabfood: number;
+        expected_shopeefood: number;
     };
 }
 
@@ -33,6 +36,9 @@ export default function Shifts({ activeShift, branches, breakdown }: ShiftsProps
                 closing_cash: breakdown.expected_cash,
                 closing_qris: breakdown.expected_qris,
                 closing_online: breakdown.expected_online,
+                closing_grab: breakdown.expected_grabfood,
+                closing_gojek: breakdown.expected_gofood,
+                closing_shopeefood: breakdown.expected_shopeefood,
             });
         }
     }, [isClosing]);
@@ -49,6 +55,7 @@ export default function Shifts({ activeShift, branches, breakdown }: ShiftsProps
         closing_online: 0,
         closing_grab: 0,
         closing_gojek: 0,
+        closing_shopeefood: 0,
         notes: '',
     });
 
@@ -56,7 +63,8 @@ export default function Shifts({ activeShift, branches, breakdown }: ShiftsProps
                         Number(closeForm.data.closing_qris) + 
                         Number(closeForm.data.closing_online) + 
                         Number(closeForm.data.closing_grab) + 
-                        Number(closeForm.data.closing_gojek);
+                        Number(closeForm.data.closing_gojek) +
+                        Number(closeForm.data.closing_shopeefood);
 
     const handleOpenShift = (e: React.FormEvent) => {
         e.preventDefault();
@@ -157,7 +165,7 @@ export default function Shifts({ activeShift, branches, breakdown }: ShiftsProps
                                 <h2 className="text-3xl font-bold font-poppins">{activeShift.branch?.name}</h2>
                                 <p className="text-gray-400 text-sm mt-1">Dibuka pada {tanggal(activeShift.opened_at)}</p>
                             </div>
-                            <div className="text-right flex items-center gap-6">
+                            <div className="text-right flex items-center gap-5 flex-wrap justify-end">
                                 <div className="text-center">
                                     <p className="text-gray-400 text-[9px] uppercase font-bold mb-1">Cash</p>
                                     <p className="text-sm font-bold text-white">{rupiah(breakdown.expected_cash)}</p>
@@ -170,10 +178,22 @@ export default function Shifts({ activeShift, branches, breakdown }: ShiftsProps
                                     <p className="text-gray-400 text-[9px] uppercase font-bold mb-1">Online</p>
                                     <p className="text-sm font-bold text-indigo-400">{rupiah(breakdown.expected_online)}</p>
                                 </div>
-                                <div className="w-px h-10 bg-white/10"></div>
+                                <div className="text-center">
+                                    <p className="text-gray-400 text-[9px] uppercase font-bold mb-1 text-red-400">GoFood</p>
+                                    <p className="text-sm font-bold text-red-400">{rupiah(breakdown.expected_gofood)}</p>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-gray-400 text-[9px] uppercase font-bold mb-1 text-green-400">Grab</p>
+                                    <p className="text-sm font-bold text-green-400">{rupiah(breakdown.expected_grabfood)}</p>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-gray-400 text-[9px] uppercase font-bold mb-1 text-orange-400">Shopee</p>
+                                    <p className="text-sm font-bold text-orange-400">{rupiah(breakdown.expected_shopeefood)}</p>
+                                </div>
+                                <div className="w-px h-10 bg-white/10 hidden md:block"></div>
                                 <div>
                                     <p className="text-[#00C48C] text-[10px] uppercase font-bold mb-1">Total Ekspektasi</p>
-                                    <p className="text-2xl font-black text-[#00C48C]">{rupiah(Number(breakdown.expected_cash) + Number(breakdown.expected_qris) + Number(breakdown.expected_online))}</p>
+                                    <p className="text-2xl font-black text-[#00C48C]">{rupiah(Number(breakdown.expected_cash) + Number(breakdown.expected_qris) + Number(breakdown.expected_online) + Number(breakdown.expected_gofood) + Number(breakdown.expected_grabfood) + Number(breakdown.expected_shopeefood))}</p>
                                 </div>
                                 {activeShift.void_count > 0 && (
                                     <>
@@ -287,13 +307,12 @@ export default function Shifts({ activeShift, branches, breakdown }: ShiftsProps
                                                 <input 
                                                     type="number"
                                                     className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none"
-                                                    placeholder="Input Manual"
                                                     value={closeForm.data.closing_grab}
                                                     onChange={e => closeForm.setData('closing_grab', e.target.value === '' ? '' as any : Number(e.target.value))}
                                                     onFocus={e => e.target.select()}
                                                     required
                                                 />
-                                                <p className="text-[9px] text-gray-400 font-bold italic">Input Manual</p>
+                                                <p className="text-[9px] text-[#2D6A4F] font-bold">Sistem: {rupiah(breakdown.expected_grabfood)}</p>
                                             </div>
 
                                             <div className="space-y-1">
@@ -301,13 +320,25 @@ export default function Shifts({ activeShift, branches, breakdown }: ShiftsProps
                                                 <input 
                                                     type="number"
                                                     className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none"
-                                                    placeholder="Input Manual"
                                                     value={closeForm.data.closing_gojek}
                                                     onChange={e => closeForm.setData('closing_gojek', e.target.value === '' ? '' as any : Number(e.target.value))}
                                                     onFocus={e => e.target.select()}
                                                     required
                                                 />
-                                                <p className="text-[9px] text-gray-400 font-bold italic">Input Manual</p>
+                                                <p className="text-[9px] text-[#2D6A4F] font-bold">Sistem: {rupiah(breakdown.expected_gofood)}</p>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">ShopeeFood</label>
+                                                <input 
+                                                    type="number"
+                                                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none"
+                                                    value={closeForm.data.closing_shopeefood}
+                                                    onChange={e => closeForm.setData('closing_shopeefood', e.target.value === '' ? '' as any : Number(e.target.value))}
+                                                    onFocus={e => e.target.select()}
+                                                    required
+                                                />
+                                                <p className="text-[9px] text-[#2D6A4F] font-bold">Sistem: {rupiah(breakdown.expected_shopeefood)}</p>
                                             </div>
 
                                             <div className="bg-gray-900 rounded-2xl p-4 flex flex-col justify-center">

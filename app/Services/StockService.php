@@ -27,9 +27,26 @@ class StockService
                 ->lockForUpdate()
                 ->first();
 
-            if (! $branchIngredient || $branchIngredient->stock < $totalNeeded) {
-                $ingredientName = $recipe->ingredient->name ?? ('Bahan #'.$recipe->ingredient_id);
-                throw new \Exception("Stok bahan baku tidak mencukupi: {$ingredientName} (Butuh: {$totalNeeded}, Tersedia: ".($branchIngredient->stock ?? 0)."). Silakan lakukan isi ulang stok terlebih dahulu.");
+            if (! $branchIngredient) {
+                if ($referenceType === 'PosTransaction') {
+                    $branchIngredient = BranchIngredient::create([
+                        'branch_id' => $branchId,
+                        'ingredient_id' => $recipe->ingredient_id,
+                        'stock' => 0,
+                        'min_stock' => 0,
+                        'average_cost' => 0,
+                    ]);
+                } else {
+                    $ingredientName = $recipe->ingredient->name ?? ('Bahan #'.$recipe->ingredient_id);
+                    throw new \Exception("Stok bahan baku tidak mencukupi: {$ingredientName} (Butuh: {$totalNeeded}, Tersedia: 0). Silakan lakukan isi ulang stok terlebih dahulu.");
+                }
+            }
+
+            if ($branchIngredient->stock < $totalNeeded) {
+                if ($referenceType !== 'PosTransaction') {
+                    $ingredientName = $recipe->ingredient->name ?? ('Bahan #'.$recipe->ingredient_id);
+                    throw new \Exception("Stok bahan baku tidak mencukupi: {$ingredientName} (Butuh: {$totalNeeded}, Tersedia: ".($branchIngredient->stock ?? 0)."). Silakan lakukan isi ulang stok terlebih dahulu.");
+                }
             }
 
             $branchIngredient->decrement('stock', $totalNeeded);
@@ -45,6 +62,7 @@ class StockService
                 'reference_id' => $referenceId,
                 'reference_type' => $referenceType,
                 'notes' => "Otomatis dari {$referenceType} #{$referenceId}",
+                'user_id' => auth()->id(),
             ]);
         }
     }
@@ -81,6 +99,7 @@ class StockService
                     'reference_id' => $referenceId,
                     'reference_type' => $referenceType,
                     'notes' => "Pengembalian otomatis dari void {$referenceType} #{$referenceId}",
+                    'user_id' => auth()->id(),
                 ]);
             }
         }

@@ -21,7 +21,7 @@ class OrderPlaced implements ShouldBroadcast
      */
     public function __construct(Order $order)
     {
-        $this->order = $order->load(['customer', 'items.product', 'branch']);
+        $this->order = $order->load(['customer', 'items.product', 'branch', 'merchant']);
     }
 
     /**

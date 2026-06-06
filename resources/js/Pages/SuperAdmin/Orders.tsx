@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import SuperAdminLayout from '../../Layouts/SuperAdminLayout';
 import { 
     ShoppingBag, 
@@ -61,6 +61,9 @@ interface StockMovement {
         name: string;
         unit: string;
     };
+    user?: {
+        name: string;
+    };
 }
 
 interface BranchIngredient {
@@ -85,12 +88,24 @@ interface ShiftLog {
     actual_cash: number | null;
     expected_qris: number;
     actual_qris: number | null;
+    expected_gofood?: number;
+    expected_grabfood?: number;
+    expected_shopeefood?: number;
+    actual_gofood?: number | null;
+    actual_grabfood?: number | null;
+    actual_shopeefood?: number | null;
     notes?: string;
 }
 
 interface BranchDetail {
     branch: Branch;
-    combinedOrders: CombinedOrder[];
+    combinedOrders: {
+        data: CombinedOrder[];
+        links: any[];
+        total?: number;
+        from?: number;
+        to?: number;
+    };
     stockMovements: StockMovement[];
     stockData: BranchIngredient[];
     shifts: ShiftLog[];
@@ -103,10 +118,16 @@ interface OrdersProps {
     orders?: {
         data: Order[];
         links: any[];
+        total?: number;
+        from?: number;
+        to?: number;
     };
     filters?: {
         stock_type: string;
         stock_search: string;
+        start_date?: string;
+        end_date?: string;
+        search?: string;
     };
 }
 
@@ -114,26 +135,53 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
     const [activeTab, setActiveTab] = useState<'transactions' | 'stock_movements' | 'stock_status' | 'shifts'>('transactions');
     const [searchQuery, setSearchQuery] = useState(filters?.stock_search || '');
     const [typeQuery, setTypeQuery] = useState(filters?.stock_type || '');
+    
+    const [startDate, setStartDate] = useState(filters?.start_date || '');
+    const [endDate, setEndDate] = useState(filters?.end_date || '');
+    const [searchVal, setSearchVal] = useState(filters?.search || '');
 
     const handleBranchChange = (branchId: string) => {
-        if (branchId) {
-            router.get(route('superadmin.orders'), { branch_id: branchId });
-        } else {
-            router.get(route('superadmin.orders'));
-        }
+        const params: any = {};
+        if (branchId) params.branch_id = branchId;
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        if (searchVal) params.search = searchVal;
+        router.get(route('superadmin.orders'), params);
     };
 
     const applyFilters = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         router.get(route('superadmin.orders'), {
-            branch_id: selectedBranchId,
+            branch_id: selectedBranchId || '',
             stock_search: searchQuery,
-            stock_type: typeQuery
+            stock_type: typeQuery,
+            start_date: startDate,
+            end_date: endDate,
+            search: searchVal
         }, {
             preserveState: true,
             preserveScroll: true,
             only: ['branchDetail', 'filters']
         });
+    };
+
+    const handleOrderFilter = (e: React.FormEvent) => {
+        e.preventDefault();
+        router.get(route('superadmin.orders'), {
+            branch_id: selectedBranchId || '',
+            start_date: startDate,
+            end_date: endDate,
+            search: searchVal
+        }, { preserveState: true });
+    };
+
+    const handleOrderReset = () => {
+        setStartDate('');
+        setEndDate('');
+        setSearchVal('');
+        router.get(route('superadmin.orders'), {
+            branch_id: selectedBranchId || '',
+        }, { preserveState: true });
     };
 
     const getStatusBadge = (status: string) => {
@@ -171,6 +219,27 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
             return (
                 <span className="px-2.5 py-1 bg-green-50 text-green-600 text-[10px] font-black rounded-full border border-green-100 flex items-center gap-1 w-fit">
                     💵 Tunai
+                </span>
+            );
+        }
+        if (method === 'gofood') {
+            return (
+                <span className="px-2.5 py-1 bg-red-50 text-red-600 text-[10px] font-black rounded-full border border-red-100 flex items-center gap-1 w-fit">
+                    🛵 GoFood
+                </span>
+            );
+        }
+        if (method === 'grabfood') {
+            return (
+                <span className="px-2.5 py-1 bg-green-50 text-green-600 text-[10px] font-black rounded-full border border-green-100 flex items-center gap-1 w-fit">
+                    🟢 GrabFood
+                </span>
+            );
+        }
+        if (method === 'shopeefood') {
+            return (
+                <span className="px-2.5 py-1 bg-orange-50 text-orange-600 text-[10px] font-black rounded-full border border-orange-100 flex items-center gap-1 w-fit">
+                    🍊 ShopeeFood
                 </span>
             );
         }
@@ -300,10 +369,58 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                             {/* Tab 1: Transactions & Orderan */}
                             {activeTab === 'transactions' && (
                                 <div className="space-y-4">
-                                    <div className="flex items-center justify-between pb-4 border-b border-gray-50">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-50 gap-4">
                                         <h4 className="font-poppins font-black text-charcoal text-lg">Riwayat Transaksi Terbaru</h4>
-                                        <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Menampilkan 50 transaksi terakhir</span>
+                                        <span className="text-xs text-[#00C48C] font-bold uppercase tracking-wider">Total {angka(branchDetail.combinedOrders.total || 0)} transaksi ditemukan</span>
                                     </div>
+
+                                    {/* Filters Bar for Branch Transactions */}
+                                    <form onSubmit={handleOrderFilter} className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 flex flex-wrap items-center gap-4">
+                                        <div className="relative group flex-1 min-w-[200px]">
+                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#00C48C] transition-colors" size={18} />
+                                            <input 
+                                                type="text" 
+                                                placeholder="Cari No. Transaksi / Pelanggan..." 
+                                                value={searchVal}
+                                                onChange={e => setSearchVal(e.target.value)}
+                                                className="w-full pl-12 pr-6 py-3 bg-white border border-gray-100 rounded-2xl text-sm font-semibold focus:ring-2 focus:ring-[#00C48C]/20 transition-all placeholder:text-gray-400"
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-2xl border border-gray-100">
+                                            <input 
+                                                type="date" 
+                                                value={startDate}
+                                                onChange={e => setStartDate(e.target.value)}
+                                                className="bg-transparent border-none text-xs font-bold outline-none transition-all p-0 focus:ring-0 text-charcoal"
+                                            />
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">s/d</span>
+                                            <input 
+                                                type="date" 
+                                                value={endDate}
+                                                onChange={e => setEndDate(e.target.value)}
+                                                className="bg-transparent border-none text-xs font-bold outline-none transition-all p-0 focus:ring-0 text-charcoal"
+                                            />
+                                        </div>
+
+                                        <button 
+                                            type="submit"
+                                            className="px-6 py-3 bg-[#00C48C] text-white text-xs font-black rounded-2xl hover:bg-[#00B07C] transition-all flex items-center gap-2 uppercase tracking-widest shadow-md shadow-[#00C48C]/15"
+                                        >
+                                            <Filter size={16} />
+                                            Filter
+                                        </button>
+
+                                        {(startDate || endDate || searchVal) && (
+                                            <button 
+                                                type="button"
+                                                onClick={handleOrderReset}
+                                                className="px-5 py-3 bg-white border border-gray-100 text-gray-400 hover:text-charcoal text-xs font-black rounded-2xl transition-all uppercase tracking-widest"
+                                            >
+                                                Reset
+                                            </button>
+                                        )}
+                                    </form>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left border-collapse">
                                             <thead>
@@ -318,7 +435,7 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50">
-                                                {branchDetail.combinedOrders.map((ord) => (
+                                                {branchDetail.combinedOrders.data.map((ord) => (
                                                     <tr key={ord.id + '-' + ord.type} className="hover:bg-gray-50/50 transition-colors group">
                                                         <td className="px-6 py-5 font-black text-sm text-charcoal">{ord.order_number}</td>
                                                         <td className="px-6 py-5">{getTypeBadge(ord.type)}</td>
@@ -329,7 +446,7 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                                         <td className="px-6 py-5 text-center">{getStatusBadge(ord.status)}</td>
                                                     </tr>
                                                 ))}
-                                                {branchDetail.combinedOrders.length === 0 && (
+                                                {branchDetail.combinedOrders.data.length === 0 && (
                                                     <tr>
                                                         <td colSpan={7} className="px-6 py-16 text-center text-gray-400 italic font-medium">
                                                             Belum ada data transaksi di cabang ini.
@@ -339,6 +456,41 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    {/* Pagination Controls for Branch Monitoring Transactions */}
+                                    {branchDetail.combinedOrders.data.length > 0 && branchDetail.combinedOrders.links && branchDetail.combinedOrders.links.length > 3 && (
+                                        <div className="p-6 border-t border-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/20 rounded-b-[40px]">
+                                            <p className="text-[11px] font-bold text-[#8A8A8A] uppercase tracking-wider">
+                                                Menampilkan <span className="font-black text-[#00C48C]">{branchDetail.combinedOrders.from || 0}</span> sampai <span className="font-black text-[#00C48C]">{branchDetail.combinedOrders.to || 0}</span> dari <span className="font-black text-[#00C48C]">{branchDetail.combinedOrders.total}</span> transaksi
+                                            </p>
+                                            <div className="flex items-center gap-1.5">
+                                                {branchDetail.combinedOrders.links.map((link, i) => {
+                                                    const isPrev = link.label.includes('Previous');
+                                                    const isNext = link.label.includes('Next');
+                                                    const label = isPrev ? '«' : (isNext ? '»' : link.label);
+                                                    
+                                                    return (
+                                                        <Link
+                                                            key={i}
+                                                            href={link.url || '#'}
+                                                            preserveState
+                                                            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all border ${
+                                                                link.active
+                                                                    ? 'bg-[#00C48C] text-white border-transparent shadow-md shadow-[#00C48C]/10'
+                                                                    : link.url
+                                                                    ? 'bg-white border-gray-100 text-gray-400 hover:border-[#00C48C] hover:text-[#00C48C]'
+                                                                    : 'bg-gray-50 border-transparent text-gray-300 cursor-not-allowed'
+                                                            }`}
+                                                            onClick={(e) => {
+                                                                if (!link.url) e.preventDefault();
+                                                            }}
+                                                            dangerouslySetInnerHTML={{ __html: label }}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -416,8 +568,17 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                                                 {sm.quantity > 0 ? '+' : ''}{qty(sm.quantity)} {sm.ingredient?.unit ?? ''}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-5 text-xs text-gray-600 font-medium max-w-xs truncate" title={sm.notes}>
-                                                            {sm.notes || '-'}
+                                                        <td className="px-6 py-5">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-xs text-gray-600 font-medium max-w-xs truncate" title={sm.notes}>
+                                                                    {sm.notes || '-'}
+                                                                </span>
+                                                                {sm.user && (
+                                                                    <span className="text-[10px] text-emerald-600 font-bold mt-1 inline-flex items-center gap-1">
+                                                                        👤 Oleh: {sm.user.name}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -517,6 +678,12 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                                 {branchDetail.shifts.map((sh) => {
                                                     const isClosed = sh.closed_at !== null;
                                                     const diffCash = isClosed && sh.actual_cash !== null ? sh.actual_cash - sh.expected_cash : 0;
+                                                    const expectedGofood = Number(sh.expected_gofood ?? 0);
+                                                    const expectedGrabfood = Number(sh.expected_grabfood ?? 0);
+                                                    const expectedShopeefood = Number(sh.expected_shopeefood ?? 0);
+                                                    const actualGofood = Number(sh.actual_gofood ?? 0);
+                                                    const actualGrabfood = Number(sh.actual_grabfood ?? 0);
+                                                    const actualShopeefood = Number(sh.actual_shopeefood ?? 0);
                                                     return (
                                                         <tr key={sh.id} className="hover:bg-gray-50/50 transition-colors">
                                                             <td className="px-6 py-5 font-bold text-charcoal text-sm">{sh.cashier_name}</td>
@@ -530,12 +697,18 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                                             <td className="px-6 py-5 text-right">
                                                                 <p className="text-xs text-charcoal font-bold">{rupiah(sh.expected_cash)} <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">(Cash)</span></p>
                                                                 <p className="text-xs text-gray-500 mt-1">{rupiah(sh.expected_qris)} <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">(QRIS)</span></p>
+                                                                {expectedGofood > 0 && <p className="text-xs text-gray-500 mt-1">{rupiah(expectedGofood)} <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider">(GoFood)</span></p>}
+                                                                {expectedGrabfood > 0 && <p className="text-xs text-gray-500 mt-1">{rupiah(expectedGrabfood)} <span className="text-[9px] text-green-400 font-bold uppercase tracking-wider">(Grab)</span></p>}
+                                                                {expectedShopeefood > 0 && <p className="text-xs text-gray-500 mt-1">{rupiah(expectedShopeefood)} <span className="text-[9px] text-orange-400 font-bold uppercase tracking-wider">(Shopee)</span></p>}
                                                             </td>
                                                             <td className="px-6 py-5 text-right">
                                                                 {isClosed ? (
                                                                     <>
                                                                         <p className="text-xs text-charcoal font-bold">{rupiah(sh.actual_cash ?? 0)} <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">(Cash)</span></p>
                                                                         <p className="text-xs text-gray-500 mt-1">{rupiah(sh.actual_qris ?? 0)} <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">(QRIS)</span></p>
+                                                                        {actualGofood > 0 && <p className="text-xs text-gray-500 mt-1">{rupiah(actualGofood)} <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider">(GoFood)</span></p>}
+                                                                        {actualGrabfood > 0 && <p className="text-xs text-gray-500 mt-1">{rupiah(actualGrabfood)} <span className="text-[9px] text-green-400 font-bold uppercase tracking-wider">(Grab)</span></p>}
+                                                                        {actualShopeefood > 0 && <p className="text-xs text-gray-500 mt-1">{rupiah(actualShopeefood)} <span className="text-[9px] text-orange-400 font-bold uppercase tracking-wider">(Shopee)</span></p>}
                                                                     </>
                                                                 ) : (
                                                                     <span className="text-gray-400 text-xs italic">-</span>
@@ -569,8 +742,57 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                     </div>
                 ) : (
                     /* Default view: Global Online Orders (Backward compatible) */
-                    <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
+                    <div className="space-y-6">
+                        {/* Filters Bar for Global Orders */}
+                        <form onSubmit={handleOrderFilter} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-wrap items-center gap-4 animate-in fade-in duration-300">
+                            <div className="relative group flex-1 min-w-[200px]">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#00C48C] transition-colors" size={18} />
+                                <input 
+                                    type="text" 
+                                    placeholder="Cari No. Pesanan / Pelanggan / Merchant..." 
+                                    value={searchVal}
+                                    onChange={e => setSearchVal(e.target.value)}
+                                    className="w-full pl-12 pr-6 py-3.5 bg-gray-50 border-none rounded-2xl text-sm font-semibold focus:ring-2 focus:ring-[#00C48C]/20 transition-all placeholder:text-gray-400"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2 bg-gray-50 px-4 py-3 rounded-2xl border border-gray-100">
+                                <input 
+                                    type="date" 
+                                    value={startDate}
+                                    onChange={e => setStartDate(e.target.value)}
+                                    className="bg-transparent border-none text-xs font-bold outline-none transition-all p-0 focus:ring-0 text-charcoal"
+                                />
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">s/d</span>
+                                <input 
+                                    type="date" 
+                                    value={endDate}
+                                    onChange={e => setEndDate(e.target.value)}
+                                    className="bg-transparent border-none text-xs font-bold outline-none transition-all p-0 focus:ring-0 text-charcoal"
+                                />
+                            </div>
+
+                            <button 
+                                type="submit"
+                                className="px-6 py-3.5 bg-[#00C48C] text-white text-xs font-black rounded-2xl hover:bg-[#00B07C] transition-all flex items-center gap-2 uppercase tracking-widest shadow-md shadow-[#00C48C]/15"
+                            >
+                                <Filter size={16} />
+                                Filter
+                            </button>
+
+                            {(startDate || endDate || searchVal) && (
+                                <button 
+                                    type="button"
+                                    onClick={handleOrderReset}
+                                    className="px-5 py-3.5 bg-white border border-gray-100 text-gray-400 hover:text-charcoal text-xs font-black rounded-2xl transition-all uppercase tracking-widest"
+                                >
+                                    Reset
+                                </button>
+                            )}
+                        </form>
+
+                        <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-gray-50/50">
@@ -638,6 +860,42 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination Controls */}
+                        {orders && orders.data.length > 0 && orders.links && orders.links.length > 3 && (
+                            <div className="p-6 border-t border-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/20">
+                                <p className="text-[11px] font-bold text-[#8A8A8A] uppercase tracking-wider">
+                                    Menampilkan <span className="font-black text-[#00C48C]">{orders.from || 0}</span> sampai <span className="font-black text-[#00C48C]">{orders.to || 0}</span> dari <span className="font-black text-[#00C48C]">{orders.total}</span> pesanan
+                                </p>
+                                <div className="flex items-center gap-1.5">
+                                    {orders.links.map((link, i) => {
+                                        const isPrev = link.label.includes('Previous');
+                                        const isNext = link.label.includes('Next');
+                                        const label = isPrev ? '«' : (isNext ? '»' : link.label);
+                                        
+                                        return (
+                                            <Link
+                                                key={i}
+                                                href={link.url || '#'}
+                                                preserveState
+                                                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all border ${
+                                                    link.active
+                                                        ? 'bg-[#00C48C] text-white border-transparent shadow-md shadow-[#00C48C]/10'
+                                                        : link.url
+                                                        ? 'bg-white border-gray-100 text-gray-400 hover:border-[#00C48C] hover:text-[#00C48C]'
+                                                        : 'bg-gray-50 border-transparent text-gray-300 cursor-not-allowed'
+                                                }`}
+                                                onClick={(e) => {
+                                                    if (!link.url) e.preventDefault();
+                                                }}
+                                                dangerouslySetInnerHTML={{ __html: label }}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     </div>
                 )}
             </div>

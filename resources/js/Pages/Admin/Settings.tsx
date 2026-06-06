@@ -637,25 +637,26 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                             <div 
                                 id="receipt-thermal-test"
                                 style={{
-                                    fontSize: `${data.receipt_font_size}px`,
-                                    fontWeight: data.receipt_font_weight,
-                                    transform: `translateX(${data.receipt_left_margin * 1.5}px)`,
                                     width: data.receipt_paper_width === '58mm' ? '170px' : '230px',
-                                    textShadow: data.receipt_font_weight > 700 ? '0.15px 0px 0px #1A1A1A, 0px 0.15px 0px #1A1A1A' : 'none',
+                                    transform: data.receipt_left_margin ? `translateX(${data.receipt_left_margin * 1.5}px)` : 'none',
                                     transition: 'transform 0.15s ease-out, width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 }}
-                                className="bg-white p-5 shadow-md text-[#1A1A1A] font-mono leading-tight flex flex-col border border-transparent shrink-0"
+                                className="bg-white px-3.5 py-6 shadow-sm mx-auto receipt-print flex flex-col border border-[#E8E4DD] print:border-none print:shadow-none shrink-0"
                             >
-                                <div className="text-center mb-4">
-                                    <p className="font-black uppercase tracking-tighter mb-1 leading-none animate-pulse-slow" style={{ fontSize: `${data.receipt_font_size + 4}px` }}>
+                                <div className="text-center mb-6">
+                                    <h4 className="font-bold uppercase tracking-tighter mb-1 leading-none" style={{ fontSize: `${data.receipt_font_size + 4}px` }}>
                                         {data.receipt_header || 'HEADER STRUK'}
-                                    </p>
+                                    </h4>
                                     <p className="font-bold" style={{ fontSize: `${data.receipt_font_size}px` }}>Cabang Malang</p>
-                                    <p className="opacity-80" style={{ fontSize: `${data.receipt_font_size - 1.5}px` }}>Jl. Raya No. 123</p>
+                                    <div className="mt-1 space-y-0.5" style={{ fontSize: `${Math.max(6.5, data.receipt_font_size - 2.5)}px` }}>
+                                        <p className="leading-tight px-2">Jl. Raya No. 123</p>
+                                        <p style={{ fontSize: `${Math.max(7, data.receipt_font_size - 2)}px` }}>0812-3456-7890</p>
+                                    </div>
                                 </div>
 
-                                <div className="border-t border-b border-dashed border-gray-400 py-2.5 mb-3 space-y-1 w-full" style={{ fontSize: `${data.receipt_font_size - 1.5}px` }}>
+                                <div className="border-t border-b border-dashed border-gray-400 py-3 mb-4 space-y-1.5 w-full" style={{ fontSize: '9px' }}>
                                     <div className="flex justify-between"><span className="opacity-60">WAKTU:</span><span>25-05-2026 17:30</span></div>
+                                    <div className="flex justify-between"><span className="opacity-60">PELANGGAN:</span><span className="font-bold uppercase">BUDI (TEST)</span></div>
                                     <div className="flex justify-between"><span className="opacity-60">KASIR:</span><span>ADMIN</span></div>
                                     <div className="flex justify-between"><span className="opacity-60">BAYAR:</span><span>TUNAI</span></div>
                                 </div>
@@ -677,7 +678,7 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                                     </div>
                                 </div>
 
-                                <div className="border-t border-dashed border-gray-400 pt-2.5 space-y-1 w-full">
+                                <div className="border-t border-dashed border-gray-400 pt-3 space-y-1.5 w-full">
                                     <div className="flex justify-between font-bold" style={{ fontSize: `${data.receipt_font_size + 1}px` }}>
                                         <span>TOTAL</span>
                                         <span>45.000</span>
@@ -686,17 +687,19 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                                         <span>TUNAI</span>
                                         <span>50.000</span>
                                     </div>
-                                    <div className="flex justify-between font-bold border-t border-dotted border-gray-300 pt-1.5 mt-1" style={{ fontSize: `${data.receipt_font_size}px` }}>
+                                    <div className="flex justify-between font-bold border-t border-dotted border-gray-300 pt-2 mt-1.5" style={{ fontSize: `${data.receipt_font_size}px` }}>
                                         <span>KEMBALI</span>
                                         <span>5.000</span>
                                     </div>
                                 </div>
 
-                                <div className="text-center mt-6 pt-3 border-t border-dashed border-gray-400">
-                                    <p className="font-bold" style={{ fontSize: `${data.receipt_font_size}px` }}>TERIMA KASIH</p>
-                                    <p className="leading-relaxed mt-1" style={{ fontSize: `${data.receipt_font_size - 1.5}px` }}>
-                                        {data.receipt_footer || 'Teks footer struk akan muncul di sini...'}
-                                    </p>
+                                <div className="text-center mt-8 space-y-3 opacity-90 w-full">
+                                    <div className="border-t border-dashed border-gray-400 pt-4">
+                                        <p className="font-bold" style={{ fontSize: `${data.receipt_font_size}px` }}>TERIMA KASIH</p>
+                                        <p className="leading-relaxed px-1" style={{ fontSize: `${data.receipt_font_size - 1.5}px` }}>
+                                            {data.receipt_footer || 'Teks footer struk akan muncul di sini...'}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -718,6 +721,36 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                     --receipt-width: ${data.receipt_paper_width};
                     --receipt-font: ${data.receipt_font_size}px;
                     --receipt-print-width: ${data.receipt_paper_width === '58mm' ? '45mm' : '68mm'};
+                }
+
+                /* --- Tampilan Layar (Screen Preview) --- */
+                .receipt-print {
+                    box-sizing: border-box !important;
+                    padding: 4mm !important;
+                    font-size: var(--receipt-font, 12px) !important;
+                }
+
+                .receipt-print,
+                .receipt-print * {
+                    color: #000 !important;
+                    opacity: 1 !important;
+                    font-family: 'Courier New', 'Consolas', monospace !important;
+                    line-height: 1.45 !important;
+                    font-weight: ${data.receipt_font_weight} !important;
+                    -webkit-text-stroke: 0.15px black !important;
+                    text-shadow: 0.15px 0px 0px #000, 0px 0.15px 0px #000 !important;
+                    border-color: #000 !important;
+                }
+
+                .receipt-print h4,
+                .receipt-print h4 * {
+                    font-weight: ${Math.max(100, data.receipt_font_weight - 40)} !important;
+                }
+
+                .receipt-print span,
+                .receipt-print p,
+                .receipt-print div {
+                    padding-right: 3px !important;
                 }
 
                 /* --- Tampilan Cetak (Print Stylesheet) --- */
@@ -753,7 +786,7 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                         background: #fff !important;
                     }
 
-                    #receipt-thermal-test {
+                    .receipt-print {
                         width: var(--receipt-print-width, 45mm) !important;
                         max-width: var(--receipt-print-width, 45mm) !important;
                         box-sizing: border-box !important;
@@ -770,8 +803,8 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                         left: ${data.receipt_left_margin}mm !important;
                     }
 
-                    #receipt-thermal-test,
-                    #receipt-thermal-test * {
+                    .receipt-print,
+                    .receipt-print * {
                         color: #000 !important;
                         opacity: 1 !important;
                         -webkit-print-color-adjust: exact !important;
@@ -784,14 +817,14 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                         border-color: #000 !important;
                     }
 
-                    #receipt-thermal-test h4,
-                    #receipt-thermal-test h4 * {
+                    .receipt-print h4,
+                    .receipt-print h4 * {
                         font-weight: ${Math.max(100, data.receipt_font_weight - 40)} !important;
                     }
 
-                    #receipt-thermal-test span,
-                    #receipt-thermal-test p,
-                    #receipt-thermal-test div {
+                    .receipt-print span,
+                    .receipt-print p,
+                    .receipt-print div {
                         padding-right: 3px !important;
                     }
 

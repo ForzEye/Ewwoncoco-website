@@ -117,7 +117,7 @@ export type OrderStatus =
     | 'delivered'
     | 'cancelled';
 
-export type PaymentMethod = 'qris' | 'cash' | 'manual_transfer';
+export type PaymentMethod = 'qris' | 'cash' | 'manual_transfer' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood';
 export type PaymentStatus = 'pending' | 'confirmed' | 'failed';
 
 export interface OrderItem {
@@ -205,7 +205,7 @@ export interface PosTransaction {
     cashier_id: number;
     shift_id?: number | null;
     transaction_number: string;
-    payment_method: 'cash' | 'qris';
+    payment_method: 'cash' | 'qris' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood';
     total: number;
     cash_received?: number | null;
     change_amount?: number | null;

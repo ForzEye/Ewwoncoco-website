@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Order } from '../../../types';
@@ -6,12 +6,48 @@ import { rupiah, tanggalWaktu, angka } from '../../../lib/format';
 import { Eye, CheckCircle, Truck, Package, Clock, XCircle, Search, Filter, ShoppingBag, ArrowUpRight, MoreHorizontal } from 'lucide-react';
 
 interface OrdersIndexProps {
-    orders: Order[];
+    orders: {
+        data: Order[];
+        links: {
+            url: string | null;
+            label: string;
+            active: boolean;
+        }[];
+        total: number;
+        from: number;
+        to: number;
+        current_page: number;
+        last_page: number;
+    };
+    filters: {
+        start_date: string;
+        end_date: string;
+        search: string;
+    };
 }
 
 import { confirmAction, toastSuccess } from '@/lib/swal';
 
-export default function Index({ orders }: OrdersIndexProps) {
+export default function Index({ orders, filters }: OrdersIndexProps) {
+    const [startDate, setStartDate] = useState(filters?.start_date || '');
+    const [endDate, setEndDate] = useState(filters?.end_date || '');
+    const [searchVal, setSearchVal] = useState(filters?.search || '');
+
+    const handleFilter = (e: React.FormEvent) => {
+        e.preventDefault();
+        router.get(route('admin.orders.index'), {
+            start_date: startDate,
+            end_date: endDate,
+            search: searchVal
+        }, { preserveState: true });
+    };
+
+    const handleReset = () => {
+        setStartDate('');
+        setEndDate('');
+        setSearchVal('');
+        router.get(route('admin.orders.index'), {}, { preserveState: true });
+    };
 
     const handleUpdateStatus = (id: number, status: string) => {
         confirmAction(
@@ -47,26 +83,58 @@ export default function Index({ orders }: OrdersIndexProps) {
         <AdminLayout title="Manajemen Pesanan">
             <Head title="Daftar Pesanan - EWWON COCO" />
 
-            <div className="mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="mb-10 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-2xl font-black text-[#1A1A1A] tracking-tight font-poppins">Pesanan Pelanggan</h1>
-                    <p className="text-[11px] font-bold text-[#B5AFA6] uppercase tracking-[0.2em] mt-1">Total {angka(orders.length)} pesanan aktif</p>
+                    <p className="text-[11px] font-bold text-[#B5AFA6] uppercase tracking-[0.2em] mt-1">Total {angka(orders.total)} pesanan ditemukan</p>
                 </div>
                 
-                <div className="flex items-center gap-4">
+                <form onSubmit={handleFilter} className="flex flex-wrap items-center gap-4">
                     <div className="relative group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#D0D0D0] group-focus-within:text-[#2D6A4F] transition-colors" size={18} />
                         <input 
                             type="text" 
-                            placeholder="Cari No. Pesanan..." 
-                            className="w-full lg:w-72 pl-12 pr-6 py-3.5 bg-white border border-[#F0F0F0] rounded-2xl text-[13px] font-bold focus:ring-4 focus:ring-[#2D6A4F]/5 focus:border-[#2D6A4F]/20 outline-none transition-all placeholder:text-[#D0D0D0]"
+                            placeholder="Cari No. Pesanan / Nama..." 
+                            value={searchVal}
+                            onChange={e => setSearchVal(e.target.value)}
+                            className="w-full sm:w-64 pl-12 pr-6 py-3.5 bg-white border border-[#F0F0F0] rounded-2xl text-[13px] font-bold focus:ring-4 focus:ring-[#2D6A4F]/5 focus:border-[#2D6A4F]/20 outline-none transition-all placeholder:text-[#D0D0D0]"
                         />
                     </div>
-                    
-                    <button className="p-3.5 bg-white border border-[#F0F0F0] rounded-2xl text-[#8A8A8A] hover:text-[#2D6A4F] hover:border-[#2D6A4F] transition-all shadow-sm">
-                        <Filter size={20} />
+
+                    <div className="flex items-center gap-2 bg-white border border-[#F0F0F0] px-4 py-2 rounded-2xl">
+                        <input 
+                            type="date" 
+                            value={startDate}
+                            onChange={e => setStartDate(e.target.value)}
+                            className="bg-transparent border-none text-[12px] font-bold outline-none transition-all p-0 focus:ring-0"
+                        />
+                        <span className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-wider">s/d</span>
+                        <input 
+                            type="date" 
+                            value={endDate}
+                            onChange={e => setEndDate(e.target.value)}
+                            className="bg-transparent border-none text-[12px] font-bold outline-none transition-all p-0 focus:ring-0"
+                        />
+                    </div>
+
+                    <button 
+                        type="submit"
+                        className="px-6 py-3.5 bg-[#2D6A4F] text-white text-[12px] font-black rounded-2xl hover:bg-[#1B4332] transition-all flex items-center gap-2 uppercase tracking-widest shadow-md shadow-[#2D6A4F]/15"
+                    >
+                        <Filter size={16} />
+                        Filter
                     </button>
-                </div>
+
+                    {(startDate || endDate || searchVal) && (
+                        <button 
+                            type="button"
+                            onClick={handleReset}
+                            className="px-5 py-3.5 bg-white border border-[#F0F0F0] text-[#8A8A8A] hover:text-[#1A1A1A] text-[12px] font-black rounded-2xl transition-all uppercase tracking-widest"
+                        >
+                            Reset
+                        </button>
+                    )}
+                </form>
             </div>
 
             {/* Table Container — Premium Design */}
@@ -84,7 +152,7 @@ export default function Index({ orders }: OrdersIndexProps) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#F8F8F8]">
-                            {orders.map((order) => {
+                            {orders.data.map((order) => {
                                 const status = getStatusConfig(order.status);
                                 return (
                                     <tr key={order.id} className="hover:bg-[#FAFAFA] transition-all group">
@@ -141,9 +209,20 @@ export default function Index({ orders }: OrdersIndexProps) {
                                             <span className={`text-[11px] font-black uppercase tracking-wider px-2 py-1 rounded-lg ${
                                                 order.payment_method === 'tester' 
                                                     ? 'bg-purple-50 text-purple-600 border border-purple-100 shadow-sm' 
+                                                    : order.payment_method === 'gofood'
+                                                    ? 'bg-red-50 text-red-600 border border-red-100 shadow-sm'
+                                                    : order.payment_method === 'grabfood'
+                                                    ? 'bg-green-50 text-green-600 border border-green-100 shadow-sm'
+                                                    : order.payment_method === 'shopeefood'
+                                                    ? 'bg-orange-50 text-orange-600 border border-orange-100 shadow-sm'
                                                     : 'bg-[#F9F9F9] text-[#8A8379]'
                                             }`}>
-                                                {order.payment_method === 'cash' ? '💵 Tunai' : (order.payment_method === 'qris' ? '📱 QRIS' : '🎁 Tester')}
+                                                {order.payment_method === 'cash' ? '💵 Tunai' : 
+                                                 (order.payment_method === 'qris' ? '📱 QRIS' : 
+                                                 (order.payment_method === 'tester' ? '🎁 Tester' : 
+                                                 (order.payment_method === 'gofood' ? '🛵 GoFood' : 
+                                                 (order.payment_method === 'grabfood' ? '🟢 GrabFood' : 
+                                                 (order.payment_method === 'shopeefood' ? '🍊 ShopeeFood' : order.payment_method.toUpperCase())))))}
                                             </span>
                                         </td>
                                         <td className="px-8 py-6 whitespace-nowrap">
@@ -211,13 +290,48 @@ export default function Index({ orders }: OrdersIndexProps) {
                     </table>
                 </div>
 
-                {orders.length === 0 && (
+                {orders.data.length === 0 && (
                     <div className="p-20 flex flex-col items-center justify-center">
                         <div className="w-20 h-20 bg-[#F9F9F9] rounded-[32px] flex items-center justify-center text-[#D0D0D0] mb-6">
                             <ShoppingBag size={40} />
                         </div>
                         <h3 className="text-lg font-black text-[#1A1A1A]">Belum Ada Pesanan</h3>
                         <p className="text-xs font-bold text-[#B5AFA6] mt-2 max-w-xs text-center leading-relaxed">Saat ini belum ada pesanan masuk dari aplikasi pelanggan.</p>
+                    </div>
+                )}
+
+                {/* Pagination Controls */}
+                {orders.data.length > 0 && orders.links && orders.links.length > 3 && (
+                    <div className="p-6 border-t border-[#F8F8F8] flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#FAFDFB]">
+                        <p className="text-[11px] font-bold text-[#8A8A8A] uppercase tracking-wider">
+                            Menampilkan <span className="font-black text-[#2D6A4F]">{orders.from || 0}</span> sampai <span className="font-black text-[#2D6A4F]">{orders.to || 0}</span> dari <span className="font-black text-[#2D6A4F]">{orders.total}</span> pesanan
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                            {orders.links.map((link, i) => {
+                                const isPrev = link.label.includes('Previous');
+                                const isNext = link.label.includes('Next');
+                                const label = isPrev ? '«' : (isNext ? '»' : link.label);
+                                
+                                return (
+                                    <Link
+                                        key={i}
+                                        href={link.url || '#'}
+                                        preserveState
+                                        className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all border ${
+                                            link.active
+                                                ? 'bg-[#2D6A4F] text-white border-transparent shadow-md shadow-[#2D6A4F]/10'
+                                                : link.url
+                                                ? 'bg-white border-[#F0F0F0] text-[#8A8A8A] hover:border-[#2D6A4F] hover:text-[#2D6A4F]'
+                                                : 'bg-[#F9F9F9] border-transparent text-[#D0D0D0] cursor-not-allowed'
+                                        }`}
+                                        onClick={(e) => {
+                                            if (!link.url) e.preventDefault();
+                                        }}
+                                        dangerouslySetInnerHTML={{ __html: label }}
+                                    />
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
             </div>

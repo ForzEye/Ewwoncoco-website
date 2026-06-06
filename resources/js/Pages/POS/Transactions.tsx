@@ -108,9 +108,9 @@ export default function Transactions({ transactions, filters }: TransactionsProp
                     <div className="overflow-x-auto flex-1">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                                 <tr className="bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
                                     <th className="px-6 py-4">Waktu</th>
-                                    <th className="px-6 py-4">No. Transaksi</th>
+                                    <th className="px-6 py-4">No. Transaksi / Pelanggan</th>
                                     <th className="px-6 py-4">Metode</th>
                                     <th className="px-6 py-4 text-right">Total</th>
                                     <th className="px-6 py-4 text-center">Aksi</th>
@@ -138,6 +138,9 @@ export default function Transactions({ transactions, filters }: TransactionsProp
                                                     </span>
                                                 )}
                                             </div>
+                                            <div className="text-xs font-black text-charcoal mt-1 uppercase">
+                                                {tx.customer_name}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center space-x-2">
@@ -149,13 +152,28 @@ export default function Transactions({ transactions, filters }: TransactionsProp
                                                     <div className="w-6 h-6 rounded bg-amber-50 text-amber-600 flex items-center justify-center">
                                                         <CreditCard size={14} />
                                                     </div>
+                                                ) : tx.payment_method === 'gofood' ? (
+                                                    <div className="w-6 h-6 rounded bg-red-50 text-red-600 flex items-center justify-center font-bold text-[10px]">
+                                                        GF
+                                                    </div>
+                                                ) : tx.payment_method === 'grabfood' ? (
+                                                    <div className="w-6 h-6 rounded bg-green-50 text-green-600 flex items-center justify-center font-bold text-[10px]">
+                                                        GB
+                                                    </div>
+                                                ) : tx.payment_method === 'shopeefood' ? (
+                                                    <div className="w-6 h-6 rounded bg-orange-50 text-orange-600 flex items-center justify-center font-bold text-[10px]">
+                                                        SF
+                                                    </div>
                                                 ) : (
                                                     <div className="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center">
                                                         <ShoppingBag size={14} />
                                                     </div>
                                                 )}
                                                 <span className="text-xs font-bold text-gray-600 capitalize">
-                                                    {tx.payment_method === 'manual_transfer' ? 'Transfer' : tx.payment_method}
+                                                    {tx.payment_method === 'manual_transfer' ? 'Transfer' : 
+                                                     (tx.payment_method === 'gofood' ? 'GoFood' : 
+                                                      (tx.payment_method === 'grabfood' ? 'GrabFood' : 
+                                                       (tx.payment_method === 'shopeefood' ? 'ShopeeFood' : tx.payment_method)))}
                                                 </span>
                                             </div>
                                         </td>

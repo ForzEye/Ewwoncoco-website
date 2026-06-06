@@ -46,6 +46,9 @@ interface ReportsProps {
         qris_revenue: number;
         pos_cash_revenue: number;
         pos_qris_revenue: number;
+        pos_gofood_revenue: number;
+        pos_grabfood_revenue: number;
+        pos_shopeefood_revenue: number;
         online_qris_revenue: number;
         online_transfer_revenue: number;
         total_hpp: number;
@@ -169,7 +172,7 @@ export default function Reports({ summary, chartData, topProducts, recentTransac
                 {/* Payment Methods Breakdown */}
                 <div className="space-y-4">
                     <h3 className="text-[11px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] mb-4 ml-1">Rincian Berdasarkan Metode Pembayaran</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {/* Cash POS */}
                         <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-green-500/5 transition-all group">
                             <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -186,6 +189,33 @@ export default function Reports({ summary, chartData, topProducts, recentTransac
                             </div>
                             <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">🖥️ QRIS POS Kasir</p>
                             <h3 className="text-[22px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.pos_qris_revenue)}</h3>
+                        </div>
+
+                        {/* GoFood POS */}
+                        <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-red-500/5 transition-all group">
+                            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                <ShoppingBag size={24} strokeWidth={2.5} />
+                            </div>
+                            <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">🛵 GoFood POS</p>
+                            <h3 className="text-[22px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.pos_gofood_revenue)}</h3>
+                        </div>
+
+                        {/* GrabFood POS */}
+                        <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 transition-all group">
+                            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                <ShoppingBag size={24} strokeWidth={2.5} />
+                            </div>
+                            <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">🛵 GrabFood POS</p>
+                            <h3 className="text-[22px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.pos_grabfood_revenue)}</h3>
+                        </div>
+
+                        {/* ShopeeFood POS */}
+                        <div className="bg-white p-8 rounded-[40px] border border-[#F0F0F0] shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all group">
+                            <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                <ShoppingBag size={24} strokeWidth={2.5} />
+                            </div>
+                            <p className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-1">🛵 ShopeeFood POS</p>
+                            <h3 className="text-[22px] font-black text-[#1A1A1A] font-poppins tracking-tighter">{rupiah(summary.pos_shopeefood_revenue)}</h3>
                         </div>
 
                         {/* QRIS Online */}
@@ -414,22 +444,34 @@ export default function Reports({ summary, chartData, topProducts, recentTransac
                 </div>
 
                 {/* Summary Grid for Print */}
-                <div className="grid grid-cols-5 gap-4 mb-12">
+                <div className="grid grid-cols-8 gap-4 mb-12">
                     <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Total Pendapatan</p>
                         <p className="text-xl font-black text-[#1A1A1A] tracking-tighter">{rupiah(summary.total_revenue)}</p>
+                    </div>
+                    <div className="bg-[#F0FAF6] p-5 rounded-3xl border border-[#2D6A4F]/10">
+                        <p className="text-[8px] font-black text-[#2D6A4F] uppercase tracking-widest mb-1.5">Tunai POS Kasir</p>
+                        <p className="text-xl font-black text-[#2D6A4F] tracking-tighter">{rupiah(summary.pos_cash_revenue)}</p>
                     </div>
                     <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">QRIS POS Kasir</p>
                         <p className="text-xl font-black text-purple-600 tracking-tighter">{rupiah(summary.pos_qris_revenue)}</p>
                     </div>
                     <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">GoFood POS</p>
+                        <p className="text-xl font-black text-red-600 tracking-tighter">{rupiah(summary.pos_gofood_revenue)}</p>
+                    </div>
+                    <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">GrabFood POS</p>
+                        <p className="text-xl font-black text-emerald-600 tracking-tighter">{rupiah(summary.pos_grabfood_revenue)}</p>
+                    </div>
+                    <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">ShopeeFood POS</p>
+                        <p className="text-xl font-black text-orange-600 tracking-tighter">{rupiah(summary.pos_shopeefood_revenue)}</p>
+                    </div>
+                    <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">QRIS Online</p>
                         <p className="text-xl font-black text-blue-600 tracking-tighter">{rupiah(summary.online_qris_revenue)}</p>
-                    </div>
-                    <div className="bg-[#F0FAF6] p-5 rounded-3xl border border-[#2D6A4F]/10">
-                        <p className="text-[8px] font-black text-[#2D6A4F] uppercase tracking-widest mb-1.5">Tunai POS Kasir</p>
-                        <p className="text-xl font-black text-[#2D6A4F] tracking-tighter">{rupiah(summary.pos_cash_revenue)}</p>
                     </div>
                     <div className="bg-[#F9F9F9] p-5 rounded-3xl border border-[#F0F0F0]">
                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Transfer Online</p>

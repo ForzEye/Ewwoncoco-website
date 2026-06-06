@@ -24,6 +24,9 @@ class ShiftController extends Controller
             'expected_cash' => 0,
             'expected_qris' => 0,
             'expected_online' => 0,
+            'expected_gofood' => 0,
+            'expected_grabfood' => 0,
+            'expected_shopeefood' => 0,
         ];
 
         if ($activeShift) {
@@ -53,6 +56,19 @@ class ShiftController extends Controller
                 ->where('branch_id', $activeShift->branch_id)
                 ->whereBetween('created_at', [$firstShiftOpenedAt, now()])
                 ->whereIn('status', ['completed', 'delivered', 'ready_for_pickup'])
+                ->sum('total');
+
+            // Expected ojol sales from all shifts today
+            $breakdown['expected_gofood'] = PosTransaction::whereIn('shift_id', $todayShiftIds)
+                ->where('payment_method', 'gofood')
+                ->sum('total');
+
+            $breakdown['expected_grabfood'] = PosTransaction::whereIn('shift_id', $todayShiftIds)
+                ->where('payment_method', 'grabfood')
+                ->sum('total');
+
+            $breakdown['expected_shopeefood'] = PosTransaction::whereIn('shift_id', $todayShiftIds)
+                ->where('payment_method', 'shopeefood')
                 ->sum('total');
         }
 
@@ -122,6 +138,7 @@ class ShiftController extends Controller
             'closing_online' => 'required|numeric|min:0',
             'closing_grab' => 'required|numeric|min:0',
             'closing_gojek' => 'required|numeric|min:0',
+            'closing_shopeefood' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
@@ -141,6 +158,7 @@ class ShiftController extends Controller
             'closing_online' => $request->closing_online,
             'closing_grab' => $request->closing_grab,
             'closing_gojek' => $request->closing_gojek,
+            'closing_shopeefood' => $request->closing_shopeefood,
             'notes' => $activeShift->notes."\nClosed Notes: ".$request->notes,
         ]);
 

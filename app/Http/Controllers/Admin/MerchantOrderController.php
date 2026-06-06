@@ -18,26 +18,67 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Inertia\Inertia;
 
 class MerchantOrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $merchant = Auth::user()->merchant;
         if (! $merchant) {
             return redirect()->route('admin.dashboard')->with('error', 'Anda tidak memiliki toko yang terdaftar.');
         }
 
-        $onlineOrders = Order::where('merchant_id', $merchant->id)
-            ->with(['customer', 'branch'])
-            ->latest()
-            ->get();
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+        $search = $request->search;
 
-        $posTransactions = PosTransaction::where('merchant_id', $merchant->id)
-            ->with(['customer', 'branch'])
-            ->latest()
-            ->get();
+        $onlineQuery = Order::where('merchant_id', $merchant->id)
+            ->with(['customer', 'branch']);
+
+        $posQuery = PosTransaction::where('merchant_id', $merchant->id)
+            ->with(['customer', 'branch']);
+
+        if ($startDate) {
+            $onlineQuery->where('created_at', '>=', $startDate . ' 00:00:00');
+            $posQuery->where(function($q) use ($startDate) {
+                $q->where('transaction_at', '>=', $startDate . ' 00:00:00')
+                  ->orWhere(function($sq) use ($startDate) {
+                      $sq->whereNull('transaction_at')->where('created_at', '>=', $startDate . ' 00:00:00');
+                  });
+            });
+        }
+
+        if ($endDate) {
+            $onlineQuery->where('created_at', '<=', $endDate . ' 23:59:59');
+            $posQuery->where(function($q) use ($endDate) {
+                $q->where('transaction_at', '<=', $endDate . ' 23:59:59')
+                  ->orWhere(function($sq) use ($endDate) {
+                      $sq->whereNull('transaction_at')->where('created_at', '<=', $endDate . ' 23:59:59');
+                  });
+            });
+        }
+
+        if ($search) {
+            $onlineQuery->where(function($q) use ($search) {
+                $q->where('order_number', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('name', 'like', "%{$search}%");
+                  });
+            });
+            $posQuery->where(function($q) use ($search) {
+                $q->where('transaction_number', 'like', "%{$search}%")
+                  ->orWhere('customer_name', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $onlineOrders = $onlineQuery->latest()->get();
+        $posTransactions = $posQuery->latest()->get();
 
         $mappedOnline = $onlineOrders->map(function ($order) {
             return [
@@ -89,8 +130,27 @@ class MerchantOrderController extends Controller
 
         $allOrders = $mappedOnline->concat($mappedPos)->sortByDesc('created_at')->values()->all();
 
+        $perPage = 15;
+        $page = Paginator::resolveCurrentPage() ?: 1;
+        $allOrdersCollection = collect($allOrders);
+        $paginatedOrders = new LengthAwarePaginator(
+            $allOrdersCollection->forPage($page, $perPage)->values()->all(),
+            $allOrdersCollection->count(),
+            $perPage,
+            $page,
+            [
+                'path' => Paginator::resolveCurrentPath(),
+                'query' => $request->query(),
+            ]
+        );
+
         return Inertia::render('Admin/Orders/Index', [
-            'orders' => $allOrders,
+            'orders' => $paginatedOrders,
+            'filters' => [
+                'start_date' => $startDate ?? '',
+                'end_date' => $endDate ?? '',
+                'search' => $search ?? '',
+            ],
         ]);
     }
 
@@ -104,14 +164,14 @@ class MerchantOrderController extends Controller
         if (str_starts_with($id, 'pos-')) {
             $posId = substr($id, 4);
             $posTransaction = PosTransaction::where('merchant_id', $merchant->id)
-                ->with(['items.product', 'customer', 'branch', 'cashier'])
+                ->with(['items.product', 'customer', 'branch', 'cashier', 'merchant'])
                 ->findOrFail($posId);
 
             $order = $this->mapPosTransactionToOrder($posTransaction);
         } else {
             $orderId = str_starts_with($id, 'online-') ? substr($id, 7) : $id;
             $orderModel = Order::where('merchant_id', $merchant->id)
-                ->with(['items.product', 'customer', 'branch'])
+                ->with(['items.product', 'customer', 'branch', 'merchant'])
                 ->findOrFail($orderId);
 
             $order = array_merge($orderModel->toArray(), [
@@ -240,6 +300,7 @@ class MerchantOrderController extends Controller
             'total' => (float)$pos->total,
             'delivery_address' => null,
             'notes' => $pos->notes,
+            'customer_name' => $pos->customer_name ?? ($pos->customer?->name ?? 'Pelanggan Umum'),
             'items' => $pos->items->map(function ($item) {
                 return [
                     'id' => $item->id,
@@ -255,12 +316,13 @@ class MerchantOrderController extends Controller
                 ];
             }),
             'customer' => $pos->customer ?? [
-                'name' => 'Pelanggan Umum',
+                'name' => $pos->customer_name ?? 'Pelanggan Umum',
                 'email' => '-',
                 'phone' => '-',
             ],
             'branch' => $pos->branch,
             'cashier' => $pos->cashier,
+            'merchant' => $pos->merchant,
             'created_at' => $pos->transaction_at ? $pos->transaction_at->toIso8601String() : $pos->created_at->toIso8601String(),
             'updated_at' => $pos->updated_at->toIso8601String(),
             'is_online' => false,

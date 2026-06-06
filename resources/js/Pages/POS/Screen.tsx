@@ -181,7 +181,7 @@ export default function Screen({ products, categories, activeShift, promotions }
         });
     }, [products, search, selectedCategory]);
 
-    const handleProcessPayment = async (data: { payment_method: 'cash' | 'qris' | 'tester', amount_paid: number }) => {
+    const handleProcessPayment = async (data: { payment_method: 'cash' | 'qris' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood', amount_paid: number }) => {
         setIsProcessing(true);
         try {
             const response = await axios.post(route('pos.store'), {
@@ -385,7 +385,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                                         <button 
                                             onClick={() => {
                                                 setSelectedCustomer(null);
-                                                setCustomerName('Pelanggan Umum');
+                                                setCustomerName('');
                                                 setUsePoints(false);
                                             }}
                                             className="text-[#2D6A4F]/40 hover:text-red-500 transition-colors"
@@ -417,15 +417,15 @@ export default function Screen({ products, categories, activeShift, promotions }
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-3 bg-[#F5F3EF] p-4 rounded-2xl border border-[#E8E4DD] border-dashed">
-                                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center flex-shrink-0 border border-[#E8E4DD]">
-                                        <User size={20} className="text-[#C4BEB5]" />
+                                <div className={`flex items-center gap-3 p-4 rounded-2xl border border-dashed transition-all ${!customerName.trim() ? 'bg-red-50 border-red-300' : 'bg-[#F5F3EF] border-[#E8E4DD]'}`}>
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border transition-all ${!customerName.trim() ? 'bg-red-100/50 border-red-200 text-red-500' : 'bg-white border-[#E8E4DD] text-[#C4BEB5]'}`}>
+                                        <User size={20} />
                                     </div>
                                     <div className="flex-1">
-                                        <p className="text-[10px] font-bold text-[#B5AFA6] uppercase tracking-wider mb-0.5">Nama Pelanggan</p>
+                                        <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 transition-all ${!customerName.trim() ? 'text-red-500' : 'text-[#B5AFA6]'}`}>Nama Pelanggan {!customerName.trim() && '(Wajib)'}</p>
                                         <input 
                                             type="text" 
-                                            placeholder="Pelanggan Umum"
+                                            placeholder="Masukkan Nama Pelanggan... (Wajib)"
                                             value={customerName}
                                             onChange={(e) => setCustomerName(e.target.value)}
                                             className="w-full border-none bg-transparent focus:ring-0 font-black text-[#1A1A1A] p-0 text-sm placeholder:text-[#C4BEB5]"
@@ -588,7 +588,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                             </button>
                             <button 
                                 onClick={() => setIsPaymentOpen(true)}
-                                disabled={items.length === 0}
+                                disabled={items.length === 0 || !customerName.trim()}
                                 className="flex-1 bg-gradient-to-r from-[#2D6A4F] to-[#40916C] hover:from-[#1B4332] hover:to-[#2D6A4F] disabled:from-[#E8E4DD] disabled:to-[#E8E4DD] disabled:text-[#B5AFA6] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 shadow-lg shadow-[#2D6A4F]/15 group disabled:shadow-none"
                             >
                                 <CreditCard size={20} className="group-hover:rotate-6 transition-transform" />

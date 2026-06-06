@@ -49,6 +49,9 @@ class TransactionController extends Controller
                 'cashier' => $isOnline ? ($item->cashier ?? null) : ($item->cashier ?? null),
                 // Map customer to cashier for online orders display if needed
                 'customer' => $isOnline ? ($item->customer ?? null) : null,
+                'customer_name' => $isOnline 
+                    ? ($item->customer?->name ?? 'Guest') 
+                    : ($item->customer_name ?? ($item->customer?->name ?? 'Pelanggan Umum')),
             ];
         })->sortByDesc(function ($item) {
             return Carbon::parse($item['transaction_at'])->timestamp;

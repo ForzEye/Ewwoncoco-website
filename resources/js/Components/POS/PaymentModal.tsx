@@ -14,12 +14,12 @@ interface PaymentModalProps {
     isOpen: boolean;
     onClose: () => void;
     total: number;
-    onConfirm: (data: { payment_method: 'cash' | 'qris' | 'tester', amount_paid: number }) => void;
+    onConfirm: (data: { payment_method: 'cash' | 'qris' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood', amount_paid: number }) => void;
     processing: boolean;
 }
 
 export default function PaymentModal({ isOpen, onClose, total, onConfirm, processing }: PaymentModalProps) {
-    const [method, setMethod] = useState<'cash' | 'qris' | 'tester'>('cash');
+    const [method, setMethod] = useState<'cash' | 'qris' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood'>('cash');
     const [amountPaid, setAmountPaid] = useState<string>('');
     const [change, setChange] = useState(0);
 
@@ -39,7 +39,7 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
 
     if (!isOpen) return null;
 
-    const canConfirm = method === 'qris' || method === 'tester' || (parseFloat(amountPaid) || 0) >= total;
+    const canConfirm = ['qris', 'tester', 'gofood', 'grabfood', 'shopeefood'].includes(method) || (parseFloat(amountPaid) || 0) >= total;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -59,39 +59,72 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
 
                 <div className="flex flex-1">
                     {/* Methods Selector */}
-                    <div className="w-[180px] border-r border-[#E8E4DD] p-5 space-y-3 bg-[#FAFAF8]">
+                    <div className="w-[180px] border-r border-[#E8E4DD] p-4 space-y-3 bg-[#FAFAF8] overflow-y-auto max-h-[420px]">
                         <button 
                             onClick={() => setMethod('cash')}
-                            className={`w-full p-5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-3 ${
+                            className={`w-full p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
                                 method === 'cash' 
                                     ? 'border-[#2D6A4F] bg-[#E8F5E9] text-[#2D6A4F] shadow-sm' 
                                     : 'border-[#E8E4DD] text-[#B5AFA6] hover:border-[#C4BEB5] hover:text-[#8A8379]'
                             }`}
                         >
-                            <Banknote size={28} />
-                            <span className="text-[10px] font-black uppercase tracking-[0.1em]">Tunai</span>
+                            <Banknote size={24} />
+                            <span className="text-[10px] font-black uppercase tracking-[0.05em]">Tunai</span>
                         </button>
                         <button 
                             onClick={() => setMethod('qris')}
-                            className={`w-full p-5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-3 ${
+                            className={`w-full p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
                                 method === 'qris' 
                                     ? 'border-[#2D6A4F] bg-[#E8F5E9] text-[#2D6A4F] shadow-sm' 
                                     : 'border-[#E8E4DD] text-[#B5AFA6] hover:border-[#C4BEB5] hover:text-[#8A8379]'
                             }`}
                         >
-                            <QrCode size={28} />
-                            <span className="text-[10px] font-black uppercase tracking-[0.1em]">QRIS</span>
+                            <QrCode size={24} />
+                            <span className="text-[10px] font-black uppercase tracking-[0.05em]">QRIS</span>
+                        </button>
+                        <button 
+                            onClick={() => setMethod('gofood')}
+                            className={`w-full p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
+                                method === 'gofood' 
+                                    ? 'border-[#ED1C24] bg-[#FDF0F1] text-[#ED1C24] shadow-sm' 
+                                    : 'border-[#E8E4DD] text-[#B5AFA6] hover:border-[#C4BEB5] hover:text-[#8A8379]'
+                            }`}
+                        >
+                            <span className="text-xl leading-none">🛵</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.05em]">GoFood</span>
+                        </button>
+                        <button 
+                            onClick={() => setMethod('grabfood')}
+                            className={`w-full p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
+                                method === 'grabfood' 
+                                    ? 'border-[#00B14F] bg-[#F0FAF4] text-[#00B14F] shadow-sm' 
+                                    : 'border-[#E8E4DD] text-[#B5AFA6] hover:border-[#C4BEB5] hover:text-[#8A8379]'
+                            }`}
+                        >
+                            <span className="text-xl leading-none">🟢</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.05em]">GrabFood</span>
+                        </button>
+                        <button 
+                            onClick={() => setMethod('shopeefood')}
+                            className={`w-full p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
+                                method === 'shopeefood' 
+                                    ? 'border-[#EE4D2D] bg-[#FEF0ED] text-[#EE4D2D] shadow-sm' 
+                                    : 'border-[#E8E4DD] text-[#B5AFA6] hover:border-[#C4BEB5] hover:text-[#8A8379]'
+                            }`}
+                        >
+                            <span className="text-xl leading-none">🍊</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.05em]">ShopeeFood</span>
                         </button>
                         <button 
                             onClick={() => setMethod('tester')}
-                            className={`w-full p-5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-3 ${
+                            className={`w-full p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
                                 method === 'tester' 
                                     ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-sm' 
                                     : 'border-[#E8E4DD] text-[#B5AFA6] hover:border-[#C4BEB5] hover:text-[#8A8379]'
                             }`}
                         >
-                            <span className="text-2xl">🎁</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.1em]">Tester</span>
+                            <span className="text-xl leading-none">🎁</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.05em]">Tester</span>
                         </button>
                     </div>
 
@@ -115,6 +148,26 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
                                     </p>
                                 </div>
                                 <div className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-purple-50 text-purple-700 rounded-full border border-purple-100 font-bold text-[10px] uppercase tracking-wider">
+                                    Stok BOM Akan Terpotong
+                                </div>
+                            </div>
+                        ) : ['gofood', 'grabfood', 'shopeefood'].includes(method) ? (
+                            <div className="flex flex-col items-center justify-center py-10 space-y-4 text-center">
+                                <div className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl animate-pulse ${
+                                    method === 'gofood' ? 'bg-red-50 text-red-600' :
+                                    method === 'grabfood' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
+                                }`}>
+                                    {method === 'gofood' ? '🛵' : method === 'grabfood' ? '🟢' : '🍊'}
+                                </div>
+                                <div>
+                                    <h4 className="font-poppins font-black text-[#1A1A1A] text-lg">
+                                        Pesanan {method === 'gofood' ? 'GoFood' : method === 'grabfood' ? 'GrabFood' : 'ShopeeFood'}
+                                    </h4>
+                                    <p className="text-xs text-[#8A8379] font-medium leading-relaxed max-w-[280px] mt-1.5">
+                                        Transaksi ini menggunakan harga reguler outlet. Silakan periksa detail pesanan pada aplikasi ojol sebelum memproses pembayaran untuk mencocokkan item.
+                                    </p>
+                                </div>
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#E8F5E9] text-[#2D6A4F] rounded-full border border-green-100 font-bold text-[10px] uppercase tracking-wider">
                                     Stok BOM Akan Terpotong
                                 </div>
                             </div>
@@ -189,7 +242,7 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
                     <button 
                         onClick={() => onConfirm({ 
                             payment_method: method, 
-                            amount_paid: method === 'tester' ? 0 : (method === 'qris' ? total : (parseFloat(amountPaid) || 0)) 
+                            amount_paid: method === 'tester' ? 0 : (['qris', 'gofood', 'grabfood', 'shopeefood'].includes(method) ? total : (parseFloat(amountPaid) || 0)) 
                         })}
                         disabled={processing || !canConfirm}
                         className="flex-1 bg-gradient-to-r from-[#2D6A4F] to-[#40916C] hover:from-[#1B4332] hover:to-[#2D6A4F] disabled:from-[#E8E4DD] disabled:to-[#E8E4DD] disabled:text-[#B5AFA6] text-white font-black py-3.5 rounded-2xl shadow-lg shadow-[#2D6A4F]/15 transition-all flex items-center justify-center gap-2 disabled:shadow-none group"

@@ -42,13 +42,41 @@ class StockManagementController extends Controller
             ->with('ingredient')
             ->get();
 
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $search = $request->input('search');
+        $type = $request->input('type');
+
+        $stockMovementsQuery = StockMovement::where('branch_id', $selectedBranchId)
+            ->with(['ingredient', 'branch', 'user']);
+
+        if ($startDate) {
+            $stockMovementsQuery->where('created_at', '>=', $startDate . ' 00:00:00');
+        }
+        if ($endDate) {
+            $stockMovementsQuery->where('created_at', '<=', $endDate . ' 23:59:59');
+        }
+        if ($type) {
+            $stockMovementsQuery->where('type', $type);
+        }
+        if ($search) {
+            $stockMovementsQuery->where(function ($q) use ($search) {
+                $q->where('notes', 'like', "%{$search}%")
+                  ->orWhereHas('ingredient', function ($iq) use ($search) {
+                      $iq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
         $stockMovements = $user->role !== 'kasir'
-            ? StockMovement::where('branch_id', $selectedBranchId)
-                ->with(['ingredient', 'branch'])
-                ->latest()
-                ->limit(50)
-                ->get()
-            : [];
+            ? $stockMovementsQuery->latest()->paginate(15)->withQueryString()
+            : [
+                'data' => [],
+                'links' => [],
+                'total' => 0,
+                'from' => 0,
+                'to' => 0,
+            ];
 
         return Inertia::render('Admin/Inventory/Stock', [
             'branches' => $branches,
@@ -56,6 +84,12 @@ class StockManagementController extends Controller
             'ingredients' => $ingredients,
             'stockData' => $stockData,
             'stockMovements' => $stockMovements,
+            'filters' => [
+                'start_date' => $startDate ?? '',
+                'end_date' => $endDate ?? '',
+                'search' => $search ?? '',
+                'type' => $type ?? '',
+            ],
         ]);
     }
 
@@ -100,7 +134,8 @@ class StockManagementController extends Controller
                 'type' => 'IN',
                 'quantity' => $newQty,
                 'reference_type' => 'Purchase',
-                'notes' => '[' . auth()->user()->name . '] ' . ($request->notes ?? ''),
+                'notes' => $request->notes ?? '-',
+                'user_id' => auth()->id(),
             ]);
 
             return back()->with('success', 'Stok berhasil ditambahkan dan HPP rata-rata telah diupdate.');
@@ -135,7 +170,8 @@ class StockManagementController extends Controller
                 'ingredient_id' => $request->ingredient_id,
                 'type' => 'ADJUST',
                 'quantity' => $diff,
-                'notes' => '[' . auth()->user()->name . '] ' . ($request->notes ?? ''),
+                'notes' => $request->notes ?? '-',
+                'user_id' => auth()->id(),
             ]);
 
             return back()->with('success', 'Stok berhasil disesuaikan.');
@@ -174,7 +210,8 @@ class StockManagementController extends Controller
             'ingredient_id' => $branchIngredient->ingredient_id,
             'type' => 'ADJUST',
             'quantity' => $newStock - $oldStock,
-            'notes' => '[' . auth()->user()->name . '] Edit Langsung Admin (Stok: ' . $oldStock . '->' . $newStock . ', HPP: ' . $oldCost . '->' . $newCost . ', Min: ' . $oldMin . '->' . $newMin . ')',
+            'notes' => 'Edit Langsung Admin (Stok: ' . $oldStock . '->' . $newStock . ', HPP: ' . $oldCost . '->' . $newCost . ', Min: ' . $oldMin . '->' . $newMin . ')',
+            'user_id' => auth()->id(),
         ]);
 
         return back()->with('success', 'Stok cabang berhasil diperbarui.');
@@ -190,7 +227,8 @@ class StockManagementController extends Controller
             'ingredient_id' => $branchIngredient->ingredient_id,
             'type' => 'ADJUST',
             'quantity' => -$branchIngredient->stock,
-            'notes' => '[' . auth()->user()->name . '] Hapus Stok Cabang: ' . $branchIngredient->ingredient?->name,
+            'notes' => 'Hapus Stok Cabang: ' . $branchIngredient->ingredient?->name,
+            'user_id' => auth()->id(),
         ]);
 
         $branchIngredient->delete();

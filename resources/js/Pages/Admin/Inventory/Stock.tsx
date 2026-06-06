@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, useForm, router, usePage } from '@inertiajs/react';
+import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import { rupiah, qty, tanggalWaktu } from '../../../lib/format';
 import { 
@@ -47,6 +47,9 @@ interface StockMovement {
     created_at: string;
     ingredient?: Ingredient;
     branch?: Branch;
+    user?: {
+        name: string;
+    };
 }
 
 interface StockProps {
@@ -54,13 +57,58 @@ interface StockProps {
     selectedBranchId: number;
     ingredients: Ingredient[];
     stockData: BranchIngredient[];
-    stockMovements: StockMovement[];
+    stockMovements: {
+        data: StockMovement[];
+        links: any[];
+        total?: number;
+        from?: number;
+        to?: number;
+    };
+    filters?: {
+        start_date: string;
+        end_date: string;
+        search: string;
+        type: string;
+    };
 }
 
-export default function Stock({ branches, selectedBranchId, ingredients, stockData, stockMovements }: StockProps) {
+export default function Stock({ branches, selectedBranchId, ingredients, stockData, stockMovements, filters }: StockProps) {
     const { auth } = usePage<any>().props;
     const isKasir = auth.user?.role === 'kasir';
     const [activeTab, setActiveTab] = useState<'stock' | 'history'>('stock');
+
+    const [localSearch, setLocalSearch] = useState('');
+    const filteredStockData = stockData.filter(item => 
+        item.ingredient?.name.toLowerCase().includes(localSearch.toLowerCase())
+    );
+
+    const [startDate, setStartDate] = useState(filters?.start_date || '');
+    const [endDate, setEndDate] = useState(filters?.end_date || '');
+    const [searchVal, setSearchVal] = useState(filters?.search || '');
+    const [typeVal, setTypeVal] = useState(filters?.type || '');
+
+    const handleFilterSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const routeName = isKasir ? 'pos.inventory.stock.index' : 'admin.inventory.stock.index';
+        router.get(route(routeName), {
+            branch_id: selectedBranchId,
+            start_date: startDate,
+            end_date: endDate,
+            search: searchVal,
+            type: typeVal,
+        }, { preserveState: true });
+    };
+
+    const handleReset = () => {
+        setStartDate('');
+        setEndDate('');
+        setSearchVal('');
+        setTypeVal('');
+        const routeName = isKasir ? 'pos.inventory.stock.index' : 'admin.inventory.stock.index';
+        router.get(route(routeName), {
+            branch_id: selectedBranchId,
+        }, { preserveState: true });
+    };
 
     const [isStockInModalOpen, setIsStockInModalOpen] = useState(false);
     const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
@@ -92,7 +140,12 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
 
     const handleBranchChange = (branchId: number) => {
         const routeName = isKasir ? 'pos.inventory.stock.index' : 'admin.inventory.stock.index';
-        router.get(route(routeName), { branch_id: branchId }, { preserveState: true });
+        const params: any = { branch_id: branchId };
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        if (searchVal) params.search = searchVal;
+        if (typeVal) params.type = typeVal;
+        router.get(route(routeName), params, { preserveState: true });
     };
 
     const openStockIn = () => {
@@ -211,6 +264,8 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
                         <input 
                             type="text"
                             placeholder="Cari bahan di cabang ini..."
+                            value={localSearch}
+                            onChange={(e) => setLocalSearch(e.target.value)}
                             className="w-full pl-12 pr-4 py-3 bg-[#F5F3EF]/50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-[#2D6A4F]/20 outline-none transition-all"
                         />
                     </div>
@@ -257,7 +312,7 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#F0F0F0]">
-                                {stockData.map((item) => (
+                                {filteredStockData.map((item) => (
                                     <tr key={item.id} className="hover:bg-[#FAFAF8] transition-all group">
                                         <td className="px-8 py-5">
                                             <div className="flex flex-col">
@@ -322,70 +377,176 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
                     </div>
                 ) : (
                     /* History Table */
-                    <div className="bg-white rounded-[32px] border border-[#F0F0F0] shadow-sm overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-[#FAFAF8] border-b border-[#F0F0F0]">
-                                <tr className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em]">
-                                    <th className="px-8 py-5">Waktu</th>
-                                    <th className="px-8 py-5">Bahan Baku</th>
-                                    <th className="px-8 py-5 text-center">Tipe</th>
-                                    <th className="px-8 py-5 text-right">Jumlah</th>
-                                    <th className="px-8 py-5">Catatan & Pengubah</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#F0F0F0]">
-                                {stockMovements.map((movement) => (
-                                    <tr key={movement.id} className="hover:bg-[#FAFAF8] transition-all">
-                                        <td className="px-8 py-5 text-xs text-gray-500 font-medium">
-                                            {tanggalWaktu(movement.created_at)}
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-[#1A1A1A]">{movement.ingredient?.name ?? 'Tidak Ada'}</span>
-                                                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black mt-0.5">{movement.ingredient?.unit ?? ''}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="flex justify-center">
-                                                {movement.type === 'IN' && (
-                                                    <span className="px-2.5 py-1 bg-green-50 text-green-600 text-[9px] font-black rounded-full border border-green-100">
-                                                        BARANG MASUK
-                                                    </span>
-                                                )}
-                                                {movement.type === 'OUT' && (
-                                                    <span className="px-2.5 py-1 bg-orange-50 text-orange-600 text-[9px] font-black rounded-full border border-orange-100">
-                                                        PENGGUNAAN
-                                                    </span>
-                                                )}
-                                                {movement.type === 'ADJUST' && (
-                                                    <span className="px-2.5 py-1 bg-purple-50 text-purple-600 text-[9px] font-black rounded-full border border-purple-100">
-                                                        PENYESUAIAN
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <span className={`font-mono font-bold ${
-                                                movement.type === 'IN' ? 'text-green-600' :
-                                                movement.type === 'OUT' ? 'text-red-500' : 'text-purple-600'
-                                            }`}>
-                                                {movement.quantity > 0 ? '+' : ''}{qty(movement.quantity)} {movement.ingredient?.unit ?? ''}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5 text-xs text-[#1A1A1A] font-medium max-w-xs truncate">
-                                            {movement.notes || '-'}
-                                        </td>
+                    <div className="space-y-4">
+                        {/* Filters Bar for Stock Movements */}
+                        <form onSubmit={handleFilterSubmit} className="bg-white p-6 rounded-[32px] border border-[#F0F0F0] shadow-sm flex flex-wrap items-center gap-4 animate-in fade-in duration-300">
+                            <div className="relative group flex-1 min-w-[200px]">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#D0D0D0] group-focus-within:text-[#2D6A4F] transition-colors" size={18} />
+                                <input 
+                                    type="text" 
+                                    placeholder="Cari Catatan / Bahan Baku..." 
+                                    value={searchVal}
+                                    onChange={e => setSearchVal(e.target.value)}
+                                    className="w-full pl-12 pr-6 py-3.5 bg-gray-50 border-none rounded-2xl text-[13px] font-semibold focus:ring-2 focus:ring-[#2D6A4F]/20 transition-all placeholder:text-gray-400"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-2xl border border-[#F0F0F0]">
+                                <input 
+                                    type="date" 
+                                    value={startDate}
+                                    onChange={e => setStartDate(e.target.value)}
+                                    className="bg-transparent border-none text-[12px] font-bold outline-none transition-all p-0 focus:ring-0 text-[#1A1A1A]"
+                                />
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">s/d</span>
+                                <input 
+                                    type="date" 
+                                    value={endDate}
+                                    onChange={e => setEndDate(e.target.value)}
+                                    className="bg-transparent border-none text-[12px] font-bold outline-none transition-all p-0 focus:ring-0 text-[#1A1A1A]"
+                                />
+                            </div>
+
+                            <div className="w-full sm:w-[180px]">
+                                <select
+                                    className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl text-[13px] font-bold focus:ring-2 focus:ring-[#2D6A4F]/20 outline-none cursor-pointer text-[#1A1A1A]"
+                                    value={typeVal}
+                                    onChange={e => setTypeVal(e.target.value)}
+                                >
+                                    <option value="">Semua Tipe</option>
+                                    <option value="IN">BARANG MASUK</option>
+                                    <option value="OUT">PENGGUNAAN</option>
+                                    <option value="ADJUST">PENYESUAIAN</option>
+                                </select>
+                            </div>
+
+                            <button 
+                                type="submit"
+                                className="px-6 py-3.5 bg-[#2D6A4F] text-white text-[12px] font-black rounded-2xl hover:bg-[#1B4332] transition-all flex items-center gap-2 uppercase tracking-widest shadow-md shadow-[#2D6A4F]/15"
+                            >
+                                Filter
+                            </button>
+
+                            {(startDate || endDate || searchVal || typeVal) && (
+                                <button 
+                                    type="button"
+                                    onClick={handleReset}
+                                    className="px-5 py-3.5 bg-white border border-[#F0F0F0] text-gray-400 hover:text-[#1A1A1A] text-[12px] font-black rounded-2xl transition-all uppercase tracking-widest"
+                                >
+                                    Reset
+                                </button>
+                            )}
+                        </form>
+
+                        <div className="bg-white rounded-[32px] border border-[#F0F0F0] shadow-sm overflow-hidden">
+                            <table className="w-full text-left">
+                                <thead className="bg-[#FAFAF8] border-b border-[#F0F0F0]">
+                                    <tr className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em]">
+                                        <th className="px-8 py-5">Waktu</th>
+                                        <th className="px-8 py-5">Bahan Baku</th>
+                                        <th className="px-8 py-5 text-center">Tipe</th>
+                                        <th className="px-8 py-5 text-right">Jumlah</th>
+                                        <th className="px-8 py-5">Catatan & Pengubah</th>
                                     </tr>
-                                ))}
-                                {stockMovements.length === 0 && (
-                                    <tr>
-                                        <td colSpan={5} className="text-center py-10 text-gray-400 text-sm font-medium">
-                                            Belum ada riwayat pergerakan stok untuk cabang ini.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-[#F0F0F0]">
+                                    {stockMovements.data.map((movement) => (
+                                        <tr key={movement.id} className="hover:bg-[#FAFAF8] transition-all">
+                                            <td className="px-8 py-5 text-xs text-gray-500 font-medium">
+                                                {tanggalWaktu(movement.created_at)}
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-[#1A1A1A]">{movement.ingredient?.name ?? 'Tidak Ada'}</span>
+                                                    <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black mt-0.5">{movement.ingredient?.unit ?? ''}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex justify-center">
+                                                    {movement.type === 'IN' && (
+                                                        <span className="px-2.5 py-1 bg-green-50 text-green-600 text-[9px] font-black rounded-full border border-green-100">
+                                                            BARANG MASUK
+                                                        </span>
+                                                    )}
+                                                    {movement.type === 'OUT' && (
+                                                        <span className="px-2.5 py-1 bg-orange-50 text-orange-600 text-[9px] font-black rounded-full border border-orange-100">
+                                                            PENGGUNAAN
+                                                        </span>
+                                                    )}
+                                                    {movement.type === 'ADJUST' && (
+                                                        <span className="px-2.5 py-1 bg-purple-50 text-purple-600 text-[9px] font-black rounded-full border border-purple-100">
+                                                            PENYESUAIAN
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5 text-right">
+                                                <span className={`font-mono font-bold ${
+                                                    movement.type === 'IN' ? 'text-green-600' :
+                                                    movement.type === 'OUT' ? 'text-red-500' : 'text-purple-600'
+                                                }`}>
+                                                    {movement.quantity > 0 ? '+' : ''}{qty(movement.quantity)} {movement.ingredient?.unit ?? ''}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-[#1A1A1A] font-medium max-w-xs truncate" title={movement.notes}>
+                                                        {movement.notes || '-'}
+                                                    </span>
+                                                    {movement.user && (
+                                                        <span className="text-[10px] text-[#2D6A4F] font-bold mt-1 inline-flex items-center gap-1">
+                                                            👤 Oleh: {movement.user.name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {stockMovements.data.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} className="text-center py-10 text-gray-400 text-sm font-medium">
+                                                Belum ada riwayat pergerakan stok untuk cabang ini.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination Controls */}
+                        {stockMovements.data.length > 0 && stockMovements.links && stockMovements.links.length > 3 && (
+                            <div className="p-6 border border-[#F0F0F0] rounded-[32px] bg-white shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <p className="text-[11px] font-bold text-[#8A8A8A] uppercase tracking-wider">
+                                    Menampilkan <span className="font-black text-[#2D6A4F]">{stockMovements.from || 0}</span> sampai <span className="font-black text-[#2D6A4F]">{stockMovements.to || 0}</span> dari <span className="font-black text-[#2D6A4F]">{stockMovements.total}</span> data histori
+                                </p>
+                                <div className="flex items-center gap-1.5">
+                                    {stockMovements.links.map((link, i) => {
+                                        const isPrev = link.label.includes('Previous');
+                                        const isNext = link.label.includes('Next');
+                                        const label = isPrev ? '«' : (isNext ? '»' : link.label);
+                                        
+                                        return (
+                                            <Link
+                                                key={i}
+                                                href={link.url || '#'}
+                                                preserveState
+                                                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all border ${
+                                                    link.active
+                                                        ? 'bg-[#2D6A4F] text-white border-transparent shadow-md shadow-[#2D6A4F]/10'
+                                                        : link.url
+                                                        ? 'bg-white border-[#F0F0F0] text-gray-400 hover:border-[#2D6A4F] hover:text-[#2D6A4F]'
+                                                        : 'bg-gray-50 border-transparent text-gray-300 cursor-not-allowed'
+                                                }`}
+                                                onClick={(e) => {
+                                                    if (!link.url) e.preventDefault();
+                                                }}
+                                                dangerouslySetInnerHTML={{ __html: label }}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

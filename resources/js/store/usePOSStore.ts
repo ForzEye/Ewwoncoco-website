@@ -25,7 +25,7 @@ export const usePOSStore = create<POSState>()(
     persist(
         (set, get) => ({
             items: [],
-            customerName: 'Pelanggan Umum',
+            customerName: '',
             addItem: (product, quantity = 1, notes = '', customizations = []) => {
                 set((state) => {
                     const newCustIds = (customizations || []).map((c) => c.id).sort().join(',');
@@ -73,7 +73,7 @@ export const usePOSStore = create<POSState>()(
                     }),
                 }));
             },
-            clearCart: () => set({ items: [], customerName: 'Pelanggan Umum' }),
+            clearCart: () => set({ items: [], customerName: '' }),
             setCustomerName: (name) => set({ customerName: name }),
             getTotal: () => {
                 return get().items.reduce((total, item) => {
