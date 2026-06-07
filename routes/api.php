@@ -122,5 +122,9 @@ Route::prefix('v1')->group(function () {
         // AI Recommendations
         Route::get('/recommendations', [MobileApiController::class, 'getRecommendations']);
         Route::get('/products/{productId}/related', [MobileApiController::class, 'getRelatedProducts']);
+
+        // Admin & Super Admin Dashboards
+        Route::get('/admin/dashboard', [MobileApiController::class, 'getAdminDashboard']);
+        Route::get('/super-admin/dashboard', [MobileApiController::class, 'getSuperAdminDashboard']);
     });
 });

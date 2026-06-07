@@ -143,11 +143,46 @@ class MobileApiController extends Controller
     /**
      * Get list of all available outlets/branches
      */
-    public function getOutlets()
+    public function getOutlets(Request $request)
     {
-        $outlets = Cache::remember('outlets_active', 3600, function () {
-            return Branch::where('is_active', true)->get();
-        });
+        $latitude = $request->input('latitude');
+        $longitude = $request->input('longitude');
+
+        // If coordinates are provided, do not use the cache for sorting
+        if ($latitude && $longitude) {
+            $outlets = Branch::where('is_active', true)->get();
+            $lat = (float) $latitude;
+            $lng = (float) $longitude;
+
+            $outlets = $outlets->map(function ($branch) use ($lat, $lng) {
+                if ($branch->lat && $branch->lng) {
+                    $branchLat = (float) $branch->lat;
+                    $branchLng = (float) $branch->lng;
+
+                    // Haversine formula
+                    $earthRadius = 6371; // km
+                    $dLat = deg2rad($branchLat - $lat);
+                    $dLng = deg2rad($branchLng - $lng);
+
+                    $a = sin($dLat / 2) * sin($dLat / 2) +
+                         cos(deg2rad($lat)) * cos(deg2rad($branchLat)) *
+                         sin($dLng / 2) * sin($dLng / 2);
+                    $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+                    $distance = $earthRadius * $c;
+
+                    $branch->distance = round($distance, 2); // distance in km
+                } else {
+                    $branch->distance = null;
+                }
+                return $branch;
+            })->sortBy(function ($branch) {
+                return $branch->distance ?? 999999;
+            })->values();
+        } else {
+            $outlets = Cache::remember('outlets_active', 3600, function () {
+                return Branch::where('is_active', true)->get();
+            });
+        }
 
         return response()->json([
             'success' => true,
@@ -972,6 +1007,149 @@ class MobileApiController extends Controller
         return response()->json([
             'success' => true,
             'data' => $vouchers,
+        ]);
+    }
+
+    /**
+     * Get Admin Dashboard stats and monitoring data for mobile native UI
+     */
+    public function getAdminDashboard(Request $request)
+    {
+        $user = $request->user();
+        if ($user->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        $merchant = $user->merchant;
+        if (! $merchant) {
+            return response()->json(['success' => false, 'message' => 'Merchant not found'], 404);
+        }
+
+        $merchantId = $merchant->id;
+
+        // Statistics for current merchant
+        $stats = [
+            'total_revenue' => Order::where('merchant_id', $merchantId)->where('payment_status', 'confirmed')->sum('total') +
+                              \App\Models\PosTransaction::where('merchant_id', $merchantId)->sum('total'),
+            'total_orders' => Order::where('merchant_id', $merchantId)->count() +
+                             \App\Models\PosTransaction::where('merchant_id', $merchantId)->count(),
+            'pending_orders' => Order::where('merchant_id', $merchantId)->where('status', 'pending')->count(),
+            'total_products' => Product::where('merchant_id', $merchantId)->count(),
+        ];
+
+        // Today's specific stats (Resets every day)
+        $todayStats = [
+            'revenue' => Order::where('merchant_id', $merchantId)->where('payment_status', 'confirmed')->whereDate('created_at', now())->sum('total') +
+                         \App\Models\PosTransaction::where('merchant_id', $merchantId)->whereDate('transaction_at', now())->sum('total'),
+            'orders' => Order::where('merchant_id', $merchantId)->whereDate('created_at', now())->count() +
+                        \App\Models\PosTransaction::where('merchant_id', $merchantId)->whereDate('transaction_at', now())->count(),
+            'voids' => \App\Models\PosShift::whereHas('branch', function ($q) use ($merchantId) {
+                $q->where('merchant_id', $merchantId);
+            })->whereDate('opened_at', now())->sum('void_count'),
+        ];
+
+        // Chart Data: Last 7 Days
+        $chartData = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $label = now()->subDays($i)->isoFormat('ddd');
+
+            $onlineSales = Order::where('merchant_id', $merchantId)
+                ->where('payment_status', 'confirmed')
+                ->whereDate('created_at', $date)
+                ->sum('total');
+
+            $posSales = \App\Models\PosTransaction::where('merchant_id', $merchantId)
+                ->whereDate('transaction_at', $date)
+                ->sum('total');
+
+            $chartData[] = [
+                'name' => $label,
+                'sales' => (float) ($onlineSales + $posSales),
+                'orders' => Order::where('merchant_id', $merchantId)->whereDate('created_at', $date)->count() +
+                           \App\Models\PosTransaction::where('merchant_id', $merchantId)->whereDate('transaction_at', $date)->count(),
+            ];
+        }
+
+        // Branch Status
+        $branches = Branch::where('merchant_id', $merchantId)
+            ->withCount(['orders as orders' => function ($q) {
+                $q->whereIn('status', ['pending', 'confirmed', 'preparing']);
+            }])
+            ->get()
+            ->map(function ($branch) {
+                return [
+                    'name' => $branch->name,
+                    'status' => 'Online', // Simplified
+                    'orders' => $branch->orders,
+                ];
+            });
+
+        // Active Shifts for Monitoring
+        $activeShifts = \App\Models\PosShift::whereHas('branch', function ($q) use ($merchantId) {
+            $q->where('merchant_id', $merchantId);
+        })
+            ->whereNull('closed_at')
+            ->with(['cashier', 'branch'])
+            ->latest()
+            ->get();
+
+        $insights = \App\Services\InsightService::generateAdminInsights($stats, $todayStats, $chartData, $merchantId);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'stats' => $stats,
+                'today_stats' => $todayStats,
+                'chart_data' => $chartData,
+                'branches' => $branches,
+                'active_shifts' => $activeShifts,
+                'insights' => $insights,
+            ]
+        ]);
+    }
+
+    /**
+     * Get Super Admin Dashboard stats for mobile native UI
+     */
+    public function getSuperAdminDashboard(Request $request)
+    {
+        $user = $request->user();
+        if ($user->role !== 'super_admin') {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        $stats = [
+            'total_users' => User::count(),
+            'total_merchants' => Merchant::count(),
+            'total_orders' => Order::count(),
+            'total_pos' => \App\Models\PosTransaction::count(),
+            'total_revenue' => Order::where('payment_status', 'confirmed')->sum('total') + \App\Models\PosTransaction::sum('total'),
+            'today_orders' => Order::whereDate('created_at', now()->today())->count(),
+            'today_revenue' => Order::whereDate('created_at', now()->today())->where('payment_status', 'confirmed')->sum('total') +
+                               \App\Models\PosTransaction::whereDate('transaction_at', now()->today())->sum('total'),
+        ];
+
+        // Chart data (7 days)
+        $chartData = collect(range(6, 0))->map(function ($days) {
+            $date = now()->subDays($days)->format('Y-m-d');
+
+            return [
+                'name' => now()->subDays($days)->format('D'),
+                'revenue' => Order::whereDate('created_at', $date)->where('payment_status', 'confirmed')->sum('total') +
+                             \App\Models\PosTransaction::whereDate('transaction_at', $date)->sum('total'),
+            ];
+        });
+
+        $insights = \App\Services\InsightService::generateSuperAdminInsights($stats);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'stats' => $stats,
+                'chart_data' => $chartData,
+                'insights' => $insights,
+            ]
         ]);
     }
 }
