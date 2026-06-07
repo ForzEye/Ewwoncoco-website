@@ -15,6 +15,8 @@ import {
     Navigation
 } from 'lucide-react';
 import { Branch, Merchant } from '../../types';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface BranchesProps {
     branches: {
@@ -34,6 +36,7 @@ export default function Branches({ branches, merchants, filters }: BranchesProps
     const [search, setSearch] = useState(filters.search || '');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingBranch, setEditingBranch] = useState<any>(null);
+    const [isSearchingAddress, setIsSearchingAddress] = useState(false);
 
     const { data, setData, post, processing, reset, delete: destroy } = useForm({
         merchant_id: '',
@@ -44,6 +47,152 @@ export default function Branches({ branches, merchants, filters }: BranchesProps
         lat: '',
         lng: '',
     });
+
+    const mapRef = React.useRef<HTMLDivElement>(null);
+    const leafletMap = React.useRef<L.Map | null>(null);
+    const markerRef = React.useRef<L.Marker | null>(null);
+    const reverseGeocodeRef = React.useRef<(lat: number, lng: number) => void>(undefined);
+
+    reverseGeocodeRef.current = async (lat: number, lng: number) => {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
+                {
+                    headers: {
+                        'User-Agent': 'Ewwon-Coco-Admin-App/1.0'
+                    }
+                }
+            );
+            const result = await response.json();
+            if (result && result.display_name) {
+                setData((prev: any) => ({
+                    ...prev,
+                    lat: lat.toFixed(8),
+                    lng: lng.toFixed(8),
+                    address: result.display_name
+                }));
+            }
+        } catch (error) {
+            console.error('Error reverse geocoding:', error);
+        }
+    };
+
+    React.useEffect(() => {
+        if (!isModalOpen || !mapRef.current) return;
+
+        // Default coordinates
+        const latVal = parseFloat(data.lat) || -6.2088;
+        const lngVal = parseFloat(data.lng) || 106.8456;
+
+        // Fix for default marker icon issues in Leaflet with Vite
+        const DefaultIcon = L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+        L.Marker.prototype.options.icon = DefaultIcon;
+
+        // Initialize map
+        leafletMap.current = L.map(mapRef.current, {
+            center: [latVal, lngVal],
+            zoom: 14,
+            zoomControl: true,
+            attributionControl: false
+        });
+
+        // Add OSM tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(leafletMap.current);
+
+        // Add draggable marker
+        markerRef.current = L.marker([latVal, lngVal], {
+            draggable: true
+        }).addTo(leafletMap.current);
+
+        // Update coordinates on drag end
+        markerRef.current.on('dragend', (event) => {
+            const marker = event.target;
+            const position = marker.getLatLng();
+            setData((prev: any) => ({
+                ...prev,
+                lat: position.lat.toFixed(8),
+                lng: position.lng.toFixed(8)
+            }));
+            reverseGeocodeRef.current?.(position.lat, position.lng);
+        });
+
+        // Update coordinates on map click
+        leafletMap.current.on('click', (event) => {
+            const position = event.latlng;
+            markerRef.current?.setLatLng(position);
+            setData((prev: any) => ({
+                ...prev,
+                lat: position.lat.toFixed(8),
+                lng: position.lng.toFixed(8)
+            }));
+            reverseGeocodeRef.current?.(position.lat, position.lng);
+        });
+
+        return () => {
+            if (leafletMap.current) {
+                leafletMap.current.remove();
+                leafletMap.current = null;
+            }
+        };
+    }, [isModalOpen]);
+
+    // Sync manual coordinate inputs to map marker position
+    React.useEffect(() => {
+        if (!leafletMap.current || !markerRef.current) return;
+
+        const latVal = parseFloat(data.lat);
+        const lngVal = parseFloat(data.lng);
+
+        if (!isNaN(latVal) && !isNaN(lngVal)) {
+            const currentPosition = markerRef.current.getLatLng();
+            if (currentPosition.lat.toFixed(8) !== latVal.toFixed(8) || currentPosition.lng.toFixed(8) !== lngVal.toFixed(8)) {
+                markerRef.current.setLatLng([latVal, lngVal]);
+                leafletMap.current.setView([latVal, lngVal]);
+            }
+        }
+    }, [data.lat, data.lng]);
+
+    const handleSearchAddress = async () => {
+        if (!data.address.trim()) return;
+        setIsSearchingAddress(true);
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(data.address)}&limit=1`,
+                {
+                    headers: {
+                        'User-Agent': 'Ewwon-Coco-Admin-App/1.0'
+                    }
+                }
+            );
+            const results = await response.json();
+            if (results && results.length > 0) {
+                const { lat, lon } = results[0];
+                const latVal = parseFloat(lat);
+                const lngVal = parseFloat(lon);
+                setData((prev: any) => ({
+                    ...prev,
+                    lat: latVal.toFixed(8),
+                    lng: lngVal.toFixed(8)
+                }));
+            } else {
+                alert('Alamat tidak ditemukan di peta. Coba perjelas nama jalan, kota, atau daerah.');
+            }
+        } catch (error) {
+            console.error('Error geocoding address:', error);
+            alert('Terjadi kesalahan saat mencari alamat. Silakan coba lagi.');
+        } finally {
+            setIsSearchingAddress(false);
+        }
+    };
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -218,7 +367,7 @@ export default function Branches({ branches, merchants, filters }: BranchesProps
                             </button>
                         </div>
                         
-                        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[78vh] overflow-y-auto">
                             {!editingBranch && (
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pilih Merchant</label>
@@ -258,7 +407,17 @@ export default function Branches({ branches, merchants, filters }: BranchesProps
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Alamat Lengkap</label>
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Alamat Lengkap</label>
+                                    <button
+                                        type="button"
+                                        onClick={handleSearchAddress}
+                                        disabled={isSearchingAddress || !data.address.trim()}
+                                        className="px-3 py-1.5 bg-[#F0FAF6] hover:bg-[#00C48C] text-[#00C48C] hover:text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isSearchingAddress ? 'Mencari...' : 'Cari di Peta'}
+                                    </button>
+                                </div>
                                 <textarea 
                                     className="w-full px-4 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none h-24"
                                     value={data.address}
@@ -315,8 +474,14 @@ export default function Branches({ branches, merchants, filters }: BranchesProps
                                         />
                                     </div>
                                 </div>
+
+                                {/* Interactive OpenStreetMap (Leaflet) Picker */}
+                                <div className="w-full h-[220px] rounded-2xl overflow-hidden border border-gray-100 shadow-inner relative z-10">
+                                    <div ref={mapRef} className="w-full h-full" />
+                                </div>
+
                                 <p className="text-[9px] text-[#00C48C] font-semibold bg-[#F0FAF6] p-2.5 rounded-lg">
-                                    💡 Tip: Koordinat GPS ini wajib diisi dengan akurat agar peta jarak pengantaran mobile apps berfungsi 100% normal.
+                                    💡 Tip: Koordinat GPS ini wajib diisi dengan akurat agar peta jarak pengantaran mobile apps berfungsi 100% normal. Klik di peta atau geser pin merah untuk menandai lokasi.
                                 </p>
                             </div>
 
