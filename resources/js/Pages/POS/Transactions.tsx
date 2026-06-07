@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import POSLayout from '@/Layouts/POSLayout';
 import { rupiah, tanggal } from '../../lib/format';
+import { getFilteredLinks } from '../../lib/utils';
 import { 
     Search, 
     Filter, 
@@ -223,8 +224,8 @@ export default function Transactions({ transactions, filters }: TransactionsProp
                         <p className="text-xs text-gray-500">
                             Menampilkan <span className="font-bold">{transactions.from || 0}</span> sampai <span className="font-bold">{transactions.to || 0}</span> dari <span className="font-bold">{transactions.total}</span> transaksi
                         </p>
-                        <div className="flex items-center space-x-2">
-                            {transactions.links.map((link: any, i: number) => {
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
+                            {getFilteredLinks(transactions.links).map((link: any, i: number) => {
                                 if (link.label.includes('Previous')) {
                                     return (
                                         <a 
@@ -245,6 +246,13 @@ export default function Transactions({ transactions, filters }: TransactionsProp
                                         >
                                             <ChevronRight size={16} />
                                         </a>
+                                    );
+                                }
+                                if (link.label === '...') {
+                                    return (
+                                        <span key={i} className="w-8 h-8 flex items-center justify-center text-xs font-bold text-gray-400">
+                                            ...
+                                        </span>
                                     );
                                 }
                                 if (link.active || (!isNaN(Number(link.label)))) {

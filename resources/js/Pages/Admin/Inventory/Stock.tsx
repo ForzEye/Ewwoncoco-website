@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import { rupiah, qty, tanggalWaktu } from '../../../lib/format';
+import { getFilteredLinks } from '../../../lib/utils';
 import { 
     Plus, 
     ArrowUpRight, 
@@ -519,8 +520,8 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
                                 <p className="text-[11px] font-bold text-[#8A8A8A] uppercase tracking-wider">
                                     Menampilkan <span className="font-black text-[#2D6A4F]">{stockMovements.from || 0}</span> sampai <span className="font-black text-[#2D6A4F]">{stockMovements.to || 0}</span> dari <span className="font-black text-[#2D6A4F]">{stockMovements.total}</span> data histori
                                 </p>
-                                <div className="flex items-center gap-1.5">
-                                    {stockMovements.links.map((link, i) => {
+                                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                                    {getFilteredLinks(stockMovements.links).map((link, i) => {
                                         const isPrev = link.label.includes('Previous');
                                         const isNext = link.label.includes('Next');
                                         const label = isPrev ? '«' : (isNext ? '»' : link.label);
@@ -530,7 +531,7 @@ export default function Stock({ branches, selectedBranchId, ingredients, stockDa
                                                 key={i}
                                                 href={link.url || '#'}
                                                 preserveState
-                                                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all border ${
+                                                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border ${
                                                     link.active
                                                         ? 'bg-[#2D6A4F] text-white border-transparent shadow-md shadow-[#2D6A4F]/10'
                                                         : link.url

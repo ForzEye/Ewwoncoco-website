@@ -136,7 +136,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                         >
                             <Menu size={20} />
                         </button>
-                        <div className="flex items-center space-x-2 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                        <div className="hidden sm:flex items-center space-x-2 text-gray-400 text-xs font-bold uppercase tracking-widest">
                             <Globe size={14} />
                             <span>Global System Control</span>
                         </div>
@@ -151,7 +151,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                         <div className="h-8 w-px bg-gray-100"></div>
 
                         <div className="flex items-center space-x-3">
-                            <div className="text-right">
+                            <div className="text-right hidden sm:block">
                                 <p className="text-sm font-bold text-charcoal">{auth.user?.name}</p>
                                 <p className="text-[10px] text-[#00C48C] font-bold uppercase">Super Admin</p>
                             </div>

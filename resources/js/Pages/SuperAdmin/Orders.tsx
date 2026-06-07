@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
+import { getFilteredLinks } from '../../lib/utils';
 import SuperAdminLayout from '../../Layouts/SuperAdminLayout';
 import { 
     ShoppingBag, 
@@ -463,8 +464,8 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                             <p className="text-[11px] font-bold text-[#8A8A8A] uppercase tracking-wider">
                                                 Menampilkan <span className="font-black text-[#00C48C]">{branchDetail.combinedOrders.from || 0}</span> sampai <span className="font-black text-[#00C48C]">{branchDetail.combinedOrders.to || 0}</span> dari <span className="font-black text-[#00C48C]">{branchDetail.combinedOrders.total}</span> transaksi
                                             </p>
-                                            <div className="flex items-center gap-1.5">
-                                                {branchDetail.combinedOrders.links.map((link, i) => {
+                                            <div className="flex flex-wrap items-center justify-center gap-1.5">
+                                                {getFilteredLinks(branchDetail.combinedOrders.links).map((link, i) => {
                                                     const isPrev = link.label.includes('Previous');
                                                     const isNext = link.label.includes('Next');
                                                     const label = isPrev ? '«' : (isNext ? '»' : link.label);
@@ -474,7 +475,7 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                                             key={i}
                                                             href={link.url || '#'}
                                                             preserveState
-                                                            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all border ${
+                                                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border ${
                                                                 link.active
                                                                     ? 'bg-[#00C48C] text-white border-transparent shadow-md shadow-[#00C48C]/10'
                                                                     : link.url
@@ -867,8 +868,8 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                 <p className="text-[11px] font-bold text-[#8A8A8A] uppercase tracking-wider">
                                     Menampilkan <span className="font-black text-[#00C48C]">{orders.from || 0}</span> sampai <span className="font-black text-[#00C48C]">{orders.to || 0}</span> dari <span className="font-black text-[#00C48C]">{orders.total}</span> pesanan
                                 </p>
-                                <div className="flex items-center gap-1.5">
-                                    {orders.links.map((link, i) => {
+                                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                                    {getFilteredLinks(orders.links).map((link, i) => {
                                         const isPrev = link.label.includes('Previous');
                                         const isNext = link.label.includes('Next');
                                         const label = isPrev ? '«' : (isNext ? '»' : link.label);
@@ -878,7 +879,7 @@ export default function Orders({ branches, selectedBranchId, branchDetail, order
                                                 key={i}
                                                 href={link.url || '#'}
                                                 preserveState
-                                                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all border ${
+                                                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border ${
                                                     link.active
                                                         ? 'bg-[#00C48C] text-white border-transparent shadow-md shadow-[#00C48C]/10'
                                                         : link.url

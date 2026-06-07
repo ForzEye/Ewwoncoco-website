@@ -288,8 +288,8 @@ export default function Branches({ branches, merchants, filters }: BranchesProps
                     </form>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <table className="w-full text-left">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+                    <table className="w-full text-left min-w-[800px]">
                         <thead className="bg-gray-50 border-b border-gray-100">
                             <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                 <th className="px-8 py-5">Nama Cabang</th>
