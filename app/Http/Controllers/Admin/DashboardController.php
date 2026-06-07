@@ -91,7 +91,7 @@ class DashboardController extends Controller
             ->latest()
             ->get();
 
-        $insights = InsightService::generateAdminInsights($stats, $todayStats, $chartData);
+        $insights = InsightService::generateAdminInsights($stats, $todayStats, $chartData, $merchantId);
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,

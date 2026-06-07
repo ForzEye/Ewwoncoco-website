@@ -110,13 +110,24 @@ class ShiftController extends Controller
 
         $user = $request->user();
 
-        // Cek jika sudah ada shift aktif
+        // Cek jika user ini sendiri sudah memiliki shift aktif
         $exists = PosShift::where('cashier_id', $user->id)
             ->whereNull('closed_at')
             ->exists();
 
         if ($exists) {
             return back()->with('error', 'Anda masih memiliki shift yang aktif.');
+        }
+
+        // Cek jika cabang yang dipilih sudah memiliki shift aktif oleh siapapun
+        $activeBranchShift = PosShift::where('branch_id', $request->branch_id)
+            ->whereNull('closed_at')
+            ->with('cashier')
+            ->first();
+
+        if ($activeBranchShift) {
+            $cashierName = $activeBranchShift->cashier->name ?? 'Kasir Lain';
+            return back()->with('error', "Shift di cabang ini masih aktif atas nama kasir {$cashierName}. Harap tutup shift tersebut terlebih dahulu.");
         }
 
         PosShift::create([

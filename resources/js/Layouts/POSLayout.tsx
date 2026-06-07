@@ -14,14 +14,26 @@ import axios from 'axios';
 import OnlineOrdersModal from '../Components/POS/OnlineOrdersModal';
 import { PageProps } from '../types';
 import { requestNotificationPermission, onMessageListener } from '../lib/firebase-setup';
-import { toastWarning } from '../lib/swal';
+import { toastWarning, toastSuccess, toastError } from '../lib/swal';
 
 interface POSLayoutProps {
     children: ReactNode;
 }
 
 export default function POSLayout({ children }: POSLayoutProps) {
-    const { auth } = usePage<PageProps>().props;
+    const { auth, flash } = usePage<PageProps>().props;
+
+    React.useEffect(() => {
+        if (flash?.success) {
+            toastSuccess(flash.success);
+        }
+        if (flash?.error) {
+            toastError(flash.error);
+        }
+        if (flash?.warning) {
+            toastWarning(flash.warning);
+        }
+    }, [flash]);
     const [isOnline, setIsOnline] = React.useState(true);
     const [currentTime, setCurrentTime] = React.useState(new Date());
     const [pendingOrders, setPendingOrders] = React.useState<any[]>([]);

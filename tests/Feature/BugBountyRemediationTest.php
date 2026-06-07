@@ -1118,4 +1118,51 @@ class BugBountyRemediationTest extends TestCase
         $branchIngredient->refresh();
         $this->assertEquals(-100, $branchIngredient->stock);
     }
+
+    /** @test */
+    public function it_prevents_multiple_active_shifts_on_the_same_branch()
+    {
+        $cashier1 = User::factory()->create(['role' => 'kasir', 'is_active' => true]);
+        $cashier2 = User::factory()->create(['role' => 'kasir', 'is_active' => true]);
+
+        $merchant = Merchant::create([
+            'id' => 4,
+            'owner_id' => $cashier1->id,
+            'name' => 'EWWON COCO Multi Shift Test',
+            'slug' => 'ewwon-coco-multi-shift-test',
+            'category' => 'F&B',
+            'address' => 'Test Address',
+            'phone' => '0215551234',
+            'operational_hours' => [],
+            'is_active' => true,
+        ]);
+
+        $branch = Branch::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Cabang Multi Shift Test',
+            'address' => 'Test Cabang Address',
+            'phone' => '0215551234',
+            'is_active' => true,
+        ]);
+
+        // 1. Cashier 1 opens a shift on the branch
+        \App\Models\PosShift::create([
+            'cashier_id' => $cashier1->id,
+            'branch_id' => $branch->id,
+            'opened_at' => now(),
+            'opening_cash' => 50000,
+        ]);
+
+        // 2. Cashier 2 tries to open a shift on the SAME branch -> Should fail
+        $response = $this->actingAs($cashier2)
+            ->post('/pos/shifts/open', [
+                'branch_id' => $branch->id,
+                'opening_cash' => 50000,
+                'notes' => 'Mencoba buka shift ganda',
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+        $this->assertStringContainsString('Shift di cabang ini masih aktif', session('error'));
+    }
 }
