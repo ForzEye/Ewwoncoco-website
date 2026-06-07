@@ -122,7 +122,11 @@ class MerchantOrderController extends Controller
                 'notes' => $pos->notes,
                 'created_at' => $pos->transaction_at ? $pos->transaction_at->toIso8601String() : $pos->created_at->toIso8601String(),
                 'updated_at' => $pos->updated_at->toIso8601String(),
-                'customer' => $pos->customer,
+                'customer' => $pos->customer ?? [
+                    'name' => $pos->customer_name ?? 'Pelanggan Umum',
+                    'email' => '-',
+                    'phone' => '-',
+                ],
                 'branch' => $pos->branch,
                 'is_online' => false,
             ];
