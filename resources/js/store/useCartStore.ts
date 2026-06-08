@@ -10,6 +10,7 @@ interface CartState {
     clearCart: () => void;
     getTotal: () => number;
     getItemCount: () => number;
+    toggleUpgradeClaim: (productId: number, customizationId: number, claim: boolean, customizations?: CustomizationOption[]) => void;
 }
 
 export const useCartStore = create<CartState>()(
@@ -73,6 +74,23 @@ export const useCartStore = create<CartState>()(
             },
             getItemCount: () => {
                 return get().items.reduce((count, item) => count + item.quantity, 0);
+            },
+            toggleUpgradeClaim: (productId, customizationId, claim, customizations = []) => {
+                const newCustIds = (customizations || []).map((c) => c.id).sort().join(',');
+                set((state) => ({
+                    items: state.items.map((item) => {
+                        if (item.product.id !== productId) return item;
+                        const itemCustIds = (item.customizations || []).map((c) => c.id).sort().join(',');
+                        if (itemCustIds !== newCustIds) return item;
+                        
+                        return {
+                            ...item,
+                            customizations: (item.customizations || []).map((c) => 
+                                c.id === customizationId ? { ...c, claim_upgrade: claim } : c
+                            )
+                        };
+                    })
+                }));
             },
         }),
         {

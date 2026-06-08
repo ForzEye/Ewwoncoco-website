@@ -151,7 +151,16 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                                         </div>
                                         {custs.length > 0 && (
                                             <p className="italic opacity-80 pl-2 leading-none animate-fade-in mt-1" style={{ fontSize: `${baseFontSize - 1.5}px` }}>
-                                                * {custs.map((c: any) => c.name).join(', ')}
+                                                * {custs.map((c: any) => {
+                                                    if (c.claim_upgrade === true || c.claim_upgrade === 'true') {
+                                                        const origPrice = c.original_price ?? 5000;
+                                                        return `${c.name} (Upgrade: ${rupiah(origPrice).replace('Rp ', '')} -> 0)`;
+                                                    } else if (Number(c.price) > 0) {
+                                                        return `${c.name} (+${rupiah(c.price).replace('Rp ', '')})`;
+                                                    } else {
+                                                        return c.name;
+                                                    }
+                                                }).join(', ')}
                                             </p>
                                         )}
                                         {item.notes && (

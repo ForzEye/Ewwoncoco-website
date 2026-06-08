@@ -13,7 +13,7 @@ interface CheckoutProps {
 }
 
 export default function Checkout({ promotions = [], branches = [] }: CheckoutProps) {
-    const { items, getTotal, clearCart } = useCartStore();
+    const { items, getTotal, clearCart, toggleUpgradeClaim } = useCartStore();
     const [isMounted, setIsMounted] = useState(false);
 
     const currentBranch = React.useMemo(() => {
@@ -21,6 +21,24 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
         const cartBranchId = items[0]?.product.branch_id;
         return branches.find(b => Number(b.id) === Number(cartBranchId)) || branches[0];
     }, [items, branches]);
+
+    const activeUpgradePromos = React.useMemo(() => {
+        return promotions.filter(p => p.type === 'upgrade');
+    }, [promotions]);
+
+    const getItemTotalPrice = (item: any) => {
+        const itemPrice = Number(item.product.price);
+        const customizationsPrice = (item.customizations || []).reduce((sum: number, opt: any) => {
+            const hasUpgrade = activeUpgradePromos.some(p => Number(p.upgrade_to_option_id) === Number(opt.id));
+            const isClaimed = opt.claim_upgrade === true;
+            return sum + (hasUpgrade && isClaimed ? 0 : Number(opt.price));
+        }, 0);
+        return (itemPrice + customizationsPrice) * item.quantity;
+    };
+
+    const cartTotal = React.useMemo(() => {
+        return items.reduce((sum, item) => sum + getItemTotalPrice(item), 0);
+    }, [items, activeUpgradePromos]);
 
     const freeBogoItems = React.useMemo(() => {
         if (!promotions || promotions.length === 0 || items.length === 0) return [];
@@ -43,7 +61,11 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
                 const buyQty = Number(promo.buy_quantity) || 1;
                 const getQty = Number(promo.get_quantity) || 1;
                 const multiplier = Math.floor(qty / buyQty);
-                const freeQty = multiplier * getQty;
+                let freeQty = multiplier * getQty;
+
+                if (promo.max_free_qty) {
+                    freeQty = Math.min(freeQty, Number(promo.max_free_qty));
+                }
 
                 if (freeQty > 0) {
                     const freeProductId = promo.get_product_id ? Number(promo.get_product_id) : productId;
@@ -51,6 +73,9 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
                     if (freeProd) {
                         if (freeItemsMap[freeProductId]) {
                             freeItemsMap[freeProductId].quantity += freeQty;
+                            if (promo.max_free_qty) {
+                                freeItemsMap[freeProductId].quantity = Math.min(freeItemsMap[freeProductId].quantity, Number(promo.max_free_qty));
+                            }
                         } else {
                             freeItemsMap[freeProductId] = {
                                 product: freeProd,
@@ -87,8 +112,10 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
             quantity: item.quantity,
             notes: item.notes,
             customizations: (item.customizations || []).map(c => ({
+                id: c.id,
                 name: c.name,
-                price: Number(c.price)
+                price: Number(c.price),
+                claim_upgrade: !!c.claim_upgrade
             }))
         })));
     }, [items]);
@@ -133,7 +160,7 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
     if (!isMounted) return null;
 
     const actualDeliveryFee = data.delivery_type === 'pickup' ? 0 : (deliveryQuote?.fee || 0);
-    const finalTotal = getTotal() + actualDeliveryFee;
+    const finalTotal = cartTotal + actualDeliveryFee;
 
     return (
         <LandingLayout>
@@ -334,8 +361,7 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
                                 
                                 <div className="space-y-3 mb-4">
                                     {items.map(item => {
-                                        const sumToppings = (item.customizations || []).reduce((s, c) => s + Number(c.price), 0);
-                                        const itemTotal = (Number(item.product.price) + sumToppings) * item.quantity;
+                                        const itemTotal = getItemTotalPrice(item);
                                         const itemKey = item.product.id + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
                                         return (
                                             <div key={itemKey} className="flex flex-col text-sm font-inter">
@@ -344,8 +370,29 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
                                                     <span className="font-medium text-[#1A1A1A] flex-shrink-0">{rupiah(itemTotal)}</span>
                                                 </div>
                                                 {item.customizations && item.customizations.length > 0 && (
-                                                    <div className="text-[11px] text-gray-400 font-inter pl-4">
-                                                        {item.customizations.map(c => c.name).join(', ')}
+                                                    <div className="text-[11px] text-gray-400 font-inter pl-4 space-y-1 mt-1">
+                                                        {item.customizations.map(c => {
+                                                            const hasUpgrade = activeUpgradePromos.some(p => Number(p.upgrade_to_option_id) === Number(c.id));
+                                                            const isClaimed = c.claim_upgrade === true;
+                                                            return (
+                                                                <div key={c.id} className="flex flex-col">
+                                                                    <span>
+                                                                        {c.name} {hasUpgrade && isClaimed && ' (Upgrade Free)'}
+                                                                    </span>
+                                                                    {hasUpgrade && (
+                                                                        <label className="inline-flex items-center gap-1.5 cursor-pointer mt-0.5 select-none text-[#00C48C]">
+                                                                            <input 
+                                                                                type="checkbox" 
+                                                                                checked={isClaimed}
+                                                                                onChange={(e) => toggleUpgradeClaim(item.product.id, c.id, e.target.checked, item.customizations)}
+                                                                                className="w-3.5 h-3.5 text-[#00C48C] border-gray-300 rounded focus:ring-0 focus:ring-offset-0"
+                                                                            />
+                                                                            <span className="text-[9px] font-black uppercase tracking-wider">Klaim Upgrade</span>
+                                                                        </label>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>
@@ -370,7 +417,7 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
                                 <div className="border-t border-gray-200 pt-4 space-y-2 mb-4 text-sm font-inter">
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Subtotal</span>
-                                        <span className="font-medium">{rupiah(getTotal())}</span>
+                                        <span className="font-medium">{rupiah(cartTotal)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">{data.delivery_type === 'pickup' ? 'Biaya Pengambilan' : `Ongkos Kirim (${deliveryQuote?.distance} km)`}</span>

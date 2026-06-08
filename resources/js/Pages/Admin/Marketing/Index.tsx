@@ -8,9 +8,10 @@ import Swal from 'sweetalert2';
 interface MarketingProps {
     promotions: any[];
     products: any[];
+    customizations?: any[];
 }
 
-export default function Marketing({ promotions, products = [] }: MarketingProps) {
+export default function Marketing({ promotions, products = [], customizations = [] }: MarketingProps) {
     const { data, setData, post, delete: destroyPromo, processing, reset } = useForm({
         name: '',
         description: '',
@@ -25,6 +26,10 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
         buy_quantity: '1',
         get_quantity: '1',
         applicable_on: 'all',
+        is_new_member_only: false,
+        max_free_qty: '',
+        upgrade_from_option_id: '',
+        upgrade_to_option_id: '',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -105,9 +110,10 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                         <option value="cashback_points">Cashback Poin</option>
                                         <option value="fixed_discount">Diskon Tetap</option>
                                         <option value="bogo">Buy 1 Get 1 (BOGO)</option>
+                                        <option value="upgrade">Upgrade Kustomisasi</option>
                                     </select>
                                 </div>
-                                {data.type !== 'bogo' && (
+                                {data.type !== 'bogo' && data.type !== 'upgrade' && (
                                     <div className="space-y-1">
                                         <label className="text-xs font-bold text-gray-400 uppercase">Nilai (Rp/Poin)</label>
                                         <input 
@@ -116,13 +122,13 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                             placeholder="5000"
                                             value={data.value}
                                             onChange={e => setData('value', e.target.value)}
-                                            required={data.type !== 'bogo'}
+                                            required={data.type !== 'bogo' && data.type !== 'upgrade'}
                                         />
                                     </div>
                                 )}
                             </div>
 
-                            {data.type !== 'bogo' ? (
+                             {data.type !== 'bogo' && data.type !== 'upgrade' ? (
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-gray-400 uppercase">Minimal Belanja</label>
                                     <input 
@@ -131,10 +137,10 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                         placeholder="50000"
                                         value={data.min_purchase}
                                         onChange={e => setData('min_purchase', e.target.value)}
-                                        required={data.type !== 'bogo'}
+                                        required={data.type !== 'bogo' && data.type !== 'upgrade'}
                                     />
                                 </div>
-                            ) : (
+                            ) : data.type === 'bogo' ? (
                                 <div className="space-y-4 border-l-2 border-[#00C48C] pl-4 mt-2">
                                     <div className="grid grid-cols-1 gap-3">
                                         <div className="space-y-1">
@@ -203,6 +209,74 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                             />
                                         </div>
                                     </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 border-l-2 border-[#00C48C] pl-4 mt-2">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">Kustomisasi Asal (Upgrade Dari)</label>
+                                        <select 
+                                            className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                            value={data.upgrade_from_option_id}
+                                            onChange={e => setData('upgrade_from_option_id', e.target.value)}
+                                            required={data.type === 'upgrade'}
+                                        >
+                                            <option value="">Pilih Opsi Kustomisasi...</option>
+                                            {customizations?.map(c => (
+                                                <optgroup key={c.id} label={c.name}>
+                                                    {c.options?.map(o => (
+                                                        <option key={o.id} value={o.id}>{c.name}: {o.name} (+{rupiah(o.price)})</option>
+                                                    ))}
+                                                </optgroup>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">Kustomisasi Tujuan (Upgrade Ke)</label>
+                                        <select 
+                                            className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                            value={data.upgrade_to_option_id}
+                                            onChange={e => setData('upgrade_to_option_id', e.target.value)}
+                                            required={data.type === 'upgrade'}
+                                        >
+                                            <option value="">Pilih Opsi Kustomisasi Tujuan...</option>
+                                            {customizations?.map(c => (
+                                                <optgroup key={c.id} label={c.name}>
+                                                    {c.options?.map(o => (
+                                                        <option key={o.id} value={o.id}>{c.name}: {o.name} (+{rupiah(o.price)})</option>
+                                                    ))}
+                                                </optgroup>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+
+                            {(data.type === 'bogo' || data.type === 'fixed_discount') && (
+                                <div className="flex items-center space-x-2 py-1">
+                                    <input 
+                                        type="checkbox"
+                                        id="is_new_member_only"
+                                        checked={data.is_new_member_only}
+                                        onChange={e => setData('is_new_member_only', e.target.checked)}
+                                        className="rounded border-gray-300 text-[#00C48C] focus:ring-[#00C48C]"
+                                    />
+                                    <label htmlFor="is_new_member_only" className="text-xs font-bold text-gray-600 cursor-pointer">
+                                        Hanya untuk Member Baru (1x pakai)
+                                    </label>
+                                </div>
+                            )}
+
+                            {data.type === 'bogo' && (
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-400 uppercase">Maksimal Gratis (Kuantitas)</label>
+                                    <input 
+                                        type="number" 
+                                        className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                        placeholder="Kosongkan jika kelipatan tak terbatas"
+                                        value={data.max_free_qty}
+                                        onChange={e => setData('max_free_qty', e.target.value)}
+                                        min="1"
+                                    />
                                 </div>
                             )}
 
@@ -279,6 +353,11 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                                         ) : (
                                                             <span>Beli {promo.buy_quantity} {promo.buy_product?.name || promo.buyProduct?.name || 'Produk'} → Gratis {promo.get_quantity} {promo.get_product?.name || promo.getProduct?.name || 'Produk'}</span>
                                                         )}
+                                                        {promo.max_free_qty && <span className="text-emerald-600 font-bold ml-1.5">(Maks {promo.max_free_qty} gratis)</span>}
+                                                    </span>
+                                                ) : promo.type === 'upgrade' ? (
+                                                    <span>
+                                                        Upgrade Kustomisasi: {promo.upgrade_from_option?.name || 'Kustomisasi A'} → {promo.upgrade_to_option?.name || 'Kustomisasi B'} (Gratis biaya upgrade)
                                                     </span>
                                                 ) : (
                                                     <span>
@@ -323,6 +402,11 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                                         ? 'ShopeeFood Only'
                                                         : 'Online & Offline'}
                                                 </span>
+                                                {promo.is_new_member_only && (
+                                                    <span className="px-2.5 py-0.5 text-[9px] font-black uppercase rounded-lg border bg-purple-50 text-purple-600 border-purple-100">
+                                                        New Member Only
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

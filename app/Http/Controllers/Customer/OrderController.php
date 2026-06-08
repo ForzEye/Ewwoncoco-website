@@ -48,10 +48,22 @@ class OrderController extends Controller
 
     public function checkout(Request $request)
     {
-        $promotions = Promotion::active()
+        $customerId = $request->user()->id;
+        $posTxCount = \App\Models\PosTransaction::where('customer_id', $customerId)->count();
+        $orderCount = Order::where('customer_id', $customerId)
+            ->where('status', '!=', 'cancelled')
+            ->count();
+        $isNewMember = ($posTxCount + $orderCount) === 0;
+
+        $promosQuery = Promotion::active()
             ->whereIn('applicable_on', ['online', 'all'])
-            ->with(['buyProduct', 'getProduct'])
-            ->get();
+            ->with(['buyProduct', 'getProduct', 'upgradeFromOption', 'upgradeToOption']);
+
+        if (!$isNewMember) {
+            $promosQuery->where('is_new_member_only', false);
+        }
+
+        $promotions = $promosQuery->get();
 
         $branches = Branch::where('is_active', true)->with('merchant')->get();
 
@@ -90,28 +102,77 @@ class OrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'items.*.customizations' => 'nullable|array',
+            'items.*.customizations.*.id' => 'required|exists:customization_options,id',
+            'items.*.customizations.*.name' => 'required|string',
+            'items.*.customizations.*.price' => 'required|numeric',
+            'items.*.customizations.*.claim_upgrade' => 'nullable|boolean',
         ]);
+
+        $firstProduct = Product::findOrFail($request->items[0]['product_id']);
+        $branchId = $firstProduct->branch_id ?? Branch::where('merchant_id', $firstProduct->merchant_id)->first()->id;
+
+        // Determine if customer is a new member
+        $isNewMember = false;
+        $customerId = $request->user()->id;
+        $posTxCount = \App\Models\PosTransaction::where('customer_id', $customerId)->count();
+        $orderCount = Order::where('customer_id', $customerId)
+            ->where('status', '!=', 'cancelled')
+            ->count();
+        $isNewMember = ($posTxCount + $orderCount) === 0;
+
+        // Fetch active promotions for this merchant
+        $promosQuery = Promotion::active()
+            ->where('merchant_id', $firstProduct->merchant_id)
+            ->whereIn('applicable_on', ['online', 'all']);
+
+        if (!$isNewMember) {
+            $promosQuery->where('is_new_member_only', false);
+        }
+
+        $activePromos = $promosQuery->get();
+        $bogoPromosCollection = $activePromos->where('type', 'bogo');
+        $upgradePromos = $activePromos->where('type', 'upgrade');
 
         $subtotal = 0;
         $orderItemsData = [];
 
         foreach ($request->items as $item) {
             $product = Product::findOrFail($item['product_id']);
-            $itemSubtotal = $product->price * $item['quantity'];
+            $unitPrice = $product->price;
+            $processedCustomizations = [];
+
+            if (isset($item['customizations']) && is_array($item['customizations'])) {
+                foreach ($item['customizations'] as $custOpt) {
+                    $originalPrice = $custOpt['price'] ?? 0;
+                    $price = $custOpt['price'] ?? 0;
+                    $hasUpgrade = $upgradePromos->where('upgrade_to_option_id', $custOpt['id'])->first();
+                    if ($hasUpgrade && !empty($custOpt['claim_upgrade'])) {
+                        $price = 0; // Upgrade is free!
+                    }
+                    $unitPrice += $price;
+                    $processedCustomizations[] = [
+                        'id' => $custOpt['id'],
+                        'name' => $custOpt['name'],
+                        'price' => $price,
+                        'original_price' => $originalPrice,
+                        'claim_upgrade' => !empty($custOpt['claim_upgrade']),
+                    ];
+                }
+            }
+
+            $itemSubtotal = $unitPrice * $item['quantity'];
             $subtotal += $itemSubtotal;
 
             $orderItemsData[] = [
                 'product_id' => $product->id,
                 'quantity' => $item['quantity'],
-                'unit_price' => $product->price,
+                'unit_price' => $unitPrice,
                 'subtotal' => $itemSubtotal,
+                'customizations' => $processedCustomizations ?: null,
                 'notes' => $item['notes'] ?? null,
             ];
         }
-
-        // Ambil merchant/branch dari produk pertama untuk simplifikasi
-        $firstProduct = Product::findOrFail($request->items[0]['product_id']);
-        $branchId = $firstProduct->branch_id ?? Branch::where('merchant_id', $firstProduct->merchant_id)->first()->id;
 
         $deliveryFee = 0;
         if ($request->delivery_type === 'delivery') {
@@ -138,13 +199,6 @@ class OrderController extends Controller
             'delivery_lat' => $request->lat,
             'delivery_lng' => $request->lng,
         ]);
-
-        // Fetch active BOGO promotions for this merchant
-        $bogoPromosCollection = Promotion::active()
-            ->where('merchant_id', $firstProduct->merchant_id)
-            ->where('type', 'bogo')
-            ->whereIn('applicable_on', ['online', 'all'])
-            ->get();
 
         // Specific BOGOs (linked to a product)
         $specificBogoPromos = $bogoPromosCollection->whereNotNull('buy_product_id')->keyBy('buy_product_id');
@@ -176,6 +230,11 @@ class OrderController extends Controller
 
                 $multiplier = floor($qty / $buyQty);
                 $freeQty = $multiplier * $getQty;
+
+                // Apply max free quantity limit if set
+                if ($promo->max_free_qty) {
+                    $freeQty = min($freeQty, $promo->max_free_qty);
+                }
 
                 if ($freeQty > 0) {
                     $order->items()->create([

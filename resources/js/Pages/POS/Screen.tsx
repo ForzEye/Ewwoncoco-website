@@ -56,7 +56,8 @@ export default function Screen({ products, categories, activeShift, promotions }
         clearCart, 
         getTotal, 
         customerName, 
-        setCustomerName 
+        setCustomerName,
+        toggleUpgradeClaim
     } = usePOSStore();
 
     const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
@@ -118,33 +119,78 @@ export default function Screen({ products, categories, activeShift, promotions }
         }
     };
 
-    const pointsDiscount = useMemo(() => {
-        if (!selectedCustomer || !usePoints) return 0;
-        const balance = selectedCustomer.balance || 0;
-        if (balance < 10) return 0;
-        return Math.min(balance, Math.floor(getTotal() / 1000)) * 1000;
-    }, [selectedCustomer, usePoints, items]);
-
-    const grandTotal = useMemo(() => {
-        return Math.max(0, getTotal() - pointsDiscount);
-    }, [items, pointsDiscount]);
-
-    const freeBogoItems = useMemo(() => {
-        const isOjol = ['gofood', 'grabfood', 'shopeefood'].includes(orderChannel);
-        if (!selectedCustomer && !isOjol) return [];
-        if (!promotions || promotions.length === 0 || items.length === 0) return [];
-        
-        // Filter promotions based on selected channel
-        const applicablePromos = promotions.filter(p => {
+    const activeUpgradePromos = useMemo(() => {
+        if (!promotions) return [];
+        let channelPromos = promotions.filter(p => {
             if (orderChannel === 'offline') {
                 return p.applicable_on === 'offline' || p.applicable_on === 'all';
             } else {
                 return p.applicable_on === orderChannel || p.applicable_on === 'all';
             }
         });
+        if (selectedCustomer) {
+            const isNewMember = (selectedCustomer.transaction_count || 0) === 0;
+            if (!isNewMember) {
+                channelPromos = channelPromos.filter(p => !p.is_new_member_only);
+            }
+        } else {
+            channelPromos = channelPromos.filter(p => !p.is_new_member_only);
+        }
+        return channelPromos.filter(p => p.type === 'upgrade');
+    }, [promotions, orderChannel, selectedCustomer]);
+
+    const activeBogoPromos = useMemo(() => {
+        if (!promotions) return [];
+        let channelPromos = promotions.filter(p => {
+            if (orderChannel === 'offline') {
+                return p.applicable_on === 'offline' || p.applicable_on === 'all';
+            } else {
+                return p.applicable_on === orderChannel || p.applicable_on === 'all';
+            }
+        });
+        if (selectedCustomer) {
+            const isNewMember = (selectedCustomer.transaction_count || 0) === 0;
+            if (!isNewMember) {
+                channelPromos = channelPromos.filter(p => !p.is_new_member_only);
+            }
+        } else {
+            channelPromos = channelPromos.filter(p => !p.is_new_member_only);
+        }
+        return channelPromos.filter(p => p.type === 'bogo');
+    }, [promotions, orderChannel, selectedCustomer]);
+
+    const getItemTotalPrice = (item: any) => {
+        const itemPrice = Number(item.product.price);
+        const customizationsPrice = (item.customizations || []).reduce((sum: number, opt: any) => {
+            const hasUpgrade = activeUpgradePromos.some(p => Number(p.upgrade_to_option_id) === Number(opt.id));
+            const isClaimed = opt.claim_upgrade === true;
+            return sum + (hasUpgrade && isClaimed ? 0 : Number(opt.price));
+        }, 0);
+        return (itemPrice + customizationsPrice) * item.quantity;
+    };
+
+    const cartTotal = useMemo(() => {
+        return items.reduce((sum, item) => sum + getItemTotalPrice(item), 0);
+    }, [items, activeUpgradePromos]);
+
+    const pointsDiscount = useMemo(() => {
+        if (!selectedCustomer || !usePoints) return 0;
+        const balance = selectedCustomer.balance || 0;
+        if (balance < 10) return 0;
+        return Math.min(balance, Math.floor(cartTotal / 1000)) * 1000;
+    }, [selectedCustomer, usePoints, cartTotal]);
+
+    const grandTotal = useMemo(() => {
+        return Math.max(0, cartTotal - pointsDiscount);
+    }, [cartTotal, pointsDiscount]);
+
+    const freeBogoItems = useMemo(() => {
+        const isOjol = ['gofood', 'grabfood', 'shopeefood'].includes(orderChannel);
+        if (!selectedCustomer && !isOjol) return [];
+        if (activeBogoPromos.length === 0 || items.length === 0) return [];
         
-        const specificBogoPromos = applicablePromos.filter(p => p.buy_product_id !== null && p.buy_product_id !== undefined);
-        const globalBogoPromo = applicablePromos.find(p => p.buy_product_id === null || p.buy_product_id === undefined);
+        const specificBogoPromos = activeBogoPromos.filter(p => p.buy_product_id !== null && p.buy_product_id !== undefined);
+        const globalBogoPromo = activeBogoPromos.find(p => p.buy_product_id === null || p.buy_product_id === undefined);
 
         const freeItemsMap: { [productId: number]: { product: Product; quantity: number; promoName: string } } = {};
 
@@ -161,7 +207,11 @@ export default function Screen({ products, categories, activeShift, promotions }
                 const buyQty = Number(promo.buy_quantity) || 1;
                 const getQty = Number(promo.get_quantity) || 1;
                 const multiplier = Math.floor(qty / buyQty);
-                const freeQty = multiplier * getQty;
+                let freeQty = multiplier * getQty;
+
+                if (promo.max_free_qty) {
+                    freeQty = Math.min(freeQty, Number(promo.max_free_qty));
+                }
 
                 if (freeQty > 0) {
                     const freeProductId = promo.get_product_id ? Number(promo.get_product_id) : productId;
@@ -169,6 +219,9 @@ export default function Screen({ products, categories, activeShift, promotions }
                     if (freeProd) {
                         if (freeItemsMap[freeProductId]) {
                             freeItemsMap[freeProductId].quantity += freeQty;
+                            if (promo.max_free_qty) {
+                                freeItemsMap[freeProductId].quantity = Math.min(freeItemsMap[freeProductId].quantity, Number(promo.max_free_qty));
+                            }
                         } else {
                             freeItemsMap[freeProductId] = {
                                 product: freeProd,
@@ -182,7 +235,7 @@ export default function Screen({ products, categories, activeShift, promotions }
         });
 
         return Object.values(freeItemsMap);
-    }, [items, promotions, products, selectedCustomer, orderChannel]);
+    }, [items, activeBogoPromos, products, selectedCustomer, orderChannel]);
 
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
@@ -355,14 +408,14 @@ export default function Screen({ products, categories, activeShift, promotions }
                 {/* Right: Cart Panel — Warm White */}
                 <div className={`flex-1 lg:flex-none lg:w-[400px] flex flex-col bg-white lg:border-l border-[#E8E4DD] relative h-full ${activeTab === 'cart' ? 'flex' : 'hidden'} lg:flex`}>
                     {/* Customer Info & Loyalty */}
-                    <div className="p-5 border-b border-[#E8E4DD] space-y-4">
+                    <div className="p-3.5 border-b border-[#E8E4DD] space-y-3">
                         {/* Order Channel Selector */}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                             <div className="flex items-center gap-2">
-                                <Store size={14} className="text-[#B5AFA6]" />
-                                <span className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em]">Saluran Pembelian (Order Channel)</span>
+                                <Store size={12} className="text-[#B5AFA6]" />
+                                <span className="text-[9px] font-black text-[#B5AFA6] uppercase tracking-[0.15em]">Saluran Pembelian (Order Channel)</span>
                             </div>
-                            <div className="grid grid-cols-4 gap-1.5">
+                            <div className="grid grid-cols-4 gap-1">
                                 {(['offline', 'gofood', 'grabfood', 'shopeefood'] as const).map(channel => {
                                     const labels = {
                                         offline: 'Offline',
@@ -396,27 +449,27 @@ export default function Screen({ products, categories, activeShift, promotions }
                                                     setCustomerName('');
                                                 }
                                             }}
-                                            className={`py-2 px-1 text-center rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${
+                                            className={`py-1.5 px-0.5 text-center rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-0.5 ${
                                                 isActive 
                                                     ? activeColors[channel]
                                                     : 'border-[#E8E4DD] text-[#B5AFA6] hover:border-[#C4BEB5] hover:text-[#8A8379]'
                                             }`}
                                         >
-                                            <span className="text-base leading-none">{emojis[channel]}</span>
-                                            <span className="text-[9px] font-black uppercase tracking-[0.02em]">{labels[channel]}</span>
+                                            <span className="text-sm leading-none">{emojis[channel]}</span>
+                                            <span className="text-[8px] font-black uppercase tracking-[0.02em]">{labels[channel]}</span>
                                         </button>
                                     );
                                 })}
                             </div>
                         </div>
 
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <User size={14} className="text-[#B5AFA6]" />
-                                <span className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em]">Informasi Pelanggan</span>
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2 mb-0.5">
+                                <User size={12} className="text-[#B5AFA6]" />
+                                <span className="text-[9px] font-black text-[#B5AFA6] uppercase tracking-[0.15em]">Informasi Pelanggan</span>
                             </div>
                             
-                            <div className="flex gap-2">
+                            <div className="flex gap-1.5">
                                 <div className="flex-1 relative">
                                     <input 
                                         type="text" 
@@ -424,7 +477,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                                         value={customerQuery}
                                         onChange={(e) => setCustomerQuery(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && handleSearchCustomer()}
-                                        className="w-full bg-[#F5F3EF] border border-[#E8E4DD] rounded-xl px-4 py-2.5 text-xs font-bold placeholder:text-[#C4BEB5] focus:ring-2 focus:ring-[#2D6A4F]/10 focus:border-[#2D6A4F]/30 transition-all"
+                                        className="w-full bg-[#F5F3EF] border border-[#E8E4DD] rounded-xl px-3 py-1.5 text-xs font-bold placeholder:text-[#C4BEB5] focus:ring-2 focus:ring-[#2D6A4F]/10 focus:border-[#2D6A4F]/30 transition-all"
                                     />
                                     {isSearchingCustomer && (
                                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -434,19 +487,19 @@ export default function Screen({ products, categories, activeShift, promotions }
                                 </div>
                                 <button 
                                     onClick={handleSearchCustomer}
-                                    className="px-4 py-2.5 bg-white border border-[#E8E4DD] text-[#2D6A4F] rounded-xl hover:bg-[#E8F5E9] transition-all"
+                                    className="px-3 py-1.5 bg-white border border-[#E8E4DD] text-[#2D6A4F] rounded-xl hover:bg-[#E8F5E9] transition-all"
                                 >
-                                    <Search size={16} />
+                                    <Search size={14} />
                                 </button>
                             </div>
 
                             {selectedCustomer ? (
-                                <div className="bg-[#E8F5E9] p-4 rounded-2xl border border-[#2D6A4F]/10 relative overflow-hidden group">
+                                <div className="bg-[#E8F5E9] p-2.5 rounded-xl border border-[#2D6A4F]/10 relative overflow-hidden group">
                                     <div className="absolute -right-4 -top-4 w-16 h-16 bg-[#2D6A4F]/5 rounded-full group-hover:scale-110 transition-transform" />
-                                    <div className="flex justify-between items-start mb-2 relative z-10">
+                                    <div className="flex justify-between items-start mb-1 relative z-10">
                                         <div>
                                             <p className="text-[10px] font-black text-[#2D6A4F] uppercase tracking-wider">{selectedCustomer.user_name}</p>
-                                            <p className="text-[11px] text-[#2D6A4F]/70 font-bold">{selectedCustomer.user_phone}</p>
+                                            <p className="text-[10px] text-[#2D6A4F]/70 font-bold">{selectedCustomer.user_phone}</p>
                                         </div>
                                         <button 
                                             onClick={() => {
@@ -456,17 +509,17 @@ export default function Screen({ products, categories, activeShift, promotions }
                                             }}
                                             className="text-[#2D6A4F]/40 hover:text-red-500 transition-colors"
                                         >
-                                            <Trash2 size={14} />
+                                            <Trash2 size={12} />
                                         </button>
                                     </div>
-                                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#2D6A4F]/10 relative z-10">
-                                        <div className="flex items-center gap-2">
-                                            <Tag size={12} className="text-[#2D6A4F]" />
-                                            <span className="text-[11px] font-black text-[#2D6A4F]">{angka(selectedCustomer.balance)} Poin</span>
+                                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#2D6A4F]/10 relative z-10">
+                                        <div className="flex items-center gap-1.5">
+                                            <Tag size={10} className="text-[#2D6A4F]" />
+                                            <span className="text-[10px] font-black text-[#2D6A4F]">{angka(selectedCustomer.balance)} Poin</span>
                                         </div>
                                         {selectedCustomer.balance >= 10 && (
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <span className="text-[10px] font-black text-[#2D6A4F] uppercase">Gunakan Poin</span>
+                                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                                <span className="text-[9px] font-black text-[#2D6A4F] uppercase">Gunakan Poin</span>
                                                 <div className="relative">
                                                     <input 
                                                         type="checkbox" 
@@ -483,29 +536,29 @@ export default function Screen({ products, categories, activeShift, promotions }
                                     </div>
                                 </div>
                             ) : (
-                                <div className={`flex items-center gap-3 p-4 rounded-2xl border border-dashed transition-all ${!customerName.trim() ? 'bg-red-50 border-red-300' : 'bg-[#F5F3EF] border-[#E8E4DD]'}`}>
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border transition-all ${!customerName.trim() ? 'bg-red-100/50 border-red-200 text-red-500' : 'bg-white border-[#E8E4DD] text-[#C4BEB5]'}`}>
-                                        <User size={20} />
+                                <div className={`flex items-center gap-2 p-2.5 rounded-xl border border-dashed transition-all ${!customerName.trim() ? 'bg-red-50 border-red-300' : 'bg-[#F5F3EF] border-[#E8E4DD]'}`}>
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 border transition-all ${!customerName.trim() ? 'bg-red-100/50 border-red-200 text-red-500' : 'bg-white border-[#E8E4DD] text-[#C4BEB5]'}`}>
+                                        <User size={16} />
                                     </div>
                                     <div className="flex-1">
-                                        <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 transition-all ${!customerName.trim() ? 'text-red-500' : 'text-[#B5AFA6]'}`}>Nama Pelanggan {!customerName.trim() && '(Wajib)'}</p>
+                                        <p className={`text-[9px] font-bold uppercase tracking-wider mb-0.5 transition-all ${!customerName.trim() ? 'text-red-500' : 'text-[#B5AFA6]'}`}>Nama Pelanggan {!customerName.trim() && '(Wajib)'}</p>
                                         <input 
                                             type="text" 
-                                            placeholder="Masukkan Nama Pelanggan... (Wajib)"
+                                            placeholder="Masukkan Nama Pelanggan..."
                                             value={customerName}
                                             onChange={(e) => setCustomerName(e.target.value)}
-                                            className="w-full border-none bg-transparent focus:ring-0 font-black text-[#1A1A1A] p-0 text-sm placeholder:text-[#C4BEB5]"
+                                            className="w-full border-none bg-transparent focus:ring-0 font-black text-[#1A1A1A] p-0 text-xs placeholder:text-[#C4BEB5]"
                                         />
                                     </div>
                                 </div>
                             )}
 
                             {items.length > 0 && !selectedCustomer && promotions && promotions.length > 0 && (
-                                <div className="bg-amber-50 border border-amber-200/60 rounded-2xl p-3 flex gap-2.5 items-start mt-2">
-                                    <Tag className="text-amber-600 flex-shrink-0 mt-0.5" size={14} />
+                                <div className="bg-amber-50 border border-amber-200/60 rounded-xl p-2 flex gap-2 items-start mt-1">
+                                    <Tag className="text-amber-600 flex-shrink-0 mt-0.5" size={12} />
                                     <div>
-                                        <p className="text-[10px] font-black text-amber-800 uppercase tracking-wider">Promo BOGO Tersedia!</p>
-                                        <p className="text-[10px] text-amber-700/90 mt-0.5 leading-relaxed font-bold">
+                                        <p className="text-[9px] font-black text-amber-800 uppercase tracking-wider">Promo BOGO Tersedia!</p>
+                                        <p className="text-[9px] text-amber-700/90 mt-0.5 leading-relaxed font-bold">
                                             Masukkan email/No. HP member untuk mengaktifkan promo otomatis.
                                         </p>
                                     </div>
@@ -515,18 +568,18 @@ export default function Screen({ products, categories, activeShift, promotions }
                     </div>
 
                     {/* Cart Header */}
-                    <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+                    <div className="px-4 pt-2.5 pb-1.5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Receipt size={14} className="text-[#B5AFA6]" />
                             <span className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em]">Pesanan</span>
                         </div>
                         {items.length > 0 && (
-                            <span className="text-[10px] font-black text-[#2D6A4F] bg-[#E8F5E9] px-2.5 py-1 rounded-lg">{angka(itemCount)} item</span>
+                            <span className="text-[10px] font-black text-[#2D6A4F] bg-[#E8F5E9] px-2 py-0.5 rounded-lg">{angka(itemCount)} item</span>
                         )}
                     </div>
 
                     {/* Cart Items */}
-                    <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2.5">
+                    <div className="flex-1 overflow-y-auto px-4 py-1.5 space-y-2">
                         {items.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-center py-16">
                                 <div className="w-20 h-20 bg-[#F5F3EF] rounded-3xl flex items-center justify-center text-[#E8E4DD] mb-5 rotate-6">
@@ -541,12 +594,11 @@ export default function Screen({ products, categories, activeShift, promotions }
                             <>
                                 {items.map((item, idx) => {
                                     const itemKey = item.product.id + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
-                                    const sumToppings = (item.customizations || []).reduce((s, c) => s + Number(c.price), 0);
-                                    const itemTotalPrice = (Number(item.product.price) + sumToppings) * item.quantity;
+                                    const itemTotalPrice = getItemTotalPrice(item);
 
                                     return (
-                                        <div key={itemKey} className="flex items-center gap-3 bg-[#FAFAF8] p-3 rounded-2xl border border-[#F0EDE8] hover:bg-[#F5F3EF] transition-colors">
-                                            <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD]">
+                                        <div key={itemKey} className="flex items-center gap-2 bg-[#FAFAF8] p-2 rounded-xl border border-[#F0EDE8] hover:bg-[#F5F3EF] transition-colors">
+                                            <div className="w-10 h-10 rounded-lg bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD]">
                                                 <img 
                                                     src={item.product.name.includes('Original') ? '/coconut_original.png' : (item.product.name.includes('Jeruk') ? '/coconut_lime.png' : (item.product.name.includes('Puding') ? '/coconut_pudding.png' : item.product.image_url || '/coconut_original.png'))} 
                                                     className="w-full h-full object-cover" 
@@ -554,27 +606,48 @@ export default function Screen({ products, categories, activeShift, promotions }
                                                 />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h5 className="text-[12px] font-black text-[#1A1A1A] truncate font-poppins">{item.product.name}</h5>
+                                                <h5 className="text-[11px] font-black text-[#1A1A1A] truncate font-poppins">{item.product.name}</h5>
                                                 {item.customizations && item.customizations.length > 0 && (
-                                                    <p className="text-[9px] text-[#8A8379] font-bold truncate">
-                                                        {item.customizations.map(c => c.name).join(', ')}
-                                                    </p>
+                                                    <div className="space-y-0.5 mt-0.5">
+                                                        {item.customizations.map(c => {
+                                                            const hasUpgrade = activeUpgradePromos.some(p => Number(p.upgrade_to_option_id) === Number(c.id));
+                                                            const isClaimed = c.claim_upgrade === true;
+                                                            return (
+                                                                <div key={c.id} className="flex flex-col">
+                                                                    <span className="text-[8px] text-[#8A8379] font-bold">
+                                                                        {c.name} {hasUpgrade && isClaimed && ' (Upgrade Free)'}
+                                                                    </span>
+                                                                    {hasUpgrade && (
+                                                                        <label className="inline-flex items-center gap-1 cursor-pointer mt-0.5 select-none" onClick={(e) => e.stopPropagation()}>
+                                                                            <input 
+                                                                                type="checkbox" 
+                                                                                checked={isClaimed}
+                                                                                onChange={(e) => toggleUpgradeClaim(item.product.id, c.id, e.target.checked, item.customizations)}
+                                                                                className="w-2.5 h-2.5 text-[#2D6A4F] border-[#C4BEB5] rounded focus:ring-0"
+                                                                            />
+                                                                            <span className="text-[7px] font-black text-[#2D6A4F] uppercase tracking-wider">Klaim Upgrade</span>
+                                                                        </label>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 )}
-                                                <p className="text-[11px] text-[#2D6A4F] font-black">{rupiah(itemTotalPrice)}</p>
+                                                <p className="text-[10px] text-[#2D6A4F] font-black">{rupiah(itemTotalPrice)}</p>
                                             </div>
-                                            <div className="flex items-center bg-white rounded-xl p-0.5 border border-[#E8E4DD] shadow-sm">
+                                            <div className="flex items-center bg-white rounded-lg p-0.5 border border-[#E8E4DD] shadow-sm">
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity - 1, item.customizations); }} 
-                                                    className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                    className="w-7 h-7 flex items-center justify-center text-[#C4BEB5] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                                                 >
-                                                    <Minus size={13} strokeWidth={2.5} />
+                                                    <Minus size={11} strokeWidth={2.5} />
                                                 </button>
-                                                <span className="w-7 text-center text-[12px] font-black text-[#1A1A1A]">{angka(item.quantity)}</span>
+                                                <span className="w-6 text-center text-[11px] font-black text-[#1A1A1A]">{angka(item.quantity)}</span>
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity + 1, item.customizations); }} 
-                                                    className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-[#2D6A4F] hover:bg-[#E8F5E9] rounded-lg transition-all"
+                                                    className="w-7 h-7 flex items-center justify-center text-[#C4BEB5] hover:text-[#2D6A4F] hover:bg-[#E8F5E9] rounded-lg transition-all"
                                                 >
-                                                    <Plus size={13} strokeWidth={2.5} />
+                                                    <Plus size={11} strokeWidth={2.5} />
                                                 </button>
                                             </div>
                                         </div>
@@ -582,8 +655,8 @@ export default function Screen({ products, categories, activeShift, promotions }
                                 })}
 
                                 {freeBogoItems.map((freeItem, idx) => (
-                                    <div key={`free-${freeItem.product.id}`} className="flex items-center gap-3 bg-[#E8F5E9]/50 p-3 rounded-2xl border border-dashed border-[#2D6A4F]/20 relative overflow-hidden transition-all duration-200">
-                                        <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD]">
+                                    <div key={`free-${freeItem.product.id}`} className="flex items-center gap-2 bg-[#E8F5E9]/50 p-2 rounded-xl border border-dashed border-[#2D6A4F]/20 relative overflow-hidden transition-all duration-200">
+                                        <div className="w-10 h-10 rounded-lg bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD]">
                                             <img 
                                                 src={freeItem.product.name.includes('Original') ? '/coconut_original.png' : (freeItem.product.name.includes('Jeruk') ? '/coconut_lime.png' : (freeItem.product.name.includes('Puding') ? '/coconut_pudding.png' : freeItem.product.image_url || '/coconut_original.png'))} 
                                                 className="w-full h-full object-cover" 
@@ -595,7 +668,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                                                 <span className="bg-[#2D6A4F] text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Gratis BOGO</span>
                                                 <span className="text-[9px] text-[#2D6A4F] font-bold truncate max-w-[120px]">{freeItem.promoName}</span>
                                             </div>
-                                            <h5 className="text-[12px] font-black text-[#1A1A1A] truncate font-poppins">{freeItem.product.name}</h5>
+                                            <h5 className="text-[11px] font-black text-[#1A1A1A] truncate font-poppins">{freeItem.product.name}</h5>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-[10px] font-bold text-gray-400 line-through">{rupiah(freeItem.product.price * freeItem.quantity)}</span>
@@ -608,58 +681,58 @@ export default function Screen({ products, categories, activeShift, promotions }
                     </div>
 
                     {/* Checkout Footer */}
-                    <div className="p-5 bg-[#FAFAF8] border-t border-[#E8E4DD] space-y-4">
+                    <div className="p-3.5 bg-[#FAFAF8] border-t border-[#E8E4DD] space-y-2.5">
                         {/* Transaction Note Input */}
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[#8A8379] uppercase tracking-[0.1em] block">Catatan Transaksi</label>
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-[#8A8379] uppercase tracking-[0.1em] block mb-0.5">Catatan Transaksi</label>
                             <input 
                                 type="text"
                                 placeholder="Tulis catatan (misal: Tester untuk tamu, dll)..."
                                 value={transactionNotes}
                                 onChange={(e) => setTransactionNotes(e.target.value)}
-                                className="w-full bg-white border border-[#E8E4DD] rounded-xl px-3 py-2 text-xs font-medium placeholder:text-[#C4BEB5] focus:ring-2 focus:ring-[#2D6A4F]/10 focus:border-[#2D6A4F]/30 transition-all shadow-sm"
+                                className="w-full bg-white border border-[#E8E4DD] rounded-xl px-2.5 py-1.5 text-xs font-medium placeholder:text-[#C4BEB5] focus:ring-2 focus:ring-[#2D6A4F]/10 focus:border-[#2D6A4F]/30 transition-all shadow-sm"
                             />
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-1.5">
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-[#B5AFA6] uppercase tracking-[0.12em]">Subtotal</span>
-                                <span className="text-sm font-black text-[#8A8379]">{rupiah(getTotal())}</span>
+                                <span className="text-[9px] font-bold text-[#B5AFA6] uppercase tracking-[0.12em]">Subtotal</span>
+                                <span className="text-xs font-black text-[#8A8379]">{rupiah(cartTotal)}</span>
                             </div>
                             {pointsDiscount > 0 && (
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-[#D97706] uppercase tracking-[0.12em]">Potongan Poin</span>
-                                    <span className="text-sm font-black text-[#D97706] animate-pulse">-{rupiah(pointsDiscount)}</span>
+                                    <span className="text-[9px] font-bold text-[#D97706] uppercase tracking-[0.12em]">Potongan Poin</span>
+                                    <span className="text-xs font-black text-[#D97706] animate-pulse">-{rupiah(pointsDiscount)}</span>
                                 </div>
                             )}
                         </div>
                         
-                        <div className="pt-4 border-t-2 border-dashed border-[#E8E4DD]">
+                        <div className="pt-2.5 border-t-2 border-dashed border-[#E8E4DD]">
                             <div className="flex justify-between items-end">
                                 <div>
-                                    <span className="text-[9px] font-bold text-[#2D6A4F] uppercase tracking-[0.2em] block mb-1">Grand Total</span>
-                                    <span className="text-[28px] font-black text-[#1A1A1A] tracking-tighter font-poppins leading-none">{rupiah(grandTotal)}</span>
+                                    <span className="text-[8px] font-bold text-[#2D6A4F] uppercase tracking-[0.2em] block mb-0.5">Grand Total</span>
+                                    <span className="text-[22px] font-black text-[#1A1A1A] tracking-tighter font-poppins leading-none">{rupiah(grandTotal)}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex gap-2 pt-1.5">
                             <button 
                                 onClick={clearCart}
                                 disabled={items.length === 0}
-                                className="w-14 h-14 bg-white text-red-400 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white border border-[#E8E4DD] disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 shadow-sm"
+                                className="w-11 h-11 bg-white text-red-400 rounded-xl flex items-center justify-center hover:bg-[#FAFAF8] hover:text-red-500 border border-[#E8E4DD] disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 shadow-sm"
                                 title="Kosongkan Keranjang"
                             >
-                                <Trash2 size={20} />
+                                <Trash2 size={16} />
                             </button>
                             <button 
                                 onClick={() => setIsPaymentOpen(true)}
                                 disabled={items.length === 0 || !customerName.trim()}
-                                className="flex-1 bg-gradient-to-r from-[#2D6A4F] to-[#40916C] hover:from-[#1B4332] hover:to-[#2D6A4F] disabled:from-[#E8E4DD] disabled:to-[#E8E4DD] disabled:text-[#B5AFA6] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 shadow-lg shadow-[#2D6A4F]/15 group disabled:shadow-none"
+                                className="flex-1 bg-gradient-to-r from-[#2D6A4F] to-[#40916C] hover:from-[#1B4332] hover:to-[#2D6A4F] disabled:from-[#E8E4DD] disabled:to-[#E8E4DD] disabled:text-[#B5AFA6] text-white font-black py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-lg shadow-[#2D6A4F]/15 group disabled:shadow-none"
                             >
-                                <CreditCard size={20} className="group-hover:rotate-6 transition-transform" />
-                                <span className="text-sm uppercase tracking-[0.1em]">Bayar Sekarang</span>
-                                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                                <CreditCard size={16} className="group-hover:rotate-6 transition-transform" />
+                                <span className="text-xs uppercase tracking-[0.1em]">Bayar Sekarang</span>
+                                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>
                     </div>

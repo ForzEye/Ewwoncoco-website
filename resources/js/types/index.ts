@@ -67,6 +67,7 @@ export interface CustomizationOption {
     name: string;
     price: number;
     is_active: boolean;
+    claim_upgrade?: boolean;
 }
 
 export interface Customization {

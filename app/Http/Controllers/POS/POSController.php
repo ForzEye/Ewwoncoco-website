@@ -57,7 +57,7 @@ class POSController extends Controller
         $merchantId = $user->merchant_id ?? 1;
         $promotions = Promotion::active()
             ->where('merchant_id', $merchantId)
-            ->where('type', 'bogo')
+            ->whereIn('type', ['bogo', 'upgrade'])
             ->whereIn('applicable_on', ['offline', 'all', 'gofood', 'grabfood', 'shopeefood'])
             ->get();
 
@@ -75,6 +75,9 @@ class POSController extends Controller
             'customer_name' => 'required|string|min:1',
             'payment_method' => 'required|in:cash,qris,tester,gofood,grabfood,shopeefood',
             'items' => 'required|array|min:1',
+            'items.*.customizations' => 'nullable|array',
+            'items.*.customizations.*.id' => 'required|exists:customization_options,id',
+            'items.*.customizations.*.claim_upgrade' => 'nullable|boolean',
             'amount_paid' => 'nullable|numeric',
             'notes' => 'nullable|string',
         ]);
@@ -101,20 +104,10 @@ class POSController extends Controller
         }
 
         return DB::transaction(function () use ($request, $user, $activeShift) {
-            $subtotal = collect($request->items)->sum(function ($item) {
-                $itemPrice = $item['product']['price'];
-                if (isset($item['customizations']) && is_array($item['customizations'])) {
-                    $itemPrice += collect($item['customizations'])->sum('price');
-                }
-
-                return $itemPrice * $item['quantity'];
-            });
-
-            // Ambil merchant/branch dari user yang login (kasir)
             $merchantId = $user->merchant_id ?? 1; // fallback ke merchant pertama
             $branchId = $activeShift->branch_id;
 
-            // Fetch active BOGO promotions for this merchant
+            // Fetch active promotions for this merchant
             $paymentMethod = $request->payment_method;
             $applicableOn = ['all'];
             if (in_array($paymentMethod, ['gofood', 'grabfood', 'shopeefood'])) {
@@ -123,20 +116,53 @@ class POSController extends Controller
                 $applicableOn[] = 'offline';
             }
 
-            $bogoPromosCollection = collect();
-            if ($request->customer_id || in_array($paymentMethod, ['gofood', 'grabfood', 'shopeefood'])) {
-                $bogoPromosCollection = Promotion::active()
-                    ->where('merchant_id', $merchantId)
-                    ->where('type', 'bogo')
-                    ->whereIn('applicable_on', $applicableOn)
-                    ->get();
+            // Determine if the customer is a new member
+            $isNewMember = false;
+            if ($request->customer_id) {
+                $posTxCount = PosTransaction::where('customer_id', $request->customer_id)->count();
+                $orderCount = \App\Models\Order::where('customer_id', $request->customer_id)
+                    ->where('status', '!=', 'cancelled')
+                    ->count();
+                $isNewMember = ($posTxCount + $orderCount) === 0;
             }
+
+            $promosQuery = Promotion::active()
+                ->where('merchant_id', $merchantId)
+                ->whereIn('applicable_on', $applicableOn);
+
+            if ($request->customer_id) {
+                if (!$isNewMember) {
+                    $promosQuery->where('is_new_member_only', false);
+                }
+            } else {
+                $promosQuery->where('is_new_member_only', false);
+            }
+
+            $activePromos = $promosQuery->get();
+            $bogoPromosCollection = $activePromos->where('type', 'bogo');
+            $upgradePromos = $activePromos->where('type', 'upgrade');
 
             // Specific BOGOs (linked to a product)
             $specificBogoPromos = $bogoPromosCollection->whereNotNull('buy_product_id')->keyBy('buy_product_id');
 
             // Global BOGO (applies to "all menus")
             $globalBogoPromo = $bogoPromosCollection->whereNull('buy_product_id')->first();
+
+            $subtotal = collect($request->items)->sum(function ($item) use ($upgradePromos) {
+                $itemPrice = $item['product']['price'];
+                if (isset($item['customizations']) && is_array($item['customizations'])) {
+                    foreach ($item['customizations'] as $custOpt) {
+                        $price = $custOpt['price'];
+                        $hasUpgrade = $upgradePromos->where('upgrade_to_option_id', $custOpt['id'])->first();
+                        if ($hasUpgrade && !empty($custOpt['claim_upgrade'])) {
+                            $price = 0; // Upgrade is free!
+                        }
+                        $itemPrice += $price;
+                    }
+                }
+
+                return $itemPrice * $item['quantity'];
+            });
 
             $isTester = $request->payment_method === 'tester';
 
@@ -167,8 +193,20 @@ class POSController extends Controller
                 $productId = $item['product']['id'];
                 $qty = $item['quantity'];
                 $unitPrice = $item['product']['price'];
+                $processedCustomizations = [];
                 if (isset($item['customizations']) && is_array($item['customizations'])) {
-                    $unitPrice += collect($item['customizations'])->sum('price');
+                    foreach ($item['customizations'] as $custOpt) {
+                        $originalPrice = $custOpt['price'] ?? 0;
+                        $price = $custOpt['price'] ?? 0;
+                        $hasUpgrade = $upgradePromos->where('upgrade_to_option_id', $custOpt['id'])->first();
+                        if ($hasUpgrade && !empty($custOpt['claim_upgrade'])) {
+                            $price = 0;
+                        }
+                        $custOpt['price'] = $price;
+                        $custOpt['original_price'] = $originalPrice;
+                        $unitPrice += $price;
+                        $processedCustomizations[] = $custOpt;
+                    }
                 }
 
                 PosTransactionItem::create([
@@ -177,7 +215,7 @@ class POSController extends Controller
                     'quantity' => $qty,
                     'unit_price' => $unitPrice,
                     'subtotal' => $unitPrice * $qty,
-                    'customizations' => $item['customizations'] ?? null,
+                    'customizations' => $processedCustomizations ?: null,
                 ]);
 
                 $product = Product::with('recipes')->find($productId);
@@ -216,6 +254,11 @@ class POSController extends Controller
 
                     $multiplier = floor($qty / $buyQty);
                     $freeQty = $multiplier * $getQty;
+
+                    // Apply max free quantity limit if set
+                    if ($promo->max_free_qty) {
+                        $freeQty = min($freeQty, $promo->max_free_qty);
+                    }
 
                     if ($freeQty > 0) {
                         PosTransactionItem::create([

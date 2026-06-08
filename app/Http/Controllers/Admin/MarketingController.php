@@ -20,7 +20,7 @@ class MarketingController extends Controller
         }
 
         $promotions = Promotion::where('merchant_id', $merchant->id)
-            ->with(['buyProduct', 'getProduct'])
+            ->with(['buyProduct', 'getProduct', 'upgradeFromOption', 'upgradeToOption'])
             ->latest()
             ->get();
 
@@ -52,10 +52,14 @@ class MarketingController extends Controller
         });
 
         $products = Product::where('merchant_id', $merchant->id)->get();
+        $customizations = \App\Models\Customization::where('merchant_id', $merchant->id)
+            ->with('options')
+            ->get();
 
         return Inertia::render('Admin/Marketing/Index', [
             'promotions' => $promotions,
             'products' => $products,
+            'customizations' => $customizations,
         ]);
     }
 
@@ -63,9 +67,9 @@ class MarketingController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:cashback_points,fixed_discount,bogo',
-            'value' => 'required_unless:type,bogo|nullable|numeric|min:0',
-            'min_purchase' => 'required_unless:type,bogo|nullable|numeric|min:0',
+            'type' => 'required|in:cashback_points,fixed_discount,bogo,upgrade',
+            'value' => 'required_unless:type,bogo,upgrade|nullable|numeric|min:0',
+            'min_purchase' => 'required_unless:type,bogo,upgrade|nullable|numeric|min:0',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'buy_product_id' => 'nullable',
@@ -73,6 +77,10 @@ class MarketingController extends Controller
             'buy_quantity' => 'required_if:type,bogo|nullable|integer|min:1',
             'get_quantity' => 'required_if:type,bogo|nullable|integer|min:1',
             'applicable_on' => 'required|in:all,online,offline,gofood,grabfood,shopeefood',
+            'is_new_member_only' => 'nullable|boolean',
+            'max_free_qty' => 'nullable|integer|min:1',
+            'upgrade_from_option_id' => 'nullable|exists:customization_options,id',
+            'upgrade_to_option_id' => 'nullable|exists:customization_options,id',
         ]);
 
         $merchant = Auth::user()->merchant;
@@ -85,8 +93,8 @@ class MarketingController extends Controller
             'name' => $request->name,
             'description' => $request->description,
             'type' => $request->type,
-            'value' => $request->type === 'bogo' ? 0 : $request->value,
-            'min_purchase' => $request->type === 'bogo' ? 0 : $request->min_purchase,
+            'value' => ($request->type === 'bogo' || $request->type === 'upgrade') ? 0 : $request->value,
+            'min_purchase' => ($request->type === 'bogo' || $request->type === 'upgrade') ? 0 : $request->min_purchase,
             'max_reward' => $request->max_reward,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
@@ -96,6 +104,10 @@ class MarketingController extends Controller
             'get_quantity' => $request->get_quantity,
             'is_active' => true,
             'applicable_on' => $request->applicable_on,
+            'is_new_member_only' => $request->boolean('is_new_member_only', false),
+            'max_free_qty' => $request->max_free_qty,
+            'upgrade_from_option_id' => $request->upgrade_from_option_id,
+            'upgrade_to_option_id' => $request->upgrade_to_option_id,
         ]);
 
         Cache::forget('promotions_active');

@@ -113,6 +113,12 @@ class AdminPointsController extends Controller
 
         $balance = PointsService::getBalance($user->id);
 
+        $posTxCount = \App\Models\PosTransaction::where('customer_id', $user->id)->count();
+        $orderCount = \App\Models\Order::where('customer_id', $user->id)
+            ->where('status', '!=', 'cancelled')
+            ->count();
+        $txCount = $posTxCount + $orderCount;
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -120,6 +126,7 @@ class AdminPointsController extends Controller
                 'user_name' => $user->name,
                 'user_phone' => $user->phone,
                 'balance' => $balance,
+                'transaction_count' => $txCount,
             ],
         ]);
     }
