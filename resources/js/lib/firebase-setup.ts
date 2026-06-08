@@ -30,12 +30,12 @@ export const requestNotificationPermission = async () => {
         if (permission === 'granted' && messaging) {
             // Register service worker explicitly to resolve ngrok/virtual host scope and registration issues
             const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            
-            const token = await getToken(messaging, { 
+
+            const token = await getToken(messaging, {
                 vapidKey: 'BALpT1QmX_gwKU1XruellKiG-zszoLGCuXyJGaHQgaRMzmcc-wmNvO7aF-Rt5wWHVL5qHnWA2Ir5ukad7R08_9g',
                 serviceWorkerRegistration: registration
             });
-            
+
             if (token) {
                 // Send token to backend
                 await axios.post('/api/notifications/token', { fcm_token: token });
@@ -52,13 +52,13 @@ export const requestNotificationPermission = async () => {
 };
 
 export const onMessageListener = (callback: (payload: any) => void) => {
-    if (!messaging) return () => {};
+    if (!messaging) return () => { };
     try {
         return onMessage(messaging, (payload: any) => {
             callback(payload);
         });
     } catch (e) {
         console.warn('FCM onMessage listener registration failed:', e);
-        return () => {};
+        return () => { };
     }
 };
