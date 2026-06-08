@@ -40,6 +40,10 @@ use Inertia\Inertia;
 */
 
 Route::get('/', [LandingController::class, 'index'])->name('home');
+Route::get('/firebase-messaging-sw.js', function () {
+    return response(view('firebase-messaging-sw'), 200)
+        ->header('Content-Type', 'application/javascript');
+});
 Route::get('/contact', [LandingController::class, 'contact'])->name('contact');
 Route::get('/faq', [LandingController::class, 'faq'])->name('faq');
 

@@ -3,12 +3,12 @@ import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import axios from 'axios';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyD_zcK4IcJr6FeBnL5WzVdnKRX9R4nlaxw",
-    authDomain: "ewwon-coco.firebaseapp.com",
-    projectId: "ewwon-coco",
-    storageBucket: "ewwon-coco.firebasestorage.app",
-    messagingSenderId: "539905312817",
-    appId: "1:539905312817:web:3b60c0f51ef7fa1c2ded10"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 let messaging: any = null;
@@ -32,7 +32,7 @@ export const requestNotificationPermission = async () => {
             const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
 
             const token = await getToken(messaging, {
-                vapidKey: 'BALpT1QmX_gwKU1XruellKiG-zszoLGCuXyJGaHQgaRMzmcc-wmNvO7aF-Rt5wWHVL5qHnWA2Ir5ukad7R08_9g',
+                vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
                 serviceWorkerRegistration: registration
             });
 
