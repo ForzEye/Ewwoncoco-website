@@ -18,7 +18,8 @@ import {
     Clock,
     Package,
     Receipt,
-    Tag
+    Tag,
+    X
 } from 'lucide-react';
 import PaymentModal from '../../Components/POS/PaymentModal';
 import ReceiptModal from '../../Components/POS/ReceiptModal';
@@ -48,7 +49,7 @@ export default function Screen({ products, categories, activeShift, promotions }
     const [activeTab, setActiveTab] = useState<'menu' | 'cart'>('menu');
     const [orderChannel, setOrderChannel] = useState<'offline' | 'gofood' | 'grabfood' | 'shopeefood'>('offline');
 
-    const { 
+    const {
         items, 
         addItem, 
         removeItem, 
@@ -57,11 +58,47 @@ export default function Screen({ products, categories, activeShift, promotions }
         getTotal, 
         customerName, 
         setCustomerName,
-        toggleUpgradeClaim
+        toggleUpgradeClaim,
+        manualDiscountType,
+        manualDiscountValue,
+        discountReason,
+        setManualDiscount,
+        clearManualDiscount
     } = usePOSStore();
 
     const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
     const [posSelectedOptions, setPosSelectedOptions] = useState<Record<number, number[]>>({});
+
+    const [isManualDiscountModalOpen, setIsManualDiscountModalOpen] = useState(false);
+    const [tempDiscountType, setTempDiscountType] = useState<'percent' | 'fixed'>('fixed');
+    const [tempDiscountValue, setTempDiscountValue] = useState<string>('');
+    const [tempDiscountReason, setTempDiscountReason] = useState('');
+
+    const openManualDiscountModal = () => {
+        setTempDiscountType(manualDiscountType || 'fixed');
+        setTempDiscountValue(manualDiscountValue > 0 ? String(manualDiscountValue) : '');
+        setTempDiscountReason(discountReason || '');
+        setIsManualDiscountModalOpen(true);
+    };
+
+    const handleApplyManualDiscount = (e: React.FormEvent) => {
+        e.preventDefault();
+        const valueNum = Number(tempDiscountValue);
+        if (isNaN(valueNum) || valueNum <= 0) {
+            toastError('Jumlah potongan harus lebih besar dari 0.');
+            return;
+        }
+        if (tempDiscountType === 'percent' && valueNum > 100) {
+            toastError('Jumlah persen potongan maksimal adalah 100%.');
+            return;
+        }
+        if (!tempDiscountReason.trim()) {
+            toastError('Alasan / Catatan potongan wajib diisi.');
+            return;
+        }
+        setManualDiscount(tempDiscountType, valueNum, tempDiscountReason.trim());
+        setIsManualDiscountModalOpen(false);
+    };
 
     const handleProductClick = (product: Product) => {
         if (product.customizations && product.customizations.length > 0) {
@@ -173,16 +210,28 @@ export default function Screen({ products, categories, activeShift, promotions }
         return items.reduce((sum, item) => sum + getItemTotalPrice(item), 0);
     }, [items, activeUpgradePromos]);
 
+    const calculatedManualDiscount = useMemo(() => {
+        if (!manualDiscountType || manualDiscountValue <= 0) return 0;
+        if (manualDiscountType === 'percent') {
+            return Math.floor((cartTotal * manualDiscountValue) / 100);
+        }
+        return manualDiscountValue;
+    }, [cartTotal, manualDiscountType, manualDiscountValue]);
+
+    const cartTotalAfterManual = useMemo(() => {
+        return Math.max(0, cartTotal - calculatedManualDiscount);
+    }, [cartTotal, calculatedManualDiscount]);
+
     const pointsDiscount = useMemo(() => {
         if (!selectedCustomer || !usePoints) return 0;
         const balance = selectedCustomer.balance || 0;
         if (balance < 10) return 0;
-        return Math.min(balance, Math.floor(cartTotal / 1000)) * 1000;
-    }, [selectedCustomer, usePoints, cartTotal]);
+        return Math.min(balance, Math.floor(cartTotalAfterManual / 1000)) * 1000;
+    }, [selectedCustomer, usePoints, cartTotalAfterManual]);
 
     const grandTotal = useMemo(() => {
-        return Math.max(0, cartTotal - pointsDiscount);
-    }, [cartTotal, pointsDiscount]);
+        return Math.max(0, cartTotalAfterManual - pointsDiscount);
+    }, [cartTotalAfterManual, pointsDiscount]);
 
     const freeBogoItems = useMemo(() => {
         const isOjol = ['gofood', 'grabfood', 'shopeefood'].includes(orderChannel);
@@ -255,13 +304,17 @@ export default function Screen({ products, categories, activeShift, promotions }
                 use_points: usePoints,
                 payment_method: data.payment_method,
                 amount_paid: data.amount_paid,
-                notes: transactionNotes
+                notes: transactionNotes,
+                manual_discount_type: manualDiscountType,
+                manual_discount_value: manualDiscountValue,
+                discount_reason: discountReason
             });
 
             if (response.data.success) {
                 setOrderChannel('offline');
                 setLastOrder(response.data.transaction);
                 clearCart();
+                clearManualDiscount();
                 setSelectedCustomer(null);
                 setCustomerQuery('');
                 setUsePoints(false);
@@ -406,9 +459,9 @@ export default function Screen({ products, categories, activeShift, promotions }
                 </div>
 
                 {/* Right: Cart Panel — Warm White */}
-                <div className={`flex-1 lg:flex-none lg:w-[400px] flex flex-col bg-white lg:border-l border-[#E8E4DD] relative h-full ${activeTab === 'cart' ? 'flex' : 'hidden'} lg:flex`}>
+                <div className={`flex-1 lg:flex-none lg:w-[480px] flex flex-col bg-white lg:border-l border-[#E8E4DD] relative h-full ${activeTab === 'cart' ? 'flex' : 'hidden'} lg:flex`}>
                     {/* Customer Info & Loyalty */}
-                    <div className="p-3.5 border-b border-[#E8E4DD] space-y-3">
+                    <div className="p-3.5 border-b border-[#E8E4DD] space-y-3 flex-shrink-0">
                         {/* Order Channel Selector */}
                         <div className="space-y-1.5">
                             <div className="flex items-center gap-2">
@@ -568,7 +621,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                     </div>
 
                     {/* Cart Header */}
-                    <div className="px-4 pt-2.5 pb-1.5 flex items-center justify-between">
+                    <div className="px-4 pt-2.5 pb-1.5 flex items-center justify-between flex-shrink-0">
                         <div className="flex items-center gap-2">
                             <Receipt size={14} className="text-[#B5AFA6]" />
                             <span className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em]">Pesanan</span>
@@ -581,12 +634,12 @@ export default function Screen({ products, categories, activeShift, promotions }
                     {/* Cart Items */}
                     <div className="flex-1 overflow-y-auto px-4 py-1.5 space-y-2">
                         {items.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-center py-16">
-                                <div className="w-20 h-20 bg-[#F5F3EF] rounded-3xl flex items-center justify-center text-[#E8E4DD] mb-5 rotate-6">
-                                    <ShoppingCart size={36} />
+                            <div className="h-full flex flex-col items-center justify-center text-center py-6 min-h-[160px]">
+                                <div className="w-16 h-16 bg-[#F5F3EF] rounded-3xl flex items-center justify-center text-[#E8E4DD] mb-3 rotate-6">
+                                    <ShoppingCart size={28} />
                                 </div>
-                                <p className="font-black text-[#1A1A1A] text-sm">Keranjang kosong</p>
-                                <p className="text-[11px] text-[#B5AFA6] mt-2 max-w-[200px] leading-relaxed">
+                                <p className="font-black text-[#1A1A1A] text-xs">Keranjang kosong</p>
+                                <p className="text-[10px] text-[#B5AFA6] mt-1 max-w-[200px] leading-relaxed">
                                     Pilih menu dari panel kiri untuk memulai transaksi baru.
                                 </p>
                             </div>
@@ -597,8 +650,8 @@ export default function Screen({ products, categories, activeShift, promotions }
                                     const itemTotalPrice = getItemTotalPrice(item);
 
                                     return (
-                                        <div key={itemKey} className="flex items-center gap-2 bg-[#FAFAF8] p-2 rounded-xl border border-[#F0EDE8] hover:bg-[#F5F3EF] transition-colors">
-                                            <div className="w-10 h-10 rounded-lg bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD]">
+                                        <div key={itemKey} className="flex items-start gap-3 bg-[#FAFAF8] p-3 rounded-2xl border border-[#F0EDE8] hover:bg-[#F5F3EF] transition-colors">
+                                            <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-[#E8E4DD] mt-0.5">
                                                 <img 
                                                     src={item.product.name.includes('Original') ? '/coconut_original.png' : (item.product.name.includes('Jeruk') ? '/coconut_lime.png' : (item.product.name.includes('Puding') ? '/coconut_pudding.png' : item.product.image_url || '/coconut_original.png'))} 
                                                     className="w-full h-full object-cover" 
@@ -606,48 +659,53 @@ export default function Screen({ products, categories, activeShift, promotions }
                                                 />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h5 className="text-[11px] font-black text-[#1A1A1A] truncate font-poppins">{item.product.name}</h5>
+                                                <h5 className="text-[13px] font-black text-[#1A1A1A] font-poppins leading-tight break-words">{item.product.name}</h5>
                                                 {item.customizations && item.customizations.length > 0 && (
-                                                    <div className="space-y-0.5 mt-0.5">
+                                                    <div className="flex flex-wrap items-center gap-1 mt-1.5">
                                                         {item.customizations.map(c => {
                                                             const hasUpgrade = activeUpgradePromos.some(p => Number(p.upgrade_to_option_id) === Number(c.id));
                                                             const isClaimed = c.claim_upgrade === true;
-                                                            return (
-                                                                <div key={c.id} className="flex flex-col">
-                                                                    <span className="text-[8px] text-[#8A8379] font-bold">
-                                                                        {c.name} {hasUpgrade && isClaimed && ' (Upgrade Free)'}
-                                                                    </span>
-                                                                    {hasUpgrade && (
-                                                                        <label className="inline-flex items-center gap-1 cursor-pointer mt-0.5 select-none" onClick={(e) => e.stopPropagation()}>
+                                                            if (hasUpgrade) {
+                                                                return (
+                                                                    <div key={c.id} className="w-full flex flex-col bg-white/70 p-2 rounded-xl border border-[#E8E4DD] mt-1 shadow-sm">
+                                                                        <span className="text-[11px] text-[#1A1A1A] font-black">
+                                                                            • {c.name} {isClaimed && ' (Upgrade Free)'}
+                                                                        </span>
+                                                                        <label className="inline-flex items-center gap-2 cursor-pointer mt-1.5 select-none" onClick={(e) => e.stopPropagation()}>
                                                                             <input 
                                                                                 type="checkbox" 
                                                                                 checked={isClaimed}
                                                                                 onChange={(e) => toggleUpgradeClaim(item.product.id, c.id, e.target.checked, item.customizations)}
-                                                                                className="w-2.5 h-2.5 text-[#2D6A4F] border-[#C4BEB5] rounded focus:ring-0"
+                                                                                className="w-4.5 h-4.5 text-[#2D6A4F] border-[#C4BEB5] rounded focus:ring-0 focus:ring-offset-0"
                                                                             />
-                                                                            <span className="text-[7px] font-black text-[#2D6A4F] uppercase tracking-wider">Klaim Upgrade</span>
+                                                                            <span className="text-[10px] font-black text-[#2D6A4F] uppercase tracking-wider">Klaim Upgrade</span>
                                                                         </label>
-                                                                    )}
-                                                                </div>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return (
+                                                                <span key={c.id} className="inline-block text-[11px] text-[#6E685E] font-medium bg-[#F5F3EF] px-2.5 py-1 rounded-lg border border-[#E8E4DD]/50">
+                                                                    {c.name}
+                                                                </span>
                                                             );
                                                         })}
                                                     </div>
                                                 )}
-                                                <p className="text-[10px] text-[#2D6A4F] font-black">{rupiah(itemTotalPrice)}</p>
+                                                <p className="text-[12px] text-[#2D6A4F] font-black mt-2">{rupiah(itemTotalPrice)}</p>
                                             </div>
-                                            <div className="flex items-center bg-white rounded-lg p-0.5 border border-[#E8E4DD] shadow-sm">
+                                            <div className="flex items-center bg-white rounded-xl p-0.5 border border-[#E8E4DD] shadow-sm flex-shrink-0 mt-0.5">
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity - 1, item.customizations); }} 
-                                                    className="w-7 h-7 flex items-center justify-center text-[#C4BEB5] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                    className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                                                 >
-                                                    <Minus size={11} strokeWidth={2.5} />
+                                                    <Minus size={13} strokeWidth={2.5} />
                                                 </button>
-                                                <span className="w-6 text-center text-[11px] font-black text-[#1A1A1A]">{angka(item.quantity)}</span>
+                                                <span className="w-6 text-center text-xs font-black text-[#1A1A1A]">{angka(item.quantity)}</span>
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity + 1, item.customizations); }} 
-                                                    className="w-7 h-7 flex items-center justify-center text-[#C4BEB5] hover:text-[#2D6A4F] hover:bg-[#E8F5E9] rounded-lg transition-all"
+                                                    className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-[#2D6A4F] hover:bg-[#E8F5E9] rounded-xl transition-all"
                                                 >
-                                                    <Plus size={11} strokeWidth={2.5} />
+                                                    <Plus size={13} strokeWidth={2.5} />
                                                 </button>
                                             </div>
                                         </div>
@@ -681,7 +739,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                     </div>
 
                     {/* Checkout Footer */}
-                    <div className="p-3.5 bg-[#FAFAF8] border-t border-[#E8E4DD] space-y-2.5">
+                    <div className="p-3.5 bg-[#FAFAF8] border-t border-[#E8E4DD] space-y-2.5 flex-shrink-0">
                         {/* Transaction Note Input */}
                         <div className="space-y-1">
                             <label className="text-[9px] font-bold text-[#8A8379] uppercase tracking-[0.1em] block mb-0.5">Catatan Transaksi</label>
@@ -694,11 +752,47 @@ export default function Screen({ products, categories, activeShift, promotions }
                             />
                         </div>
 
+                        <div className="flex items-center justify-between py-1 bg-white border border-[#E8E4DD] rounded-xl px-2.5 shadow-sm">
+                            <span className="text-[9px] font-bold text-[#8A8379] uppercase tracking-[0.15em] block">Potongan Manual</span>
+                            <button
+                                type="button"
+                                onClick={openManualDiscountModal}
+                                className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg border transition-all ${
+                                    calculatedManualDiscount > 0
+                                        ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                                        : 'bg-[#F5F3EF] text-[#2D6A4F] border-[#E8E4DD] hover:bg-[#E8E4DD]'
+                                }`}
+                            >
+                                {calculatedManualDiscount > 0 ? 'Edit Potongan' : 'Tambah Potongan'}
+                            </button>
+                        </div>
+
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center">
                                 <span className="text-[9px] font-bold text-[#B5AFA6] uppercase tracking-[0.12em]">Subtotal</span>
                                 <span className="text-xs font-black text-[#8A8379]">{rupiah(cartTotal)}</span>
                             </div>
+                            {calculatedManualDiscount > 0 && (
+                                <div className="flex justify-between items-center bg-red-50/50 p-2 rounded-xl border border-red-100/40">
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-bold text-red-600 uppercase tracking-[0.12em]">
+                                            Potongan Manual ({manualDiscountType === 'percent' ? `${manualDiscountValue}%` : 'Nominal'})
+                                        </span>
+                                        <span className="text-[8px] text-gray-500 font-bold max-w-[120px] truncate">{discountReason}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-black text-red-600">-{rupiah(calculatedManualDiscount)}</span>
+                                        <button 
+                                            type="button"
+                                            onClick={clearManualDiscount} 
+                                            className="text-gray-400 hover:text-red-600 p-0.5 rounded transition-colors"
+                                            title="Hapus diskon"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                             {pointsDiscount > 0 && (
                                 <div className="flex justify-between items-center">
                                     <span className="text-[9px] font-bold text-[#D97706] uppercase tracking-[0.12em]">Potongan Poin</span>
@@ -782,6 +876,9 @@ export default function Screen({ products, categories, activeShift, promotions }
                 onConfirm={handleProcessPayment}
                 processing={isProcessing}
                 defaultMethod={orderChannel === 'offline' ? 'cash' : orderChannel}
+                items={items}
+                freeBogoItems={freeBogoItems}
+                activeUpgradePromos={activeUpgradePromos}
             />
 
             <ReceiptModal 
@@ -862,6 +959,97 @@ export default function Screen({ products, categories, activeShift, promotions }
                                 Konfirmasi
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Manual Discount Modal */}
+            {isManualDiscountModalOpen && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-[#F5F3EF] rounded-[2rem] w-full max-w-md p-6 shadow-2xl border border-[#E8E4DD] animate-in fade-in zoom-in duration-200">
+                        <div className="flex justify-between items-center border-b border-[#E8E4DD] pb-4 mb-4">
+                            <div>
+                                <h3 className="font-poppins font-black text-[#1A1A1A]">Potongan Manual</h3>
+                                <p className="text-[10px] font-bold text-[#B5AFA6] uppercase tracking-[0.1em]">Input Diskon Khusus POS</p>
+                            </div>
+                            <button 
+                                onClick={() => setIsManualDiscountModalOpen(false)}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#E8E4DD]/40 text-[#B5AFA6] transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleApplyManualDiscount} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] ml-1">Tipe Potongan</label>
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setTempDiscountType('fixed')}
+                                        className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                                            tempDiscountType === 'fixed'
+                                                ? 'bg-[#2D6A4F] border-[#2D6A4F] text-white shadow-md shadow-[#2D6A4F]/10'
+                                                : 'bg-white border-[#E8E4DD] text-gray-500 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        Nominal (Rp)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTempDiscountType('percent')}
+                                        className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                                            tempDiscountType === 'percent'
+                                                ? 'bg-[#2D6A4F] border-[#2D6A4F] text-white shadow-md shadow-[#2D6A4F]/10'
+                                                : 'bg-white border-[#E8E4DD] text-gray-500 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        Persentase (%)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] ml-1">Jumlah Potongan</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={tempDiscountType === 'percent' ? 100 : undefined}
+                                    placeholder={tempDiscountType === 'percent' ? 'Contoh: 10' : 'Contoh: 5000'}
+                                    value={tempDiscountValue}
+                                    onChange={(e) => setTempDiscountValue(e.target.value)}
+                                    className="w-full bg-white border border-[#E8E4DD] rounded-xl px-4 py-3 text-sm font-black focus:ring-4 focus:ring-[#2D6A4F]/5 focus:border-[#2D6A4F]/20 outline-none transition-all shadow-sm"
+                                    required
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] ml-1">Alasan / Catatan (Wajib)</label>
+                                <textarea
+                                    placeholder="Alasan memberikan diskon (contoh: Diskon Rekan Owner, Diskon Promo Ultah, dll)..."
+                                    value={tempDiscountReason}
+                                    onChange={(e) => setTempDiscountReason(e.target.value)}
+                                    className="w-full bg-white border border-[#E8E4DD] rounded-xl px-4 py-3 text-xs font-medium focus:ring-4 focus:ring-[#2D6A4F]/5 focus:border-[#2D6A4F]/20 outline-none transition-all shadow-sm min-h-[80px] resize-none"
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsManualDiscountModalOpen(false)}
+                                    className="flex-1 py-3.5 font-bold text-xs text-[#8A8379] hover:bg-[#E8E4DD]/40 rounded-xl transition-all"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-[2] py-3.5 bg-gradient-to-r from-[#2D6A4F] to-[#40916C] hover:from-[#1B4332] hover:to-[#2D6A4F] text-white text-xs font-black rounded-xl shadow-lg transition-all"
+                                >
+                                    Terapkan Potongan
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

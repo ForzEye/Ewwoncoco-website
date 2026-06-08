@@ -179,13 +179,47 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                             )}
                         </div>
 
+                        {/* Totals Section */}
                         <div className="border-t border-dashed border-gray-400 pt-3 space-y-1.5 w-full">
-                            {(order.discount > 0) && (
-                                <div className="flex justify-between opacity-80 italic" style={{ fontSize: `${baseFontSize}px` }}>
-                                    <span>{order.payment_method === 'tester' ? 'DISKON TESTER' : 'POTONGAN POIN'}</span>
-                                    <span>-{rupiah(order.discount)}</span>
-                                </div>
-                            )}
+                            {(() => {
+                                const manualDiscountAmt = order.manual_discount_value > 0 ? Number(order.manual_discount_value) : 0;
+                                const manualDiscountDisplay = order.manual_discount_type === 'percent' 
+                                    ? `${Math.floor(order.manual_discount_value)}%`
+                                    : rupiah(order.manual_discount_value);
+                                
+                                const pointsDiscountAmt = Math.max(
+                                    0, 
+                                    Number(order.discount || 0) - (order.payment_method === 'tester' ? Number(order.discount || 0) : manualDiscountAmt)
+                                );
+
+                                return (
+                                    <>
+                                        {order.payment_method === 'tester' && (
+                                            <div className="flex justify-between opacity-80 italic" style={{ fontSize: `${baseFontSize}px` }}>
+                                                <span>DISKON TESTER</span>
+                                                <span>-{rupiah(order.discount)}</span>
+                                            </div>
+                                        )}
+                                        {order.payment_method !== 'tester' && manualDiscountAmt > 0 && (
+                                            <div className="flex flex-col opacity-80 italic" style={{ fontSize: `${baseFontSize}px` }}>
+                                                <div className="flex justify-between">
+                                                    <span>POTONGAN ({manualDiscountDisplay})</span>
+                                                    <span>-{rupiah(manualDiscountAmt)}</span>
+                                                </div>
+                                                {order.discount_reason && (
+                                                    <span className="text-[7.5px] text-gray-500 pl-2">ALASAN: {order.discount_reason.toUpperCase()}</span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {order.payment_method !== 'tester' && pointsDiscountAmt > 0 && (
+                                            <div className="flex justify-between opacity-80 italic" style={{ fontSize: `${baseFontSize}px` }}>
+                                                <span>POTONGAN POIN</span>
+                                                <span>-{rupiah(pointsDiscountAmt)}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
                             <div className="flex justify-between font-bold" style={{ fontSize: `${baseFontSize + 1}px` }}>
                                 <span>TOTAL</span>
                                 <span>{rupiah(order.total || 0)}</span>

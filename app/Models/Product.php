@@ -57,7 +57,9 @@ class Product extends Model
 
     public function customizations()
     {
-        return $this->belongsToMany(Customization::class, 'product_customizations');
+        return $this->belongsToMany(Customization::class, 'product_customizations')
+            ->orderBy('order', 'asc')
+            ->orderBy('id', 'asc');
     }
 
     /**

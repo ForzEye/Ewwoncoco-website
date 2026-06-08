@@ -1,0 +1,6 @@
+import{c as s}from"./createLucideIcon-DPfkoTuJ.js";import{j as e,H as r,L as d}from"./app-C7fIjLQS.js";/**
+ * @license lucide-react v0.454.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const m=s("EyeOff",[["path",{d:"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49",key:"ct8e1f"}],["path",{d:"M14.084 14.158a3 3 0 0 1-4.242-4.242",key:"151rxh"}],["path",{d:"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143",key:"13bj9a"}],["path",{d:"m2 2 20 20",key:"1ooewy"}]]);function l({children:t,title:a}){return e.jsxs("div",{className:"min-h-screen bg-light-green flex flex-col justify-center items-center p-4",children:[e.jsx(r,{title:a}),e.jsx(d,{href:"/",className:"mb-8 flex items-center justify-center bg-primary text-white w-16 h-16 rounded-2xl text-3xl shadow-sm hover:scale-105 transition-transform",children:"🥥"}),e.jsx("div",{className:"w-full max-w-md bg-white rounded-2xl shadow-sm border border-border-base p-6 sm:p-8 animate-fadeInUp",children:t}),e.jsxs("div",{className:"mt-8 text-center text-sm text-gray-muted",children:["© ",new Date().getFullYear()," EWWON COCO. All rights reserved."]})]})}export{l as A,m as E};

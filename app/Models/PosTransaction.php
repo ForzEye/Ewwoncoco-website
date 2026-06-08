@@ -10,6 +10,7 @@ class PosTransaction extends Model
         'merchant_id', 'branch_id', 'cashier_id', 'customer_id', 'customer_name', 'shift_id',
         'transaction_number', 'payment_method', 'total', 'discount',
         'cash_received', 'change_amount', 'transaction_at', 'notes',
+        'manual_discount_type', 'manual_discount_value', 'discount_reason',
     ];
 
     protected $casts = ['transaction_at' => 'datetime'];

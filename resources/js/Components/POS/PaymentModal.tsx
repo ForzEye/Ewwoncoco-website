@@ -17,14 +17,27 @@ interface PaymentModalProps {
     onConfirm: (data: { payment_method: 'cash' | 'qris' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood', amount_paid: number }) => void;
     processing: boolean;
     defaultMethod?: 'cash' | 'qris' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood';
+    items?: any[];
+    freeBogoItems?: any[];
+    activeUpgradePromos?: any[];
 }
 
-export default function PaymentModal({ isOpen, onClose, total, onConfirm, processing, defaultMethod }: PaymentModalProps) {
+export default function PaymentModal({ isOpen, onClose, total, onConfirm, processing, defaultMethod, items = [], freeBogoItems = [], activeUpgradePromos = [] }: PaymentModalProps) {
     const [method, setMethod] = useState<'cash' | 'qris' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood'>('cash');
     const [amountPaid, setAmountPaid] = useState<string>('');
     const [change, setChange] = useState(0);
 
     const quickAmounts = [20000, 50000, 100000, 200000];
+
+    const getItemTotalPrice = (item: any) => {
+        const itemPrice = Number(item.product.price);
+        const customizationsPrice = (item.customizations || []).reduce((sum: number, opt: any) => {
+            const hasUpgrade = (activeUpgradePromos || []).some(p => Number(p.upgrade_to_option_id) === Number(opt.id));
+            const isClaimed = opt.claim_upgrade === true;
+            return sum + (hasUpgrade && isClaimed ? 0 : Number(opt.price));
+        }, 0);
+        return (itemPrice + customizationsPrice) * item.quantity;
+    };
 
     useEffect(() => {
         const paid = parseFloat(amountPaid) || 0;
@@ -46,7 +59,7 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
             
-            <div className="relative bg-white w-full max-w-2xl rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-[#E8E4DD]" style={{animation: 'fadeInUp 0.3s ease-out both'}}>
+            <div className="relative bg-white w-full max-w-3xl rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-[#E8E4DD]" style={{animation: 'fadeInUp 0.3s ease-out both'}}>
                 {/* Header */}
                 <div className="p-6 border-b border-[#E8E4DD] flex items-center justify-between bg-[#FAFAF8]">
                     <div>
@@ -60,7 +73,7 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
 
                 <div className="flex flex-1">
                     {/* Methods Selector */}
-                    <div className="w-[180px] border-r border-[#E8E4DD] p-4 space-y-3 bg-[#FAFAF8] overflow-y-auto max-h-[420px]">
+                    <div className="w-[170px] border-r border-[#E8E4DD] p-4 space-y-3 bg-[#FAFAF8] overflow-y-auto max-h-[420px]">
                         <button 
                             onClick={() => setMethod('cash')}
                             className={`w-full p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
@@ -128,6 +141,60 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
                             <span className="text-[10px] font-black uppercase tracking-[0.05em]">Tester</span>
                         </button>
                     </div>
+
+                    {/* Middle Pane: Order Summary */}
+                    {items && items.length > 0 && (
+                        <div className="w-[240px] border-r border-[#E8E4DD] bg-[#FAFAF8] flex flex-col p-4">
+                            <h4 className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em] mb-3">Ringkasan Pesanan</h4>
+                            <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[360px] scrollbar-thin">
+                                {items.map((item, idx) => {
+                                    const itemTotalPrice = getItemTotalPrice(item);
+                                    return (
+                                        <div key={idx} className="text-xs">
+                                            <div className="flex justify-between items-start gap-1">
+                                                <span className="font-bold text-[#1A1A1A] leading-tight flex-1">
+                                                    {item.product.name}
+                                                </span>
+                                                <span className="text-gray-400 font-bold flex-shrink-0">
+                                                    x{item.quantity}
+                                                </span>
+                                            </div>
+                                            {item.customizations && item.customizations.length > 0 && (
+                                                <div className="text-[9px] text-gray-500 font-medium mt-0.5 pl-1.5 space-y-0.5 border-l border-gray-200">
+                                                    {item.customizations.map(c => {
+                                                        const hasUpgrade = (activeUpgradePromos || []).some(p => Number(p.upgrade_to_option_id) === Number(c.id));
+                                                        const isClaimed = c.claim_upgrade === true;
+                                                        return (
+                                                            <div key={c.id}>
+                                                                {c.name} {hasUpgrade && isClaimed && '(Free)'}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                            <div className="text-[10px] text-[#2D6A4F] font-bold mt-1">
+                                                {rupiah(itemTotalPrice)}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {freeBogoItems && freeBogoItems.map((freeItem, idx) => (
+                                    <div key={`free-${idx}`} className="text-xs bg-[#E8F5E9]/50 p-1.5 rounded-lg border border-dashed border-[#2D6A4F]/20">
+                                        <div className="flex justify-between items-start gap-1">
+                                            <span className="font-bold text-[#2D6A4F] leading-tight flex-1">
+                                                🎁 {freeItem.product.name}
+                                            </span>
+                                            <span className="text-[#2D6A4F] font-black flex-shrink-0">
+                                                x{freeItem.quantity}
+                                            </span>
+                                        </div>
+                                        <span className="text-[8px] text-[#2D6A4F] font-black uppercase tracking-wider block mt-0.5">Gratis BOGO</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Payment Input */}
                     <div className="flex-1 p-6">

@@ -12,6 +12,9 @@ export interface POSItem {
 interface POSState {
     items: POSItem[];
     customerName: string;
+    manualDiscountType: 'percent' | 'fixed' | null;
+    manualDiscountValue: number;
+    discountReason: string;
     addItem: (product: Product, quantity?: number, notes?: string, customizations?: CustomizationOption[]) => void;
     removeItem: (productId: number, customizations?: CustomizationOption[]) => void;
     updateQuantity: (productId: number, quantity: number, customizations?: CustomizationOption[]) => void;
@@ -20,6 +23,8 @@ interface POSState {
     getTotal: () => number;
     getItemCount: () => number;
     toggleUpgradeClaim: (productId: number, customizationId: number, claim: boolean, customizations?: CustomizationOption[]) => void;
+    setManualDiscount: (type: 'percent' | 'fixed' | null, value: number, reason: string) => void;
+    clearManualDiscount: () => void;
 }
 
 export const usePOSStore = create<POSState>()(
@@ -27,6 +32,9 @@ export const usePOSStore = create<POSState>()(
         (set, get) => ({
             items: [],
             customerName: '',
+            manualDiscountType: null,
+            manualDiscountValue: 0,
+            discountReason: '',
             addItem: (product, quantity = 1, notes = '', customizations = []) => {
                 set((state) => {
                     const newCustIds = (customizations || []).map((c) => c.id).sort().join(',');
@@ -74,7 +82,7 @@ export const usePOSStore = create<POSState>()(
                     }),
                 }));
             },
-            clearCart: () => set({ items: [], customerName: '' }),
+            clearCart: () => set({ items: [], customerName: '', manualDiscountType: null, manualDiscountValue: 0, discountReason: '' }),
             setCustomerName: (name) => set({ customerName: name }),
             getTotal: () => {
                 return get().items.reduce((total, item) => {
@@ -105,6 +113,16 @@ export const usePOSStore = create<POSState>()(
                     })
                 }));
             },
+            setManualDiscount: (type, value, reason) => set({
+                manualDiscountType: type,
+                manualDiscountValue: value,
+                discountReason: reason
+            }),
+            clearManualDiscount: () => set({
+                manualDiscountType: null,
+                manualDiscountValue: 0,
+                discountReason: ''
+            }),
         }),
         {
             name: 'ewwon-coco-pos-cart',

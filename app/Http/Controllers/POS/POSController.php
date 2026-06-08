@@ -78,6 +78,9 @@ class POSController extends Controller
             'items.*.customizations' => 'nullable|array',
             'items.*.customizations.*.id' => 'required|exists:customization_options,id',
             'items.*.customizations.*.claim_upgrade' => 'nullable|boolean',
+            'manual_discount_type' => 'nullable|in:percent,fixed',
+            'manual_discount_value' => 'nullable|numeric|min:0',
+            'discount_reason' => 'required_with:manual_discount_value|string|nullable',
             'amount_paid' => 'nullable|numeric',
             'notes' => 'nullable|string',
         ]);
@@ -166,6 +169,17 @@ class POSController extends Controller
 
             $isTester = $request->payment_method === 'tester';
 
+            $manualDiscount = 0;
+            if ($request->manual_discount_type && $request->manual_discount_value > 0) {
+                if ($request->manual_discount_type === 'percent') {
+                    $manualDiscount = (int) floor(($subtotal * $request->manual_discount_value) / 100);
+                } else {
+                    $manualDiscount = (int) $request->manual_discount_value;
+                }
+            }
+
+            $totalBeforePoints = max(0, $subtotal - $manualDiscount);
+
             $transaction = PosTransaction::create([
                 'merchant_id' => $merchantId,
                 'branch_id' => $branchId,
@@ -175,10 +189,13 @@ class POSController extends Controller
                 'shift_id' => $activeShift->id,
                 'transaction_number' => 'POS-'.date('Ymd').'-'.strtoupper(bin2hex(random_bytes(3))),
                 'payment_method' => $request->payment_method,
-                'total' => $isTester ? 0 : $subtotal,
-                'discount' => $isTester ? $subtotal : 0,
-                'cash_received' => $isTester ? 0 : ($request->amount_paid ?? $subtotal),
-                'change_amount' => $isTester ? 0 : (($request->amount_paid ?? $subtotal) - $subtotal),
+                'total' => $isTester ? 0 : $totalBeforePoints,
+                'discount' => $isTester ? $subtotal : $manualDiscount,
+                'manual_discount_type' => $request->manual_discount_type,
+                'manual_discount_value' => $request->manual_discount_value,
+                'discount_reason' => $request->discount_reason,
+                'cash_received' => $isTester ? 0 : ($request->amount_paid ?? $totalBeforePoints),
+                'change_amount' => $isTester ? 0 : max(0, ($request->amount_paid ?? $totalBeforePoints) - $totalBeforePoints),
                 'transaction_at' => now(),
                 'notes' => $request->notes,
             ]);

@@ -187,6 +187,7 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     // Customizations
     Route::get('/customizations', [CustomizationController::class, 'index'])->name('customizations.index');
     Route::post('/customizations', [CustomizationController::class, 'store'])->name('customizations.store');
+    Route::post('/customizations/reorder', [CustomizationController::class, 'reorder'])->name('customizations.reorder');
     Route::post('/customizations/{id}', [CustomizationController::class, 'update'])->name('customizations.update');
     Route::delete('/customizations/{id}', [CustomizationController::class, 'destroy'])->name('customizations.destroy');
 

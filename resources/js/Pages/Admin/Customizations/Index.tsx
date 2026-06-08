@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Sliders, Plus, Edit2, Trash2, X, Check, HelpCircle, Utensils, CheckSquare, Square } from 'lucide-react';
+import { Sliders, Plus, Edit2, Trash2, X, Check, HelpCircle, Utensils, CheckSquare, Square, ArrowLeft, ArrowRight } from 'lucide-react';
 import { rupiah } from '@/lib/format';
 import { confirmAction, toastSuccess } from '@/lib/swal';
 
@@ -141,6 +141,33 @@ export default function Index({ customizations, products }: IndexProps) {
         }
     };
 
+    const handleMove = (index: number, direction: 'up' | 'down') => {
+        const list = [...customizations];
+        if (direction === 'up' && index > 0) {
+            const temp = list[index];
+            list[index] = list[index - 1];
+            list[index - 1] = temp;
+        } else if (direction === 'down' && index < list.length - 1) {
+            const temp = list[index];
+            list[index] = list[index + 1];
+            list[index + 1] = temp;
+        } else {
+            return;
+        }
+        
+        const orderData = list.map((item, idx) => ({
+            id: item.id,
+            order: idx
+        }));
+        
+        router.post(route('admin.customizations.reorder'), { orders: orderData }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toastSuccess('Urutan kustomisasi berhasil diperbarui!');
+            }
+        });
+    };
+
     return (
         <AdminLayout title="Produk & Menu">
             <Head title="Kustomisasi & Topping - EWWON COCO" />
@@ -168,7 +195,7 @@ export default function Index({ customizations, products }: IndexProps) {
 
                 {/* Customizations Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {customizations.map((c) => (
+                    {customizations.map((c, idx) => (
                         <div 
                             key={c.id} 
                             className="bg-white rounded-[40px] border border-[#F0F0F0] shadow-sm overflow-hidden group hover:shadow-xl hover:shadow-[#2D6A4F]/5 transition-all flex flex-col justify-between"
@@ -240,15 +267,38 @@ export default function Index({ customizations, products }: IndexProps) {
                                     Aktif di Apps & POS
                                 </span>
                                 <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleMove(idx, 'up')}
+                                        disabled={idx === 0}
+                                        className="w-9 h-9 flex items-center justify-center bg-white border border-[#F0F0F0] text-[#A0A0A0] hover:text-[#2D6A4F] hover:border-[#2D6A4F] rounded-xl shadow-sm transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                        title="Geser ke kiri / atas"
+                                    >
+                                        <ArrowLeft size={14} strokeWidth={2.5} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleMove(idx, 'down')}
+                                        disabled={idx === customizations.length - 1}
+                                        className="w-9 h-9 flex items-center justify-center bg-white border border-[#F0F0F0] text-[#A0A0A0] hover:text-[#2D6A4F] hover:border-[#2D6A4F] rounded-xl shadow-sm transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                        title="Geser ke kanan / bawah"
+                                    >
+                                        <ArrowRight size={14} strokeWidth={2.5} />
+                                    </button>
+
                                     <button 
+                                        type="button"
                                         onClick={() => handleOpenEdit(c)}
                                         className="w-9 h-9 flex items-center justify-center bg-white border border-[#F0F0F0] text-[#A0A0A0] hover:text-[#2D6A4F] hover:border-[#2D6A4F] rounded-xl shadow-sm transition-all"
+                                        title="Ubah"
                                     >
                                         <Edit2 size={14} strokeWidth={2.5} />
                                     </button>
                                     <button 
+                                        type="button"
                                         onClick={() => handleDelete(c.id)}
                                         className="w-9 h-9 flex items-center justify-center bg-white border border-[#F0F0F0] text-[#A0A0A0] hover:text-red-500 hover:border-red-500 rounded-xl shadow-sm transition-all"
+                                        title="Hapus"
                                     >
                                         <Trash2 size={14} strokeWidth={2.5} />
                                     </button>

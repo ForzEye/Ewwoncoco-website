@@ -21,7 +21,8 @@ class CustomizationController extends Controller
 
         $customizations = Customization::where('merchant_id', $merchant->id)
             ->with(['options', 'products'])
-            ->latest()
+            ->orderBy('order', 'asc')
+            ->orderBy('id', 'asc')
             ->get();
 
         $products = Product::where('merchant_id', $merchant->id)->get();
@@ -129,5 +130,29 @@ class CustomizationController extends Controller
         $customization->delete();
 
         return redirect()->route('admin.customizations.index')->with('success', 'Kustomisasi berhasil dihapus.');
+    }
+
+    public function reorder(Request $request)
+    {
+        $request->validate([
+            'orders' => 'required|array',
+            'orders.*.id' => 'required|exists:customizations,id',
+            'orders.*.order' => 'required|integer',
+        ]);
+
+        $merchant = Auth::user()->merchant;
+        if (! $merchant) {
+            return back()->with('error', 'Toko tidak ditemukan.');
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $merchant) {
+            foreach ($request->orders as $item) {
+                Customization::where('merchant_id', $merchant->id)
+                    ->where('id', $item['id'])
+                    ->update(['order' => $item['order']]);
+            }
+        });
+
+        return redirect()->route('admin.customizations.index')->with('success', 'Urutan kustomisasi berhasil diperbarui.');
     }
 }
