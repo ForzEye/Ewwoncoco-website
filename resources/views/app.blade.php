@@ -4,6 +4,9 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#00C48C" />
+        
+        {{-- Favicon --}}
+        <link rel="icon" type="image/x-icon" href="{{ \App\Models\SystemSetting::getVal('site_favicon', asset('favicon.ico')) }}" />
 
         {{-- Preconnect to Google Fonts to speed up asset loading --}}
         <link rel="preconnect" href="https://fonts.googleapis.com">
