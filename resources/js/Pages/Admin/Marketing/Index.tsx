@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Plus, Megaphone, Trash2, Calendar, Target, Power } from 'lucide-react';
+import { Plus, Megaphone, Trash2, Calendar, Target, Power, TrendingUp } from 'lucide-react';
 import { rupiah } from '../../../lib/format';
 import Swal from 'sweetalert2';
 
@@ -290,6 +290,13 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                                 <div className="flex items-center space-x-1.5 text-[10px] font-bold text-gray-500">
                                                     <Calendar size={12} />
                                                     <span>{new Date(promo.start_date).toLocaleDateString()} - {new Date(promo.end_date).toLocaleDateString()}</span>
+                                                </div>
+                                                <div className="flex items-center space-x-1.5 text-[10px] font-black text-emerald-600 bg-[#E8F5E9] px-2 py-0.5 rounded-lg border border-emerald-100">
+                                                    <TrendingUp size={12} />
+                                                    <span>Digunakan: {promo.used_count || 0} kali</span>
+                                                </div>
+                                                <div className="flex items-center space-x-1.5 text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">
+                                                    <span>Biaya Promo: {rupiah(promo.marketing_cost || 0)}</span>
                                                 </div>
                                                 <span className={`px-2.5 py-0.5 text-[9px] font-black uppercase rounded-lg border ${
                                                     promo.applicable_on === 'online' 

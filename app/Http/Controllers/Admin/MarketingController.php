@@ -24,6 +24,33 @@ class MarketingController extends Controller
             ->latest()
             ->get();
 
+        $promotions->transform(function ($promo) {
+            // Count from POS transaction items where notes matches the promotion name
+            $posUsage = \DB::table('pos_transaction_items')
+                ->where('notes', 'like', 'PROMO BOGO: ' . $promo->name)
+                ->sum('quantity');
+
+            // Count from online order items where notes matches the promotion name
+            $onlineUsage = \DB::table('order_items')
+                ->where('notes', 'like', 'PROMO BOGO: ' . $promo->name)
+                ->sum('quantity');
+
+            // Calculate total cost (quantity of free items * original product price)
+            $posCost = \DB::table('pos_transaction_items')
+                ->join('products', 'pos_transaction_items.product_id', '=', 'products.id')
+                ->where('pos_transaction_items.notes', 'like', 'PROMO BOGO: ' . $promo->name)
+                ->sum(\DB::raw('pos_transaction_items.quantity * products.price'));
+
+            $onlineCost = \DB::table('order_items')
+                ->join('products', 'order_items.product_id', '=', 'products.id')
+                ->where('order_items.notes', 'like', 'PROMO BOGO: ' . $promo->name)
+                ->sum(\DB::raw('order_items.quantity * products.price'));
+
+            $promo->used_count = (int) ($posUsage + $onlineUsage);
+            $promo->marketing_cost = (float) ($posCost + $onlineCost);
+            return $promo;
+        });
+
         $products = Product::where('merchant_id', $merchant->id)->get();
 
         return Inertia::render('Admin/Marketing/Index', [
