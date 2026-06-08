@@ -58,7 +58,7 @@ class POSController extends Controller
         $promotions = Promotion::active()
             ->where('merchant_id', $merchantId)
             ->where('type', 'bogo')
-            ->whereIn('applicable_on', ['offline', 'all'])
+            ->whereIn('applicable_on', ['offline', 'all', 'gofood', 'grabfood', 'shopeefood'])
             ->get();
 
         return Inertia::render('POS/Screen', [
@@ -114,13 +114,21 @@ class POSController extends Controller
             $merchantId = $user->merchant_id ?? 1; // fallback ke merchant pertama
             $branchId = $activeShift->branch_id;
 
-            // Fetch active BOGO promotions for this merchant only if customer is a registered member
+            // Fetch active BOGO promotions for this merchant
+            $paymentMethod = $request->payment_method;
+            $applicableOn = ['all'];
+            if (in_array($paymentMethod, ['gofood', 'grabfood', 'shopeefood'])) {
+                $applicableOn[] = $paymentMethod;
+            } else {
+                $applicableOn[] = 'offline';
+            }
+
             $bogoPromosCollection = collect();
-            if ($request->customer_id) {
+            if ($request->customer_id || in_array($paymentMethod, ['gofood', 'grabfood', 'shopeefood'])) {
                 $bogoPromosCollection = Promotion::active()
                     ->where('merchant_id', $merchantId)
                     ->where('type', 'bogo')
-                    ->whereIn('applicable_on', ['offline', 'all'])
+                    ->whereIn('applicable_on', $applicableOn)
                     ->get();
             }
 

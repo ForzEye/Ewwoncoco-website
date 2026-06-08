@@ -46,6 +46,7 @@ export default function Screen({ products, categories, activeShift, promotions }
     const [usePoints, setUsePoints] = useState(false);
     const [transactionNotes, setTransactionNotes] = useState('');
     const [activeTab, setActiveTab] = useState<'menu' | 'cart'>('menu');
+    const [orderChannel, setOrderChannel] = useState<'offline' | 'gofood' | 'grabfood' | 'shopeefood'>('offline');
 
     const { 
         items, 
@@ -129,11 +130,21 @@ export default function Screen({ products, categories, activeShift, promotions }
     }, [items, pointsDiscount]);
 
     const freeBogoItems = useMemo(() => {
-        if (!selectedCustomer) return [];
+        const isOjol = ['gofood', 'grabfood', 'shopeefood'].includes(orderChannel);
+        if (!selectedCustomer && !isOjol) return [];
         if (!promotions || promotions.length === 0 || items.length === 0) return [];
         
-        const specificBogoPromos = promotions.filter(p => p.buy_product_id !== null && p.buy_product_id !== undefined);
-        const globalBogoPromo = promotions.find(p => p.buy_product_id === null || p.buy_product_id === undefined);
+        // Filter promotions based on selected channel
+        const applicablePromos = promotions.filter(p => {
+            if (orderChannel === 'offline') {
+                return p.applicable_on === 'offline' || p.applicable_on === 'all';
+            } else {
+                return p.applicable_on === orderChannel || p.applicable_on === 'all';
+            }
+        });
+        
+        const specificBogoPromos = applicablePromos.filter(p => p.buy_product_id !== null && p.buy_product_id !== undefined);
+        const globalBogoPromo = applicablePromos.find(p => p.buy_product_id === null || p.buy_product_id === undefined);
 
         const freeItemsMap: { [productId: number]: { product: Product; quantity: number; promoName: string } } = {};
 
@@ -171,7 +182,7 @@ export default function Screen({ products, categories, activeShift, promotions }
         });
 
         return Object.values(freeItemsMap);
-    }, [items, promotions, products, selectedCustomer]);
+    }, [items, promotions, products, selectedCustomer, orderChannel]);
 
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
@@ -195,6 +206,7 @@ export default function Screen({ products, categories, activeShift, promotions }
             });
 
             if (response.data.success) {
+                setOrderChannel('offline');
                 setLastOrder(response.data.transaction);
                 clearCart();
                 setSelectedCustomer(null);
@@ -344,6 +356,60 @@ export default function Screen({ products, categories, activeShift, promotions }
                 <div className={`flex-1 lg:flex-none lg:w-[400px] flex flex-col bg-white lg:border-l border-[#E8E4DD] relative h-full ${activeTab === 'cart' ? 'flex' : 'hidden'} lg:flex`}>
                     {/* Customer Info & Loyalty */}
                     <div className="p-5 border-b border-[#E8E4DD] space-y-4">
+                        {/* Order Channel Selector */}
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <Store size={14} className="text-[#B5AFA6]" />
+                                <span className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.15em]">Saluran Pembelian (Order Channel)</span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-1.5">
+                                {(['offline', 'gofood', 'grabfood', 'shopeefood'] as const).map(channel => {
+                                    const labels = {
+                                        offline: 'Offline',
+                                        gofood: 'GoFood',
+                                        grabfood: 'GrabFood',
+                                        shopeefood: 'ShopeeFood'
+                                    };
+                                    const emojis = {
+                                        offline: '🏠',
+                                        gofood: '🛵',
+                                        grabfood: '🟢',
+                                        shopeefood: '🍊'
+                                    };
+                                    const activeColors = {
+                                        offline: 'border-[#2D6A4F] bg-[#E8F5E9] text-[#2D6A4F]',
+                                        gofood: 'border-[#ED1C24] bg-[#FDF0F1] text-[#ED1C24]',
+                                        grabfood: 'border-[#00B14F] bg-[#F0FAF4] text-[#00B14F]',
+                                        shopeefood: 'border-[#EE4D2D] bg-[#FEF0ED] text-[#EE4D2D]'
+                                    };
+                                    const isActive = orderChannel === channel;
+                                    return (
+                                        <button
+                                            key={channel}
+                                            type="button"
+                                            onClick={() => {
+                                                setOrderChannel(channel);
+                                                // If we switch to ojol, set the customer name automatically
+                                                if (channel !== 'offline' && (!customerName || ['GoFood', 'GrabFood', 'ShopeeFood'].includes(customerName))) {
+                                                    setCustomerName(labels[channel]);
+                                                } else if (channel === 'offline' && ['GoFood', 'GrabFood', 'ShopeeFood'].includes(customerName)) {
+                                                    setCustomerName('');
+                                                }
+                                            }}
+                                            className={`py-2 px-1 text-center rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${
+                                                isActive 
+                                                    ? activeColors[channel]
+                                                    : 'border-[#E8E4DD] text-[#B5AFA6] hover:border-[#C4BEB5] hover:text-[#8A8379]'
+                                            }`}
+                                        >
+                                            <span className="text-base leading-none">{emojis[channel]}</span>
+                                            <span className="text-[9px] font-black uppercase tracking-[0.02em]">{labels[channel]}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                         <div className="space-y-3">
                             <div className="flex items-center gap-2 mb-1">
                                 <User size={14} className="text-[#B5AFA6]" />
@@ -642,6 +708,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                 total={grandTotal}
                 onConfirm={handleProcessPayment}
                 processing={isProcessing}
+                defaultMethod={orderChannel === 'offline' ? 'cash' : orderChannel}
             />
 
             <ReceiptModal 

@@ -45,7 +45,7 @@ class MarketingController extends Controller
             'get_product_id' => 'nullable',
             'buy_quantity' => 'required_if:type,bogo|nullable|integer|min:1',
             'get_quantity' => 'required_if:type,bogo|nullable|integer|min:1',
-            'applicable_on' => 'required|in:all,online,offline',
+            'applicable_on' => 'required|in:all,online,offline,gofood,grabfood,shopeefood',
         ]);
 
         $merchant = Auth::user()->merchant;

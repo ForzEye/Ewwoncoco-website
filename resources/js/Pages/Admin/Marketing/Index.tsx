@@ -216,6 +216,9 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                     <option value="all">Bisa Keduanya (Online & Offline)</option>
                                     <option value="online">Hanya Pembelian Online</option>
                                     <option value="offline">Hanya Pembelian Offline</option>
+                                    <option value="gofood">Hanya GoFood</option>
+                                    <option value="grabfood">Hanya GrabFood</option>
+                                    <option value="shopeefood">Hanya ShopeeFood</option>
                                 </select>
                             </div>
 
@@ -293,9 +296,25 @@ export default function Marketing({ promotions, products = [] }: MarketingProps)
                                                     ? 'bg-blue-50 text-blue-600 border-blue-100' 
                                                     : promo.applicable_on === 'offline' 
                                                     ? 'bg-amber-50 text-amber-600 border-amber-100' 
+                                                    : promo.applicable_on === 'gofood'
+                                                    ? 'bg-red-50 text-red-600 border-red-100'
+                                                    : promo.applicable_on === 'grabfood'
+                                                    ? 'bg-green-50 text-green-600 border-green-100'
+                                                    : promo.applicable_on === 'shopeefood'
+                                                    ? 'bg-orange-50 text-orange-600 border-orange-100'
                                                     : 'bg-[#F0FAF6] text-[#00C48C] border-[#00C48C]/15'
                                                 }`}>
-                                                    {promo.applicable_on === 'online' ? 'Online Only' : promo.applicable_on === 'offline' ? 'Offline Only' : 'Online & Offline'}
+                                                    {promo.applicable_on === 'online' 
+                                                        ? 'Online Only' 
+                                                        : promo.applicable_on === 'offline' 
+                                                        ? 'Offline Only' 
+                                                        : promo.applicable_on === 'gofood'
+                                                        ? 'GoFood Only'
+                                                        : promo.applicable_on === 'grabfood'
+                                                        ? 'GrabFood Only'
+                                                        : promo.applicable_on === 'shopeefood'
+                                                        ? 'ShopeeFood Only'
+                                                        : 'Online & Offline'}
                                                 </span>
                                             </div>
                                         </div>

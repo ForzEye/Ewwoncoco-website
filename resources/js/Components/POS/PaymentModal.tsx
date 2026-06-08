@@ -16,9 +16,10 @@ interface PaymentModalProps {
     total: number;
     onConfirm: (data: { payment_method: 'cash' | 'qris' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood', amount_paid: number }) => void;
     processing: boolean;
+    defaultMethod?: 'cash' | 'qris' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood';
 }
 
-export default function PaymentModal({ isOpen, onClose, total, onConfirm, processing }: PaymentModalProps) {
+export default function PaymentModal({ isOpen, onClose, total, onConfirm, processing, defaultMethod }: PaymentModalProps) {
     const [method, setMethod] = useState<'cash' | 'qris' | 'tester' | 'gofood' | 'grabfood' | 'shopeefood'>('cash');
     const [amountPaid, setAmountPaid] = useState<string>('');
     const [change, setChange] = useState(0);
@@ -33,9 +34,9 @@ export default function PaymentModal({ isOpen, onClose, total, onConfirm, proces
     useEffect(() => {
         if (isOpen) {
             setAmountPaid('');
-            setMethod('cash');
+            setMethod(defaultMethod || 'cash');
         }
-    }, [isOpen]);
+    }, [isOpen, defaultMethod]);
 
     if (!isOpen) return null;
 
