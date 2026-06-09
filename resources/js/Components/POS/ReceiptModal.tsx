@@ -1,6 +1,8 @@
 import React from 'react';
 import { X, Printer, CheckCircle2, Home } from 'lucide-react';
 import { rupiah, tanggalWaktu } from '../../lib/format';
+import { usePage } from '@inertiajs/react';
+import { PageProps } from '../../types';
 
 interface ReceiptModalProps {
     isOpen: boolean;
@@ -9,6 +11,9 @@ interface ReceiptModalProps {
 }
 
 export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalProps) {
+    const { site_settings = {} } = usePage<PageProps>().props;
+    const logoUrl = (site_settings as any)?.site_logo || '/images/logo.png';
+
     console.log('ReceiptModal render:', { isOpen, order });
     if (!isOpen || !order) return null;
 
@@ -87,7 +92,7 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                         className="bg-white px-3.5 py-6 shadow-sm mx-auto receipt-print flex flex-col border border-[#E8E4DD] print:border-none print:shadow-none"
                     >
                         <div className="text-center mb-6">
-                            <img src="/images/logo.png" alt="Logo" className="h-10 w-auto object-contain mx-auto mb-2" />
+                            <img src={logoUrl} alt="Logo" className="h-10 w-auto object-contain mx-auto mb-2" />
                             <p className="font-bold" style={{ fontSize: `${baseFontSize}px` }}>{order.branch?.name || 'Cabang Utama'}</p>
                             <div className="mt-1 space-y-0.5" style={{ fontSize: `${Math.max(6.5, baseFontSize - 2.5)}px` }}>
                                 <p className="leading-tight px-2">

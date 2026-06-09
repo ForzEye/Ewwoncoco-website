@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
+import { PageProps } from '@/types';
 import {
     Store,
     FileText,
@@ -31,6 +32,9 @@ interface SettingsProps {
 }
 
 export default function Settings({ merchant, branch, loyalty_settings, auth }: SettingsProps) {
+    const { site_settings = {} } = usePage<PageProps>().props;
+    const logoUrl = (site_settings as any)?.site_logo || '/images/logo.png';
+
     const qrisInputRef = useRef<HTMLInputElement>(null);
     const [qrisPreview, setQrisPreview] = useState<string | null>(
         merchant.qris_image_url ? merchant.qris_image_url : null
@@ -644,7 +648,7 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                                 className="bg-white px-3.5 py-6 shadow-sm mx-auto receipt-print flex flex-col border border-[#E8E4DD] print:border-none print:shadow-none shrink-0"
                             >
                                 <div className="text-center mb-6">
-                                    <img src="/images/logo.png" alt="Logo" className="h-10 w-auto object-contain mx-auto mb-2" />
+                                    <img src={logoUrl} alt="Logo" className="h-10 w-auto object-contain mx-auto mb-2" />
                                     <p className="font-bold" style={{ fontSize: `${data.receipt_font_size}px` }}>Cabang Malang</p>
                                     <div className="mt-1 space-y-0.5" style={{ fontSize: `${Math.max(6.5, data.receipt_font_size - 2.5)}px` }}>
                                         <p className="leading-tight px-2">Jl. Raya No. 123</p>
