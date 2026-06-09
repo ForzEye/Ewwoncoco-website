@@ -114,7 +114,7 @@ class POSManualDiscountTest extends TestCase
     }
 
     /** @test */
-    public function it_requires_discount_reason_when_value_is_provided()
+    public function it_does_not_require_discount_reason_when_value_is_provided()
     {
         $response = $this->actingAs($this->cashier)
             ->postJson('/pos/store', [
@@ -131,7 +131,7 @@ class POSManualDiscountTest extends TestCase
                 'discount_reason' => '' // Empty reason
             ]);
 
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['discount_reason']);
+        $response->assertStatus(200);
+        $this->assertEquals(15000, $response->json('transaction.total'));
     }
 }

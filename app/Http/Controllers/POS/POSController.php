@@ -80,7 +80,7 @@ class POSController extends Controller
             'items.*.customizations.*.claim_upgrade' => 'nullable|boolean',
             'manual_discount_type' => 'nullable|in:percent,fixed',
             'manual_discount_value' => 'nullable|numeric|min:0',
-            'discount_reason' => 'required_with:manual_discount_value|string|nullable',
+            'discount_reason' => 'nullable|string',
             'amount_paid' => 'nullable|numeric',
             'notes' => 'nullable|string',
         ]);
