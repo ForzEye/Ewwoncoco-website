@@ -92,10 +92,6 @@ export default function Screen({ products, categories, activeShift, promotions }
             toastError('Jumlah persen potongan maksimal adalah 100%.');
             return;
         }
-        if (!tempDiscountReason.trim()) {
-            toastError('Alasan / Catatan potongan wajib diisi.');
-            return;
-        }
         setManualDiscount(tempDiscountType, valueNum, tempDiscountReason.trim());
         setIsManualDiscountModalOpen(false);
     };
