@@ -644,9 +644,7 @@ export default function Settings({ merchant, branch, loyalty_settings, auth }: S
                                 className="bg-white px-3.5 py-6 shadow-sm mx-auto receipt-print flex flex-col border border-[#E8E4DD] print:border-none print:shadow-none shrink-0"
                             >
                                 <div className="text-center mb-6">
-                                    <h4 className="font-bold uppercase tracking-tighter mb-1 leading-none" style={{ fontSize: `${data.receipt_font_size + 4}px` }}>
-                                        {data.receipt_header || 'HEADER STRUK'}
-                                    </h4>
+                                    <img src="/images/logo.png" alt="Logo" className="h-10 w-auto object-contain mx-auto mb-2" />
                                     <p className="font-bold" style={{ fontSize: `${data.receipt_font_size}px` }}>Cabang Malang</p>
                                     <div className="mt-1 space-y-0.5" style={{ fontSize: `${Math.max(6.5, data.receipt_font_size - 2.5)}px` }}>
                                         <p className="leading-tight px-2">Jl. Raya No. 123</p>

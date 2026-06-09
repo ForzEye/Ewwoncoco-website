@@ -87,9 +87,7 @@ export default function ReceiptModal({ isOpen, onClose, order }: ReceiptModalPro
                         className="bg-white px-3.5 py-6 shadow-sm mx-auto receipt-print flex flex-col border border-[#E8E4DD] print:border-none print:shadow-none"
                     >
                         <div className="text-center mb-6">
-                            <h4 className="font-bold uppercase tracking-tighter mb-1 leading-none" style={{ fontSize: `${baseFontSize + 4}px` }}>
-                                {order.merchant?.receipt_header || order.merchant?.name || 'EWWON COCO'}
-                            </h4>
+                            <img src="/images/logo.png" alt="Logo" className="h-10 w-auto object-contain mx-auto mb-2" />
                             <p className="font-bold" style={{ fontSize: `${baseFontSize}px` }}>{order.branch?.name || 'Cabang Utama'}</p>
                             <div className="mt-1 space-y-0.5" style={{ fontSize: `${Math.max(6.5, baseFontSize - 2.5)}px` }}>
                                 <p className="leading-tight px-2">
