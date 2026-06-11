@@ -304,6 +304,10 @@ export default function Screen({ products, categories, activeShift, promotions }
                 manual_discount_type: manualDiscountType,
                 manual_discount_value: manualDiscountValue,
                 discount_reason: discountReason
+            }, {
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                }
             });
 
             if (response.data.success) {
