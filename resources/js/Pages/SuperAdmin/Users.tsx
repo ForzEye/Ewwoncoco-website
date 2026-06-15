@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage, Link } from '@inertiajs/react';
+import { getFilteredLinks } from '../../lib/utils';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 import { 
     Search, 
@@ -12,7 +13,8 @@ import {
     X,
     CheckCircle2,
     AlertCircle,
-    Plus
+    Plus,
+    Download
 } from 'lucide-react';
 import { User, Role } from '../../types';
 
@@ -38,6 +40,10 @@ export default function Users({ users, filters, merchants }: UsersProps) {
     const [isCreating, setIsCreating] = useState(false);
 
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
+
+    const handleExport = () => {
+        window.location.href = route('superadmin.users.export', { search, role: selectedRole });
+    };
 
     const editForm = useForm({
         role: '' as Role,
@@ -122,13 +128,22 @@ export default function Users({ users, filters, merchants }: UsersProps) {
                         <h2 className="text-2xl font-poppins font-bold text-charcoal">Users Control</h2>
                         <p className="text-gray-500 text-sm mt-1">Total {users.total} pengguna terdaftar di sistem.</p>
                     </div>
-                    <button 
-                        onClick={() => setIsCreating(true)}
-                        className="flex items-center gap-2 px-6 py-3.5 bg-[#00C48C] text-white font-black rounded-2xl shadow-lg shadow-[#00C48C]/20 hover:bg-[#00ab7a] transition-all transform active:scale-95"
-                    >
-                        <Plus size={18} strokeWidth={3} />
-                        <span className="text-xs uppercase tracking-widest">Tambah User</span>
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={handleExport}
+                            className="flex items-center gap-2 px-6 py-3.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-2xl shadow-sm hover:bg-gray-50 transition-all transform active:scale-95"
+                        >
+                            <Download size={18} />
+                            <span className="text-xs uppercase tracking-widest">Export CSV</span>
+                        </button>
+                        <button 
+                            onClick={() => setIsCreating(true)}
+                            className="flex items-center gap-2 px-6 py-3.5 bg-[#00C48C] text-white font-black rounded-2xl shadow-lg shadow-[#00C48C]/20 hover:bg-[#00ab7a] transition-all transform active:scale-95"
+                        >
+                            <Plus size={18} strokeWidth={3} />
+                            <span className="text-xs uppercase tracking-widest">Tambah User</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filters */}
@@ -234,6 +249,41 @@ export default function Users({ users, filters, merchants }: UsersProps) {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {users.data.length > 0 && users.links && users.links.length > 3 && (
+                        <div className="p-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50">
+                            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                Menampilkan <span className="font-black text-[#00C48C]">{users.from || 0}</span> sampai <span className="font-black text-[#00C48C]">{users.to || 0}</span> dari <span className="font-black text-[#00C48C]">{users.total}</span> pengguna
+                            </p>
+                            <div className="flex flex-wrap items-center justify-center gap-1.5">
+                                {getFilteredLinks(users.links).map((link, i) => {
+                                    const isPrev = link.label.includes('Previous');
+                                    const isNext = link.label.includes('Next');
+                                    const label = isPrev ? '«' : (isNext ? '»' : link.label);
+                                    
+                                    return (
+                                        <Link
+                                            key={i}
+                                            href={link.url || '#'}
+                                            preserveState
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border ${
+                                                link.active
+                                                    ? 'bg-[#00C48C] text-white border-transparent shadow-md shadow-[#00C48C]/10'
+                                                    : link.url
+                                                    ? 'bg-white border-gray-200 text-gray-500 hover:border-[#00C48C] hover:text-[#00C48C]'
+                                                    : 'bg-gray-50 border-transparent text-gray-300 cursor-not-allowed'
+                                            }`}
+                                            onClick={(e) => {
+                                                if (!link.url) e.preventDefault();
+                                            }}
+                                            dangerouslySetInnerHTML={{ __html: label }}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

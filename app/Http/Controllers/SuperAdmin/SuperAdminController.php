@@ -335,6 +335,63 @@ class SuperAdminController extends Controller
         ]);
     }
 
+    public function exportUsers(Request $request)
+    {
+        $fileName = "Users_Export_" . now()->format('Y-m-d_H-i-s') . ".csv";
+
+        $headers = [
+            'Content-type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=$fileName",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $usersQuery = User::with('merchant')
+            ->when($request->search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            })
+            ->when($request->role, function ($query, $role) {
+                $query->where('role', $role);
+            })
+            ->orderBy('created_at', 'desc');
+
+        $callback = function () use ($usersQuery) {
+            $file = fopen('php://output', 'w');
+            // Add UTF-8 BOM for proper Excel reading
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            fputcsv($file, ['ID', 'Nama', 'Email', 'No. Telp', 'Role', 'Status', 'Merchant', 'Tanggal Terdaftar']);
+
+            $usersQuery->chunk(100, function ($users) use ($file) {
+                foreach ($users as $user) {
+                    $status = $user->is_active ? 'Aktif' : 'Nonaktif';
+                    $roleLabel = match ($user->role) {
+                        'super_admin' => 'Super Admin',
+                        'admin' => 'Admin',
+                        'kasir' => 'Kasir',
+                        default => 'Customer',
+                    };
+                    fputcsv($file, [
+                        $user->id,
+                        $user->name,
+                        $user->email,
+                        $user->phone,
+                        $roleLabel,
+                        $status,
+                        $user->merchant?->name ?? '-',
+                        $user->created_at ? $user->created_at->timezone('Asia/Jakarta')->toDateTimeString() : '-',
+                    ]);
+                }
+            });
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function updateUser(Request $request, $id)
     {
         $request->validate([

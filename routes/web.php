@@ -288,6 +288,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
 
     // User Management
     Route::get('/users', [SuperAdminController::class, 'users'])->name('users');
+    Route::get('/users/export', [SuperAdminController::class, 'exportUsers'])->name('users.export');
     Route::post('/users', [SuperAdminController::class, 'storeUser'])->name('users.store');
     Route::post('/users/{id}', [SuperAdminController::class, 'updateUser'])->name('users.update');
 
