@@ -12,10 +12,14 @@ class Product extends Model
 
     protected $fillable = [
         'merchant_id', 'branch_id', 'category_id', 'name', 'slug', 'description',
-        'price', 'image_url', 'barcode', 'stock', 'min_stock', 'is_available',
+        'price', 'price_options', 'image_url', 'barcode', 'stock', 'min_stock', 'is_available',
     ];
 
-    protected $casts = ['price' => 'decimal:2', 'is_available' => 'boolean'];
+    protected $casts = [
+        'price' => 'decimal:2', 
+        'price_options' => 'array', 
+        'is_available' => 'boolean'
+    ];
 
     protected $appends = [];
 

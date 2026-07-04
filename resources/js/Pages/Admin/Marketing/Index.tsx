@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Plus, Megaphone, Trash2, Calendar, Target, Power, TrendingUp } from 'lucide-react';
+import { Plus, Megaphone, Trash2, Calendar, Target, Power, TrendingUp, Edit2 } from 'lucide-react';
 import { rupiah } from '../../../lib/format';
 import Swal from 'sweetalert2';
 
@@ -12,6 +12,8 @@ interface MarketingProps {
 }
 
 export default function Marketing({ promotions, products = [], customizations = [] }: MarketingProps) {
+    const [editingPromo, setEditingPromo] = React.useState<any>(null);
+    
     const { data, setData, post, delete: destroyPromo, processing, reset } = useForm({
         name: '',
         description: '',
@@ -32,19 +34,62 @@ export default function Marketing({ promotions, products = [], customizations = 
         upgrade_to_option_id: '',
     });
 
+    const handleStartEdit = (promo: any) => {
+        setEditingPromo(promo);
+        setData({
+            name: promo.name || '',
+            description: promo.description || '',
+            type: promo.type || 'cashback_points',
+            value: promo.value ? String(promo.value) : '',
+            min_purchase: promo.min_purchase ? String(promo.min_purchase) : '',
+            max_reward: promo.max_reward ? String(promo.max_reward) : '',
+            start_date: promo.start_date || '',
+            end_date: promo.end_date || '',
+            buy_product_id: promo.buy_product_id ? String(promo.buy_product_id) : '',
+            get_product_id: promo.get_product_id ? String(promo.get_product_id) : '',
+            buy_quantity: promo.buy_quantity ? String(promo.buy_quantity) : '1',
+            get_quantity: promo.get_quantity ? String(promo.get_quantity) : '1',
+            applicable_on: promo.applicable_on || 'all',
+            is_new_member_only: !!promo.is_new_member_only,
+            max_free_qty: promo.max_free_qty ? String(promo.max_free_qty) : '',
+            upgrade_from_option_id: promo.upgrade_from_option_id ? String(promo.upgrade_from_option_id) : '',
+            upgrade_to_option_id: promo.upgrade_to_option_id ? String(promo.upgrade_to_option_id) : '',
+        });
+    };
+
+    const handleCancelEdit = () => {
+        setEditingPromo(null);
+        reset();
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('admin.marketing.store'), {
-            onSuccess: () => {
-                reset();
-                Swal.fire({
-                    title: 'Berhasil!',
-                    text: 'Campaign promo baru berhasil dibuat.',
-                    icon: 'success',
-                    confirmButtonColor: '#00C48C'
-                });
-            }
-        });
+        if (editingPromo) {
+            post(route('admin.marketing.update', editingPromo.id), {
+                onSuccess: () => {
+                    setEditingPromo(null);
+                    reset();
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Campaign promo berhasil diperbarui.',
+                        icon: 'success',
+                        confirmButtonColor: '#00C48C'
+                    });
+                }
+            });
+        } else {
+            post(route('admin.marketing.store'), {
+                onSuccess: () => {
+                    reset();
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Campaign promo baru berhasil dibuat.',
+                        icon: 'success',
+                        confirmButtonColor: '#00C48C'
+                    });
+                }
+            });
+        }
     };
 
     const handleDelete = (id: number) => {
@@ -83,7 +128,7 @@ export default function Marketing({ promotions, products = [], customizations = 
                     <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
                         <div className="flex items-center space-x-3 text-[#00C48C]">
                             <Megaphone size={24} />
-                            <h3 className="font-poppins font-bold text-xl text-charcoal">Buat Promo Baru</h3>
+                            <h3 className="font-poppins font-bold text-xl text-charcoal">{editingPromo ? 'Edit Campaign' : 'Buat Promo Baru'}</h3>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
@@ -223,7 +268,7 @@ export default function Marketing({ promotions, products = [], customizations = 
                                             <option value="">Pilih Opsi Kustomisasi...</option>
                                             {customizations?.map(c => (
                                                 <optgroup key={c.id} label={c.name}>
-                                                    {c.options?.map(o => (
+                                                    {c.options?.map((o: any) => (
                                                         <option key={o.id} value={o.id}>{c.name}: {o.name} (+{rupiah(o.price)})</option>
                                                     ))}
                                                 </optgroup>
@@ -241,7 +286,7 @@ export default function Marketing({ promotions, products = [], customizations = 
                                             <option value="">Pilih Opsi Kustomisasi Tujuan...</option>
                                             {customizations?.map(c => (
                                                 <optgroup key={c.id} label={c.name}>
-                                                    {c.options?.map(o => (
+                                                    {c.options?.map((o: any) => (
                                                         <option key={o.id} value={o.id}>{c.name}: {o.name} (+{rupiah(o.price)})</option>
                                                     ))}
                                                 </optgroup>
@@ -319,13 +364,24 @@ export default function Marketing({ promotions, products = [], customizations = 
                                 </div>
                             </div>
 
-                            <button 
-                                type="submit" 
-                                disabled={processing}
-                                className="w-full py-3 bg-[#00C48C] text-white font-bold rounded-xl text-sm hover:bg-[#00ab7a] transition-all shadow-lg shadow-green-100 mt-4 disabled:opacity-50"
-                            >
-                                Simpan Campaign
-                            </button>
+                            <div className="flex gap-3 mt-4">
+                                {editingPromo && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCancelEdit}
+                                        className="flex-1 py-3 bg-white border border-gray-200 text-gray-500 font-bold rounded-xl text-sm hover:bg-gray-50 transition-all"
+                                    >
+                                        Batal
+                                    </button>
+                                )}
+                                <button 
+                                    type="submit" 
+                                    disabled={processing}
+                                    className="flex-1 py-3 bg-[#00C48C] text-white font-bold rounded-xl text-sm hover:bg-[#00ab7a] transition-all shadow-lg shadow-green-100 disabled:opacity-50"
+                                >
+                                    {editingPromo ? 'Simpan Edit' : 'Simpan Campaign'}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -412,6 +468,13 @@ export default function Marketing({ promotions, products = [], customizations = 
                                     </div>
                                     
                                     <div className="flex items-center space-x-2">
+                                        <button 
+                                            onClick={() => handleStartEdit(promo)}
+                                            className="p-2 text-[#00C48C] bg-[#F0FAF6] hover:bg-[#E0F5EE] rounded-lg transition-all"
+                                            title="Edit Promo"
+                                        >
+                                            <Edit2 size={18} />
+                                        </button>
                                         <button 
                                             onClick={() => post(route('admin.marketing.toggle', promo.id))}
                                             className={`p-2 rounded-lg transition-all ${promo.is_active ? 'text-green-500 bg-green-50 hover:bg-green-100' : 'text-gray-400 bg-gray-50 hover:bg-gray-100'}`}

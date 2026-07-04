@@ -38,9 +38,37 @@ export default function Edit({ product, categories, ingredients }: EditProps) {
             ingredient_id: r.ingredient_id.toString(),
             quantity: r.quantity.toString()
         })) as { ingredient_id: string; quantity: string }[],
+        price_options: (product.price_options || []).map(opt => ({
+            id: opt.id,
+            name: opt.name,
+            price: Math.round(Number(opt.price)).toString(),
+            multiplier: opt.multiplier.toString()
+        })) as { id: string; name: string; price: string; multiplier: string }[],
     });
 
+    const [hasMultiplePricing, setHasMultiplePricing] = useState(
+        !!(product.price_options && product.price_options.length > 0)
+    );
     const [preview, setPreview] = useState<string | null>(product.image_url || null);
+
+    const addPriceOption = () => {
+        setData('price_options', [
+            ...data.price_options,
+            { id: Math.random().toString(36).substring(2, 9), name: '', price: '', multiplier: '1' }
+        ]);
+    };
+
+    const removePriceOption = (index: number) => {
+        const newOptions = [...data.price_options];
+        newOptions.splice(index, 1);
+        setData('price_options', newOptions);
+    };
+
+    const updatePriceOption = (index: number, field: 'name' | 'price' | 'multiplier', value: string) => {
+        const newOptions = [...data.price_options];
+        newOptions[index][field] = value;
+        setData('price_options', newOptions);
+    };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -68,6 +96,14 @@ export default function Edit({ product, categories, ingredients }: EditProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (hasMultiplePricing && data.price_options.length > 0) {
+            data.price = data.price_options[0].price;
+        } else {
+            // @ts-ignore
+            data.price_options = [];
+        }
+
         // Since we have a file upload, we use POST request even for update
         post(route('admin.products.update', product.id), {
             forceFormData: true,
@@ -125,38 +161,135 @@ export default function Edit({ product, categories, ingredients }: EditProps) {
 
                         {/* Section 2: Harga & Inventori */}
                         <div className="bg-white p-10 rounded-[40px] border border-[#F0F0F0] shadow-sm space-y-8">
-                            <h3 className="font-poppins font-black text-[18px] text-[#1A1A1A] flex items-center gap-3">
-                                <div className="w-8 h-8 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center text-xs">2</div>
-                                Harga & Inventori
-                            </h3>
+                            <div className="flex items-center justify-between pb-4 border-b border-[#F8F8F8]">
+                                <h3 className="font-poppins font-black text-[18px] text-[#1A1A1A] flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center text-xs">2</div>
+                                    Harga & Inventori
+                                </h3>
+                                <label className="flex items-center space-x-3 cursor-pointer select-none">
+                                    <input 
+                                        type="checkbox"
+                                        checked={hasMultiplePricing}
+                                        onChange={e => {
+                                            setHasMultiplePricing(e.target.checked);
+                                            if (e.target.checked && data.price_options.length === 0) {
+                                                setData('price_options', [
+                                                    { id: Math.random().toString(36).substring(2, 9), name: 'Pcs', price: data.price, multiplier: '1' }
+                                                ]);
+                                            }
+                                        }}
+                                        className="rounded border-[#E8E8E8] text-[#2D6A4F] focus:ring-[#2D6A4F]/20 w-5 h-5"
+                                    />
+                                    <span className="text-[11px] font-black uppercase tracking-wider text-[#1A1A1A]">Pilihan Harga Ganda (Pcs / Kg)</span>
+                                </label>
+                            </div>
                             
-                            <div className="grid grid-cols-2 gap-8">
-                                <div className="space-y-2.5">
-                                    <label className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] ml-1">Harga Satuan</label>
-                                    <div className="relative group">
-                                        <span className="absolute left-7 top-1/2 -translate-y-1/2 text-[#B5AFA6] font-black text-[13px] group-focus-within:text-[#2D6A4F] transition-colors">Rp</span>
+                            {!hasMultiplePricing ? (
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="space-y-2.5">
+                                        <label className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] ml-1">Harga Satuan</label>
+                                        <div className="relative group">
+                                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-[#B5AFA6] font-black text-[13px] group-focus-within:text-[#2D6A4F] transition-colors">Rp</span>
+                                            <input 
+                                                type="number" 
+                                                value={data.price}
+                                                onChange={e => setData('price', e.target.value)}
+                                                placeholder="0"
+                                                className={`w-full pl-16 pr-7 py-4.5 bg-[#F9F9F9] border-transparent focus:bg-white focus:ring-4 focus:ring-[#2D6A4F]/5 focus:border-[#2D6A4F]/20 rounded-2xl text-[15px] font-black outline-none transition-all ${errors.price ? 'border-red-300' : ''}`}
+                                            />
+                                        </div>
+                                        {errors.price && <p className="text-[10px] font-bold text-red-500 ml-1">{errors.price}</p>}
+                                    </div>
+                                    <div className="space-y-2.5">
+                                        <label className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] ml-1">Stok</label>
                                         <input 
                                             type="number" 
-                                            value={data.price}
-                                            onChange={e => setData('price', e.target.value)}
+                                            value={data.stock}
+                                            onChange={e => setData('stock', e.target.value)}
                                             placeholder="0"
-                                            className={`w-full pl-16 pr-7 py-4.5 bg-[#F9F9F9] border-transparent focus:bg-white focus:ring-4 focus:ring-[#2D6A4F]/5 focus:border-[#2D6A4F]/20 rounded-2xl text-[15px] font-black outline-none transition-all ${errors.price ? 'border-red-300' : ''}`}
+                                            className={`w-full px-7 py-4.5 bg-[#F9F9F9] border-transparent focus:bg-white focus:ring-4 focus:ring-[#2D6A4F]/5 focus:border-[#2D6A4F]/20 rounded-2xl text-[15px] font-black outline-none transition-all ${errors.stock ? 'border-red-300' : ''}`}
                                         />
+                                        {errors.stock && <p className="text-[10px] font-bold text-red-500 ml-1">{errors.stock}</p>}
                                     </div>
-                                    {errors.price && <p className="text-[10px] font-bold text-red-500 ml-1">{errors.price}</p>}
                                 </div>
-                                <div className="space-y-2.5">
-                                    <label className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] ml-1">Stok</label>
-                                    <input 
-                                        type="number" 
-                                        value={data.stock}
-                                        onChange={e => setData('stock', e.target.value)}
-                                        placeholder="0"
-                                        className={`w-full px-7 py-4.5 bg-[#F9F9F9] border-transparent focus:bg-white focus:ring-4 focus:ring-[#2D6A4F]/5 focus:border-[#2D6A4F]/20 rounded-2xl text-[15px] font-black outline-none transition-all ${errors.stock ? 'border-red-300' : ''}`}
-                                    />
-                                    {errors.stock && <p className="text-[10px] font-bold text-red-500 ml-1">{errors.stock}</p>}
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] ml-1">Daftar Pilihan Satuan & Harga</span>
+                                        <button 
+                                            type="button"
+                                            onClick={addPriceOption}
+                                            className="px-3 py-1.5 bg-[#2D6A4F] text-white text-[9px] font-black rounded-lg hover:bg-[#1B4332] transition-all flex items-center gap-1"
+                                        >
+                                            <Plus size={12} /> TAMBAH PILIHAN
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {data.price_options.map((opt, idx) => (
+                                            <div key={opt.id} className="flex items-center gap-3 bg-[#F9F9F9] p-4 rounded-2xl border border-[#F0F0F0] animate-in slide-in-from-right-1 duration-200">
+                                                <div className="flex-1 grid grid-cols-12 gap-3">
+                                                    <div className="col-span-4 space-y-1.5">
+                                                        <label className="text-[9px] font-black text-[#B5AFA6] uppercase tracking-wider ml-1">Nama Satuan</label>
+                                                        <input 
+                                                            type="text"
+                                                            placeholder="Misal: Pcs, Kg, Gelas"
+                                                            value={opt.name}
+                                                            onChange={e => updatePriceOption(idx, 'name', e.target.value)}
+                                                            className="w-full px-4 py-2 bg-white border border-[#E8E8E8] rounded-xl text-xs font-bold focus:ring-2 focus:ring-[#2D6A4F]/20 outline-none"
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-5 space-y-1.5">
+                                                        <label className="text-[9px] font-black text-[#B5AFA6] uppercase tracking-wider ml-1">Harga (Rp)</label>
+                                                        <input 
+                                                            type="number"
+                                                            placeholder="0"
+                                                            value={opt.price}
+                                                            onChange={e => updatePriceOption(idx, 'price', e.target.value)}
+                                                            className="w-full px-4 py-2 bg-white border border-[#E8E8E8] rounded-xl text-xs font-bold focus:ring-2 focus:ring-[#2D6A4F]/20 outline-none"
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-3 space-y-1.5">
+                                                        <label className="text-[9px] font-black text-[#B5AFA6] uppercase tracking-wider ml-1">Pengali Stok</label>
+                                                        <input 
+                                                            type="number"
+                                                            step="0.0001"
+                                                            placeholder="1"
+                                                            value={opt.multiplier}
+                                                            onChange={e => updatePriceOption(idx, 'multiplier', e.target.value)}
+                                                            className="w-full px-4 py-2 bg-white border border-[#E8E8E8] rounded-xl text-xs font-bold focus:ring-2 focus:ring-[#2D6A4F]/20 outline-none"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                {data.price_options.length > 1 && (
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => removePriceOption(idx)}
+                                                        className="w-9 h-9 mt-4.5 flex items-center justify-center text-[#D0D0D0] hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-8 pt-2">
+                                        <div className="space-y-2.5">
+                                            <label className="text-[10px] font-black text-[#B5AFA6] uppercase tracking-[0.2em] ml-1">Stok (Unit Dasar)</label>
+                                            <input 
+                                                type="number" 
+                                                value={data.stock}
+                                                onChange={e => setData('stock', e.target.value)}
+                                                placeholder="0"
+                                                className={`w-full px-7 py-4.5 bg-[#F9F9F9] border-transparent focus:bg-white focus:ring-4 focus:ring-[#2D6A4F]/5 focus:border-[#2D6A4F]/20 rounded-2xl text-[15px] font-black outline-none transition-all ${errors.stock ? 'border-red-300' : ''}`}
+                                            />
+                                            {errors.stock && <p className="text-[10px] font-bold text-red-500 ml-1">{errors.stock}</p>}
+                                            <span className="text-[9px] text-[#B5AFA6] font-medium ml-1 block">* Masukkan jumlah stok dalam unit dasar (multiplier = 1).</span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
 
                         {/* Section 3: Formula Resep (BOM) — SINKRONISASI BAHAN BAKU */}

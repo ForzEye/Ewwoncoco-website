@@ -102,6 +102,7 @@ class OrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'items.*.selected_price_option' => 'nullable|array',
             'items.*.customizations' => 'nullable|array',
             'items.*.customizations.*.id' => 'required|exists:customization_options,id',
             'items.*.customizations.*.name' => 'required|string',
@@ -139,8 +140,23 @@ class OrderController extends Controller
 
         foreach ($request->items as $item) {
             $product = Product::findOrFail($item['product_id']);
-            $unitPrice = $product->price;
+            
+            $priceOption = $item['selected_price_option'] ?? null;
+            $multiplier = $priceOption ? (float) $priceOption['multiplier'] : 1.0;
+            
+            $unitPrice = $priceOption ? $priceOption['price'] : $product->price;
             $processedCustomizations = [];
+
+            if ($priceOption) {
+                $processedCustomizations[] = [
+                    'id' => null,
+                    'name' => 'Satuan: ' . $priceOption['name'],
+                    'price' => 0,
+                    'original_price' => 0,
+                    'is_price_option' => true,
+                    'multiplier' => $multiplier,
+                ];
+            }
 
             if (isset($item['customizations']) && is_array($item['customizations'])) {
                 foreach ($item['customizations'] as $custOpt) {

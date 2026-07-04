@@ -27,7 +27,7 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
     }, [promotions]);
 
     const getItemTotalPrice = (item: any) => {
-        const itemPrice = Number(item.product.price);
+        const itemPrice = item.selected_price_option ? Number(item.selected_price_option.price) : Number(item.product.price);
         const customizationsPrice = (item.customizations || []).reduce((sum: number, opt: any) => {
             const hasUpgrade = activeUpgradePromos.some(p => Number(p.upgrade_to_option_id) === Number(opt.id));
             const isClaimed = opt.claim_upgrade === true;
@@ -111,6 +111,7 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
             product_id: item.product.id,
             quantity: item.quantity,
             notes: item.notes,
+            selected_price_option: item.selected_price_option || null,
             customizations: (item.customizations || []).map(c => ({
                 id: c.id,
                 name: c.name,
@@ -362,11 +363,18 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
                                 <div className="space-y-3 mb-4">
                                     {items.map(item => {
                                         const itemTotal = getItemTotalPrice(item);
-                                        const itemKey = item.product.id + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
+                                        const itemKey = item.product.id + '-' + (item.selected_price_option?.id || '') + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
                                         return (
                                             <div key={itemKey} className="flex flex-col text-sm font-inter">
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600 truncate mr-2">{item.quantity}x {item.product.name}</span>
+                                                    <span className="text-gray-600 truncate mr-2">
+                                                        {item.quantity}x {item.product.name}
+                                                        {item.selected_price_option && (
+                                                            <span className="text-[11px] text-[#00C48C] font-semibold bg-[#F0FAF6] px-1.5 py-0.5 rounded ml-1.5">
+                                                                {item.selected_price_option.name}
+                                                            </span>
+                                                        )}
+                                                    </span>
                                                     <span className="font-medium text-[#1A1A1A] flex-shrink-0">{rupiah(itemTotal)}</span>
                                                 </div>
                                                 {item.customizations && item.customizations.length > 0 && (
@@ -384,7 +392,7 @@ export default function Checkout({ promotions = [], branches = [] }: CheckoutPro
                                                                             <input 
                                                                                 type="checkbox" 
                                                                                 checked={isClaimed}
-                                                                                onChange={(e) => toggleUpgradeClaim(item.product.id, c.id, e.target.checked, item.customizations)}
+                                                                                onChange={(e) => toggleUpgradeClaim(item.product.id, c.id, e.target.checked, item.customizations, item.selected_price_option)}
                                                                                 className="w-3.5 h-3.5 text-[#00C48C] border-gray-300 rounded focus:ring-0 focus:ring-offset-0"
                                                                             />
                                                                             <span className="text-[9px] font-black uppercase tracking-wider">Klaim Upgrade</span>

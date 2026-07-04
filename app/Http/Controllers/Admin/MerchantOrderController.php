@@ -227,14 +227,26 @@ class MerchantOrderController extends Controller
                     foreach ($order->items as $item) {
                         $product = Product::with('recipes')->find($item->product_id);
                         if ($product) {
+                            $multiplier = 1.0;
+                            $custs = $item->customizations;
+                            $array = is_string($custs) ? json_decode($custs, true) : $custs;
+                            if (is_array($array)) {
+                                foreach ($array as $opt) {
+                                    if (!empty($opt['is_price_option']) && isset($opt['multiplier'])) {
+                                        $multiplier = (float) $opt['multiplier'];
+                                        break;
+                                    }
+                                }
+                            }
+
                             if ($product->recipes->isEmpty()) {
-                                $product->decrement('stock', $item->quantity);
+                                $product->decrement('stock', $item->quantity * $multiplier);
                                 $product->refresh();
                             }
                             StockService::deductFromRecipe(
                                 $item->product_id,
                                 $order->branch_id,
-                                $item->quantity,
+                                $item->quantity * $multiplier,
                                 $order->order_number,
                                 'OnlineOrder'
                             );
@@ -247,14 +259,26 @@ class MerchantOrderController extends Controller
                     foreach ($order->items as $item) {
                         $product = Product::with('recipes')->find($item->product_id);
                         if ($product) {
+                            $multiplier = 1.0;
+                            $custs = $item->customizations;
+                            $array = is_string($custs) ? json_decode($custs, true) : $custs;
+                            if (is_array($array)) {
+                                foreach ($array as $opt) {
+                                    if (!empty($opt['is_price_option']) && isset($opt['multiplier'])) {
+                                        $multiplier = (float) $opt['multiplier'];
+                                        break;
+                                    }
+                                }
+                            }
+
                             if ($product->recipes->isEmpty()) {
-                                $product->increment('stock', $item->quantity);
+                                $product->increment('stock', $item->quantity * $multiplier);
                                 $product->refresh();
                             } else {
                                 StockService::restoreToRecipe(
                                     $item->product_id,
                                     $order->branch_id,
-                                    $item->quantity,
+                                    $item->quantity * $multiplier,
                                     $order->order_number,
                                     'OnlineOrder'
                                 );

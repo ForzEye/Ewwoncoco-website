@@ -38,9 +38,10 @@ export default function Cart() {
                             {/* Item List */}
                             <div className="lg:col-span-2 space-y-4">
                                 {items.map((item) => {
-                                    const itemKey = item.product.id + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
+                                    const itemKey = item.product.id + '-' + (item.selected_price_option?.id || '') + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
                                     const sumToppings = (item.customizations || []).reduce((s, c) => s + Number(c.price), 0);
-                                    const itemUnitPrice = Number(item.product.price) + sumToppings;
+                                    const baseProductPrice = item.selected_price_option ? Number(item.selected_price_option.price) : Number(item.product.price);
+                                    const itemUnitPrice = baseProductPrice + sumToppings;
 
                                     return (
                                         <div key={itemKey} className="flex flex-col sm:flex-row gap-4 bg-white border border-gray-200 rounded-lg p-4">
@@ -56,9 +57,14 @@ export default function Cart() {
                                                     <div className="flex justify-between items-start">
                                                         <h3 className="font-poppins font-semibold text-lg text-[#1A1A1A] line-clamp-2">
                                                             {item.product.name}
+                                                            {item.selected_price_option && (
+                                                                <span className="text-xs text-[#00C48C] font-semibold bg-[#F0FAF6] px-1.5 py-0.5 rounded ml-1.5">
+                                                                    {item.selected_price_option.name}
+                                                                </span>
+                                                            )}
                                                         </h3>
                                                         <button 
-                                                            onClick={() => removeItem(item.product.id, item.customizations)}
+                                                            onClick={() => removeItem(item.product.id, item.customizations, item.selected_price_option)}
                                                             className="text-gray-400 hover:text-red-500 p-1"
                                                         >
                                                             <Trash2 size={20} />
@@ -82,7 +88,7 @@ export default function Cart() {
                                                     <div className="flex items-center border border-gray-300 rounded-md">
                                                         <button 
                                                             onClick={() => {
-                                                                if (item.quantity > 1) updateQuantity(item.product.id, item.quantity - 1, item.customizations);
+                                                                if (item.quantity > 1) updateQuantity(item.product.id, item.quantity - 1, item.customizations, item.selected_price_option);
                                                             }}
                                                             className="px-3 py-1 text-gray-600 hover:bg-gray-100"
                                                         >
@@ -92,7 +98,7 @@ export default function Cart() {
                                                             {item.quantity}
                                                         </span>
                                                         <button 
-                                                            onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.customizations)}
+                                                            onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.customizations, item.selected_price_option)}
                                                             className="px-3 py-1 text-gray-600 hover:bg-gray-100"
                                                         >
                                                             <Plus size={16} />

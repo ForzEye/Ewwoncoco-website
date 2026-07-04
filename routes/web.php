@@ -221,6 +221,7 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     Route::get('/marketing', [MarketingController::class, 'index'])->name('marketing.index');
     Route::post('/marketing', [MarketingController::class, 'store'])->name('marketing.store');
     Route::post('/marketing/{id}/toggle', [MarketingController::class, 'toggle'])->name('marketing.toggle');
+    Route::post('/marketing/{id}', [MarketingController::class, 'update'])->name('marketing.update');
     Route::delete('/marketing/{id}', [MarketingController::class, 'destroy'])->name('marketing.destroy');
 
     // Inventory & Recipe Management

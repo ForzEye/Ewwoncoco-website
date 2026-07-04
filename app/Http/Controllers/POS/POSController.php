@@ -78,6 +78,7 @@ class POSController extends Controller
             'items.*.customizations' => 'nullable|array',
             'items.*.customizations.*.id' => 'required|exists:customization_options,id',
             'items.*.customizations.*.claim_upgrade' => 'nullable|boolean',
+            'items.*.selected_price_option' => 'nullable|array',
             'manual_discount_type' => 'nullable|in:percent,fixed',
             'manual_discount_value' => 'nullable|numeric|min:0',
             'discount_reason' => 'nullable|string',
@@ -152,7 +153,9 @@ class POSController extends Controller
             $globalBogoPromo = $bogoPromosCollection->whereNull('buy_product_id')->first();
 
             $subtotal = collect($request->items)->sum(function ($item) use ($upgradePromos) {
-                $itemPrice = $item['product']['price'];
+                $itemPrice = isset($item['selected_price_option']) && !empty($item['selected_price_option']['price'])
+                    ? $item['selected_price_option']['price']
+                    : $item['product']['price'];
                 if (isset($item['customizations']) && is_array($item['customizations'])) {
                     foreach ($item['customizations'] as $custOpt) {
                         $price = $custOpt['price'];
@@ -209,8 +212,23 @@ class POSController extends Controller
             foreach ($request->items as $item) {
                 $productId = $item['product']['id'];
                 $qty = $item['quantity'];
-                $unitPrice = $item['product']['price'];
+
+                $priceOption = $item['selected_price_option'] ?? null;
+                $multiplier = $priceOption ? (float) $priceOption['multiplier'] : 1.0;
+
+                $unitPrice = $priceOption ? $priceOption['price'] : $item['product']['price'];
                 $processedCustomizations = [];
+
+                if ($priceOption) {
+                    $processedCustomizations[] = [
+                        'id' => null,
+                        'name' => 'Satuan: ' . $priceOption['name'],
+                        'price' => 0,
+                        'original_price' => 0,
+                        'is_price_option' => true,
+                    ];
+                }
+
                 if (isset($item['customizations']) && is_array($item['customizations'])) {
                     foreach ($item['customizations'] as $custOpt) {
                         $originalPrice = $custOpt['price'] ?? 0;
@@ -238,7 +256,7 @@ class POSController extends Controller
                 $product = Product::with('recipes')->find($productId);
                 if ($product) {
                     if ($product->recipes->isEmpty()) {
-                        $product->decrement('stock', $qty);
+                        $product->decrement('stock', $qty * $multiplier);
                         $product->refresh();
                         \App\Services\Notification\StockAlertService::checkAndSendProductAlert($product);
                     }
@@ -248,7 +266,7 @@ class POSController extends Controller
                 StockService::deductFromRecipe(
                     $productId,
                     $branchId,
-                    $qty,
+                    $qty * $multiplier,
                     $transaction->transaction_number,
                     'PosTransaction'
                 );

@@ -19,6 +19,13 @@ export default function ProductDetail({ product, reviews, avgRating, reviewCount
     const [quantity, setQuantity] = useState(1);
     const addItem = useCartStore((state) => state.addItem);
 
+    const [selectedPriceOption, setSelectedPriceOption] = useState<any>(() => {
+        if (product.price_options && product.price_options.length > 0) {
+            return product.price_options[0];
+        }
+        return null;
+    });
+
     // Initial state with default choices for required/single customizations
     const [selectedOptions, setSelectedOptions] = useState<Record<number, number[]>>(() => {
         const initial: Record<number, number[]> = {};
@@ -66,7 +73,8 @@ export default function ProductDetail({ product, reviews, avgRating, reviewCount
         return sum;
     };
 
-    const currentSinglePrice = Number(product.price) + getToppingsPriceSum();
+    const baseProductPrice = selectedPriceOption ? Number(selectedPriceOption.price) : Number(product.price);
+    const currentSinglePrice = baseProductPrice + getToppingsPriceSum();
     const totalPrice = currentSinglePrice * quantity;
 
     const handleAddToCart = () => {
@@ -83,7 +91,7 @@ export default function ProductDetail({ product, reviews, avgRating, reviewCount
                 }
             });
         }
-        addItem(product, quantity, '', customizationsList);
+        addItem(product, quantity, '', customizationsList, selectedPriceOption);
         setIsCartOpen(true);
     };
 
@@ -166,6 +174,38 @@ export default function ProductDetail({ product, reviews, avgRating, reviewCount
                             <p className="text-gray-600 font-inter leading-relaxed mb-8">
                                 {product.description || 'Produk berkualitas dari EWWON COCO. Segera pesan sebelum kehabisan!'}
                             </p>
+
+                            {/* Pilihan Satuan / Harga Ganda */}
+                            {product.price_options && product.price_options.length > 0 && (
+                                <div className="space-y-4 mb-8 border-t border-gray-100 pt-6">
+                                    <div className="flex items-center justify-between">
+                                        <label className="font-poppins font-bold text-lg text-charcoal">Pilih Satuan</label>
+                                        <span className="text-[10px] bg-[#F0FAF6] text-[#00C48C] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Wajib</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {product.price_options.map((opt) => {
+                                            const isSelected = selectedPriceOption?.id === opt.id;
+                                            return (
+                                                <button
+                                                    key={opt.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedPriceOption(opt)}
+                                                    className={`flex flex-col justify-between p-4 border rounded-xl transition-all text-left h-24 ${
+                                                        isSelected 
+                                                            ? 'border-[#00C48C] bg-[#F0FAF6] text-[#00C48C]' 
+                                                            : 'border-gray-200 hover:border-gray-300 bg-white text-[#1A1A1A]'
+                                                    }`}
+                                                >
+                                                    <span className="text-sm font-bold font-poppins">{opt.name}</span>
+                                                    <span className="text-sm font-black text-[#00C48C] mt-2">
+                                                        {rupiah(opt.price)}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Customization Options */}
                             {product.customizations && product.customizations.length > 0 && (

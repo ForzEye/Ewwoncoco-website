@@ -60,9 +60,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         </div>
                     ) : (
                         items.map((item) => {
-                            const itemKey = item.product.id + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
+                            const itemKey = item.product.id + '-' + (item.selected_price_option?.id || '') + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
                             const sumToppings = (item.customizations || []).reduce((s, c) => s + Number(c.price), 0);
-                            const itemUnitPrice = Number(item.product.price) + sumToppings;
+                            const baseProductPrice = item.selected_price_option ? Number(item.selected_price_option.price) : Number(item.product.price);
+                            const itemUnitPrice = baseProductPrice + sumToppings;
 
                             return (
                                 <div key={itemKey} className="flex gap-4 border-b border-gray-100 pb-4">
@@ -76,6 +77,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                     <div className="flex-1">
                                         <h4 className="font-poppins font-medium text-sm text-[#1A1A1A] line-clamp-2">
                                             {item.product.name}
+                                            {item.selected_price_option && (
+                                                <span className="text-xs text-[#00C48C] font-semibold bg-[#F0FAF6] px-1.5 py-0.5 rounded ml-1.5">
+                                                    {item.selected_price_option.name}
+                                                </span>
+                                            )}
                                         </h4>
                                         {item.customizations && item.customizations.length > 0 && (
                                             <div className="text-[11px] text-gray-500 font-inter mt-1 space-y-0.5">
@@ -94,9 +100,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                                 <button 
                                                     onClick={() => {
                                                         if (item.quantity > 1) {
-                                                            updateQuantity(item.product.id, item.quantity - 1, item.customizations);
+                                                            updateQuantity(item.product.id, item.quantity - 1, item.customizations, item.selected_price_option);
                                                         } else {
-                                                            removeItem(item.product.id, item.customizations);
+                                                            removeItem(item.product.id, item.customizations, item.selected_price_option);
                                                         }
                                                     }}
                                                     className="px-2 py-1 text-gray-600 hover:bg-gray-50"
@@ -107,7 +113,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                                     {item.quantity}
                                                 </span>
                                                 <button 
-                                                    onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.customizations)}
+                                                    onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.customizations, item.selected_price_option)}
                                                     className="px-2 py-1 text-gray-600 hover:bg-gray-50"
                                                 >
                                                     <Plus size={14} />

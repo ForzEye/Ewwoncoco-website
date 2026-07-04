@@ -80,6 +80,13 @@ export interface Customization {
     options?: CustomizationOption[];
 }
 
+export interface PriceOption {
+    id: string;
+    name: string;
+    price: number;
+    multiplier: number;
+}
+
 export interface Product {
     id: number;
     merchant_id: number;
@@ -89,6 +96,7 @@ export interface Product {
     slug: string;
     description?: string | null;
     price: number;
+    price_options?: PriceOption[] | null;
     image_url?: string | null;
     barcode?: string | null;
     stock: number;

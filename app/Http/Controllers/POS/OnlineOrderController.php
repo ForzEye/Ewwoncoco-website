@@ -68,10 +68,30 @@ class OnlineOrderController extends Controller
             // Deduct Stock for all items in order
             $order->load('items.product');
             foreach ($order->items as $item) {
+                $multiplier = 1.0;
+                $custs = $item->customizations;
+                $array = is_string($custs) ? json_decode($custs, true) : $custs;
+                if (is_array($array)) {
+                    foreach ($array as $opt) {
+                        if (!empty($opt['is_price_option']) && isset($opt['multiplier'])) {
+                            $multiplier = (float) $opt['multiplier'];
+                            break;
+                        }
+                    }
+                }
+
+                if ($item->product) {
+                    if ($item->product->recipes->isEmpty()) {
+                        $item->product->decrement('stock', $item->quantity * $multiplier);
+                        $item->product->refresh();
+                        \App\Services\Notification\StockAlertService::checkAndSendProductAlert($item->product);
+                    }
+                }
+
                 StockService::deductFromRecipe(
                     $item->product_id,
                     $order->branch_id,
-                    $item->quantity,
+                    $item->quantity * $multiplier,
                     $order->id,
                     'OnlineOrder'
                 );

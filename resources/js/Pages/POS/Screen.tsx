@@ -68,6 +68,7 @@ export default function Screen({ products, categories, activeShift, promotions }
 
     const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
     const [posSelectedOptions, setPosSelectedOptions] = useState<Record<number, number[]>>({});
+    const [posSelectedPriceOption, setPosSelectedPriceOption] = useState<any>(null);
 
     const [isManualDiscountModalOpen, setIsManualDiscountModalOpen] = useState(false);
     const [tempDiscountType, setTempDiscountType] = useState<'percent' | 'fixed'>('fixed');
@@ -97,17 +98,30 @@ export default function Screen({ products, categories, activeShift, promotions }
     };
 
     const handleProductClick = (product: Product) => {
-        if (product.customizations && product.customizations.length > 0) {
+        if (
+            (product.customizations && product.customizations.length > 0) ||
+            (product.price_options && product.price_options.length > 0)
+        ) {
             // Open customization modal
             const initial: Record<number, number[]> = {};
-            product.customizations.forEach((cust) => {
-                if (cust.type === 'single' && cust.options && cust.options.length > 0) {
-                    initial[cust.id] = [cust.options[0].id];
-                } else {
-                    initial[cust.id] = [];
-                }
-            });
+            if (product.customizations) {
+                product.customizations.forEach((cust) => {
+                    if (cust.type === 'single' && cust.options && cust.options.length > 0) {
+                        initial[cust.id] = [cust.options[0].id];
+                    } else {
+                        initial[cust.id] = [];
+                    }
+                });
+            }
             setPosSelectedOptions(initial);
+            
+            // Set the first price option as selected by default
+            if (product.price_options && product.price_options.length > 0) {
+                setPosSelectedPriceOption(product.price_options[0]);
+            } else {
+                setPosSelectedPriceOption(null);
+            }
+
             setCustomizingProduct(product);
         } else {
             // Add immediately
@@ -130,8 +144,9 @@ export default function Screen({ products, categories, activeShift, promotions }
                 }
             });
         }
-        addItem(customizingProduct, 1, '', selectedList);
+        addItem(customizingProduct, 1, '', selectedList, posSelectedPriceOption);
         setCustomizingProduct(null);
+        setPosSelectedPriceOption(null);
     };
 
     const handleSearchCustomer = async () => {
@@ -193,7 +208,7 @@ export default function Screen({ products, categories, activeShift, promotions }
     }, [promotions, orderChannel, selectedCustomer]);
 
     const getItemTotalPrice = (item: any) => {
-        const itemPrice = Number(item.product.price);
+        const itemPrice = item.selected_price_option ? Number(item.selected_price_option.price) : Number(item.product.price);
         const customizationsPrice = (item.customizations || []).reduce((sum: number, opt: any) => {
             const hasUpgrade = activeUpgradePromos.some(p => Number(p.upgrade_to_option_id) === Number(opt.id));
             const isClaimed = opt.claim_upgrade === true;
@@ -646,7 +661,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                         ) : (
                             <>
                                 {items.map((item, idx) => {
-                                    const itemKey = item.product.id + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
+                                    const itemKey = item.product.id + '-' + (item.selected_price_option?.id || '') + '-' + (item.customizations || []).map(c => c.id).sort().join(',');
                                     const itemTotalPrice = getItemTotalPrice(item);
 
                                     return (
@@ -659,14 +674,21 @@ export default function Screen({ products, categories, activeShift, promotions }
                                                 />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h5 className="text-[13px] font-black text-[#1A1A1A] font-poppins leading-tight break-words">{item.product.name}</h5>
+                                                <h5 className="text-[13px] font-black text-[#1A1A1A] font-poppins leading-tight break-words">
+                                                    {item.product.name}
+                                                    {item.selected_price_option && (
+                                                        <span className="text-[10px] text-[#2D6A4F] font-black ml-1.5 px-2 py-0.5 bg-[#E8F5E9] rounded-md">
+                                                            {item.selected_price_option.name}
+                                                        </span>
+                                                    )}
+                                                </h5>
                                                 {item.customizations && item.customizations.length > 0 && (
                                                     <div className="flex flex-wrap items-center gap-1 mt-1.5">
                                                         {item.customizations.map(c => {
                                                             const hasUpgrade = activeUpgradePromos.some(p => Number(p.upgrade_to_option_id) === Number(c.id));
                                                             const isClaimed = c.claim_upgrade === true;
                                                             if (hasUpgrade) {
-                                                                return (
+                                                                 return (
                                                                     <div key={c.id} className="w-full flex flex-col bg-white/70 p-2 rounded-xl border border-[#E8E4DD] mt-1 shadow-sm">
                                                                         <span className="text-[11px] text-[#1A1A1A] font-black">
                                                                             • {c.name} {isClaimed && ' (Upgrade Free)'}
@@ -675,7 +697,7 @@ export default function Screen({ products, categories, activeShift, promotions }
                                                                             <input 
                                                                                 type="checkbox" 
                                                                                 checked={isClaimed}
-                                                                                onChange={(e) => toggleUpgradeClaim(item.product.id, c.id, e.target.checked, item.customizations)}
+                                                                                onChange={(e) => toggleUpgradeClaim(item.product.id, c.id, e.target.checked, item.customizations, item.selected_price_option)}
                                                                                 className="w-4.5 h-4.5 text-[#2D6A4F] border-[#C4BEB5] rounded focus:ring-0 focus:ring-offset-0"
                                                                             />
                                                                             <span className="text-[10px] font-black text-[#2D6A4F] uppercase tracking-wider">Klaim Upgrade</span>
@@ -695,14 +717,14 @@ export default function Screen({ products, categories, activeShift, promotions }
                                             </div>
                                             <div className="flex items-center bg-white rounded-xl p-0.5 border border-[#E8E4DD] shadow-sm flex-shrink-0 mt-0.5">
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity - 1, item.customizations); }} 
+                                                    onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity - 1, item.customizations, item.selected_price_option); }} 
                                                     className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                                                 >
                                                     <Minus size={13} strokeWidth={2.5} />
                                                 </button>
                                                 <span className="w-6 text-center text-xs font-black text-[#1A1A1A]">{angka(item.quantity)}</span>
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity + 1, item.customizations); }} 
+                                                    onClick={(e) => { e.stopPropagation(); updateQuantity(item.product.id, item.quantity + 1, item.customizations, item.selected_price_option); }} 
                                                     className="w-8 h-8 flex items-center justify-center text-[#C4BEB5] hover:text-[#2D6A4F] hover:bg-[#E8F5E9] rounded-xl transition-all"
                                                 >
                                                     <Plus size={13} strokeWidth={2.5} />
@@ -898,6 +920,36 @@ export default function Screen({ products, categories, activeShift, promotions }
                         </div>
                         {/* Content */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            {/* Pilihan Satuan / Harga */}
+                            {customizingProduct.price_options && customizingProduct.price_options.length > 0 && (
+                                <div className="space-y-2.5 pb-4 border-b border-[#E8E4DD]">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[11px] font-black text-[#B5AFA6] uppercase tracking-wider">Pilih Satuan / Ukuran</span>
+                                        <span className="text-[9px] font-bold bg-[#E8F5E9] text-[#2D6A4F] px-2 py-0.5 rounded">Wajib</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {customizingProduct.price_options.map((opt) => {
+                                            const isSelected = posSelectedPriceOption?.id === opt.id;
+                                            return (
+                                                <button
+                                                    key={opt.id}
+                                                    type="button"
+                                                    onClick={() => setPosSelectedPriceOption(opt)}
+                                                    className={`p-3 rounded-2xl border-2 font-bold text-left transition-all flex flex-col justify-between h-20 ${
+                                                        isSelected 
+                                                            ? 'border-[#2D6A4F] bg-[#E8F5E9] text-[#2D6A4F]' 
+                                                            : 'border-[#E8E4DD] bg-white text-[#8A8379] hover:border-[#C4BEB5]'
+                                                    }`}
+                                                >
+                                                    <span className="text-xs">{opt.name}</span>
+                                                    <span className="text-[11px] font-black text-[#2D6A4F]">{rupiah(opt.price)}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
                             {customizingProduct.customizations?.map((cust) => (
                                 <div key={cust.id} className="space-y-2.5">
                                     <div className="flex justify-between items-center">

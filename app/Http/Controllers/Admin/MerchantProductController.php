@@ -62,6 +62,7 @@ class MerchantProductController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'price_options' => 'nullable',
         ]);
 
         $imageUrl = null;
@@ -70,12 +71,18 @@ class MerchantProductController extends Controller
             $imageUrl = Storage::url($path);
         }
 
+        $priceOptions = $request->price_options;
+        if (is_string($priceOptions)) {
+            $priceOptions = json_decode($priceOptions, true);
+        }
+
         $product = Product::create([
             'merchant_id' => $merchant->id,
             'name' => $request->name,
             'slug' => Str::slug($request->name).'-'.Str::random(5),
             'category_id' => $request->category_id,
             'price' => $request->price,
+            'price_options' => $priceOptions,
             'stock' => $request->stock,
             'description' => $request->description,
             'image_url' => $imageUrl,
@@ -131,9 +138,15 @@ class MerchantProductController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'price_options' => 'nullable',
         ]);
 
-        $data = $request->except(['image', 'recipes']);
+        $data = $request->except(['image', 'recipes', 'price_options']);
+        $priceOptions = $request->price_options;
+        if (is_string($priceOptions)) {
+            $priceOptions = json_decode($priceOptions, true);
+        }
+        $data['price_options'] = $priceOptions;
 
         if ($request->hasFile('image')) {
             // Delete old image if exists

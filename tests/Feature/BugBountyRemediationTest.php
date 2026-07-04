@@ -840,8 +840,9 @@ class BugBountyRemediationTest extends TestCase
             'discount' => 0,
             'status' => 'pending',
             'payment_method' => 'qris',
-            'created_at' => '2026-06-06 12:00:00',
         ]);
+        $order1->created_at = '2026-06-06 12:00:00';
+        $order1->save(['timestamps' => false]);
 
         // 2. Order within date range but does NOT match search (Online)
         $order2 = Order::create([
@@ -854,8 +855,9 @@ class BugBountyRemediationTest extends TestCase
             'discount' => 0,
             'status' => 'pending',
             'payment_method' => 'qris',
-            'created_at' => '2026-06-06 13:00:00',
         ]);
+        $order2->created_at = '2026-06-06 13:00:00';
+        $order2->save(['timestamps' => false]);
 
         // 3. Order outside date range but matches search (POS)
         $order3 = \App\Models\PosTransaction::create([

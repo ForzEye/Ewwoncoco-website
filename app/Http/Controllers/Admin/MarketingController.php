@@ -144,4 +144,56 @@ class MarketingController extends Controller
 
         return back()->with('success', 'Promo berhasil dihapus.');
     }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:cashback_points,fixed_discount,bogo,upgrade',
+            'value' => 'required_unless:type,bogo,upgrade|nullable|numeric|min:0',
+            'min_purchase' => 'required_unless:type,bogo,upgrade|nullable|numeric|min:0',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after:start_date',
+            'buy_product_id' => 'nullable',
+            'get_product_id' => 'nullable',
+            'buy_quantity' => 'required_if:type,bogo|nullable|integer|min:1',
+            'get_quantity' => 'required_if:type,bogo|nullable|integer|min:1',
+            'applicable_on' => 'required|in:all,online,offline,gofood,grabfood,shopeefood',
+            'is_new_member_only' => 'nullable|boolean',
+            'max_free_qty' => 'nullable|integer|min:1',
+            'upgrade_from_option_id' => 'nullable|exists:customization_options,id',
+            'upgrade_to_option_id' => 'nullable|exists:customization_options,id',
+        ]);
+
+        $merchant = Auth::user()->merchant;
+        if (! $merchant) {
+            return back()->with('error', 'Toko tidak ditemukan.');
+        }
+
+        $promo = Promotion::where('merchant_id', $merchant->id)->findOrFail($id);
+
+        $promo->update([
+            'name' => $request->name,
+            'description' => $request->description,
+            'type' => $request->type,
+            'value' => ($request->type === 'bogo' || $request->type === 'upgrade') ? 0 : $request->value,
+            'min_purchase' => ($request->type === 'bogo' || $request->type === 'upgrade') ? 0 : $request->min_purchase,
+            'max_reward' => $request->max_reward,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'buy_product_id' => ($request->buy_product_id === 'all' || ! $request->buy_product_id) ? null : $request->buy_product_id,
+            'get_product_id' => ($request->get_product_id === 'all' || ! $request->get_product_id) ? null : $request->get_product_id,
+            'buy_quantity' => $request->buy_quantity,
+            'get_quantity' => $request->get_quantity,
+            'applicable_on' => $request->applicable_on,
+            'is_new_member_only' => $request->boolean('is_new_member_only', false),
+            'max_free_qty' => $request->max_free_qty,
+            'upgrade_from_option_id' => $request->upgrade_from_option_id,
+            'upgrade_to_option_id' => $request->upgrade_to_option_id,
+        ]);
+
+        Cache::forget('promotions_active');
+
+        return back()->with('success', 'Promo berhasil diperbarui.');
+    }
 }
