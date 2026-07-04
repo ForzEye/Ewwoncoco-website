@@ -13,10 +13,21 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Products: top selling (public — landing page)
 Route::get('/products/top-selling', function () {
     $products = Product::where('is_available', true)
-        ->latest()
+        ->select('products.*')
+        ->selectSub(function($query) {
+            $query->selectRaw('COALESCE(SUM(quantity), 0)')
+                ->from('order_items')
+                ->whereColumn('order_items.product_id', 'products.id');
+        }, 'online_sold')
+        ->selectSub(function($query) {
+            $query->selectRaw('COALESCE(SUM(quantity), 0)')
+                ->from('pos_transaction_items')
+                ->whereColumn('pos_transaction_items.product_id', 'products.id');
+        }, 'pos_sold')
+        ->orderByRaw('(online_sold + pos_sold) DESC')
+        ->orderBy('created_at', 'desc')
         ->take(3)
         ->get();
 
