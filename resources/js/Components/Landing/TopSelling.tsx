@@ -85,9 +85,14 @@ export default function TopSelling() {
                                         {product.description}
                                     </p>
                                     <div className="flex items-center justify-between mt-auto">
-                                        <span className="font-bold text-primary text-xl">
-                                            {rupiah(product.price)}
-                                        </span>
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-primary text-xl">
+                                                {rupiah(product.price)}
+                                            </span>
+                                            <span className="text-xs text-[#B5AFA6] mt-1 font-bold">
+                                                Terjual: {product.total_sold ?? 0}
+                                            </span>
+                                        </div>
                                         <Link 
                                             href={auth.user ? route('shop') : route('login')}
                                             className="w-10 h-10 rounded-lg bg-gray-100 text-charcoal hover:bg-primary hover:text-white flex items-center justify-center transition-colors"

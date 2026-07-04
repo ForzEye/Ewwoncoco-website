@@ -21,7 +21,7 @@ class Product extends Model
         'is_available' => 'boolean'
     ];
 
-    protected $appends = [];
+    protected $appends = ['total_sold'];
 
     public function getImageUrlAttribute($value)
     {
@@ -128,5 +128,21 @@ class Product extends Model
         }
 
         return $totalStock;
+    }
+
+    /**
+     * Get the total quantity sold for this product across online orders and POS transactions.
+     */
+    public function getTotalSoldAttribute()
+    {
+        $onlineUsage = \DB::table('order_items')
+            ->where('product_id', $this->id)
+            ->sum('quantity');
+
+        $posUsage = \DB::table('pos_transaction_items')
+            ->where('product_id', $this->id)
+            ->sum('quantity');
+
+        return (int) ($onlineUsage + $posUsage);
     }
 }

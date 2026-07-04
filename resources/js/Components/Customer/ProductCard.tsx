@@ -58,7 +58,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                             {rupiah(product.price)}
                         </span>
                         <span className="text-xs text-gray-400 mt-1 block">
-                            Sisa stok: {product.stock}
+                            Sisa stok: {product.stock} • Terjual: {product.total_sold ?? 0}
                         </span>
                     </div>
                     <button

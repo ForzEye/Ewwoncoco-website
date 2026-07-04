@@ -106,6 +106,7 @@ export interface Product {
     merchant?: Merchant;
     recipes?: Recipe[];
     customizations?: Customization[];
+    total_sold?: number;
 }
 
 export interface Recipe {
