@@ -99,7 +99,18 @@ export default function Index({ products = [] }: ProductsIndexProps) {
                                         </span>
                                     </td>
                                     <td className="px-8 py-6 whitespace-nowrap">
-                                        <p className="text-[14px] font-black text-[#1A1A1A] tracking-tighter">{rupiah(product.price)}</p>
+                                        {product.price_options && product.price_options.length > 0 ? (
+                                            <div className="flex flex-col gap-1.5">
+                                                {product.price_options.map((opt: any, idx: number) => (
+                                                    <div key={idx} className="flex items-center gap-1.5">
+                                                        <span className="text-[13px] font-black text-[#1A1A1A] tracking-tighter">{rupiah(opt.price)}</span>
+                                                        <span className="px-1.5 py-0.5 bg-[#F5F5F5] text-gray-500 rounded text-[9px] font-black uppercase tracking-wider">{opt.name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-[14px] font-black text-[#1A1A1A] tracking-tighter">{rupiah(product.price)}</p>
+                                        )}
                                     </td>
                                     <td className="px-8 py-6 whitespace-nowrap">
                                         <div className="flex flex-col">
