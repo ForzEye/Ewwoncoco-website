@@ -43,6 +43,10 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
         otp_email_enabled: settings.otp_email_enabled !== undefined ? String(settings.otp_email_enabled) : '1',
         wa_notifications_enabled: settings.wa_notifications_enabled !== undefined ? String(settings.wa_notifications_enabled) : '1',
         android_download_url: settings.android_download_url || '',
+        opening_hours_weekday: settings.opening_hours_weekday || '09:00 - 21:00',
+        opening_hours_weekday_label: settings.opening_hours_weekday_label || 'Senin - Jumat',
+        opening_hours_weekend: settings.opening_hours_weekend || '10:00 - 22:00',
+        opening_hours_weekend_label: settings.opening_hours_weekend_label || 'Sabtu - Minggu',
 
         // Mobile App Settings
         app_landing_promo_text: appSettings.app_landing_promo_text || '',
@@ -396,6 +400,62 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
                                         onChange={e => setData('footer_text', e.target.value)}
                                         className="w-full px-7 py-5 bg-gray-50 border-none rounded-2xl text-sm font-medium text-gray-500 leading-relaxed focus:ring-4 focus:ring-[#00C48C]/10 outline-none h-24 resize-none"
                                     />
+                                </div>
+
+                                <div className="border-t border-gray-100 pt-8 mt-8 space-y-6">
+                                    <h4 className="text-sm font-poppins font-black text-charcoal uppercase tracking-wider">
+                                        Jam Operasional
+                                    </h4>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Weekday Label */}
+                                        <div className="space-y-2.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Label Hari Kerja</label>
+                                            <input 
+                                                type="text" 
+                                                value={data.opening_hours_weekday_label}
+                                                onChange={e => setData('opening_hours_weekday_label', e.target.value)}
+                                                className="w-full px-7 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-[#00C48C]/10 outline-none"
+                                                placeholder="Senin - Jumat"
+                                            />
+                                        </div>
+                                        {/* Weekday Hours */}
+                                        <div className="space-y-2.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Jam Operasional Hari Kerja</label>
+                                            <input 
+                                                type="text" 
+                                                value={data.opening_hours_weekday}
+                                                onChange={e => setData('opening_hours_weekday', e.target.value)}
+                                                className="w-full px-7 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-[#00C48C]/10 outline-none"
+                                                placeholder="09:00 - 21:00"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Weekend Label */}
+                                        <div className="space-y-2.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Label Akhir Pekan</label>
+                                            <input 
+                                                type="text" 
+                                                value={data.opening_hours_weekend_label}
+                                                onChange={e => setData('opening_hours_weekend_label', e.target.value)}
+                                                className="w-full px-7 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-[#00C48C]/10 outline-none"
+                                                placeholder="Sabtu - Minggu"
+                                            />
+                                        </div>
+                                        {/* Weekend Hours */}
+                                        <div className="space-y-2.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Jam Operasional Akhir Pekan</label>
+                                            <input 
+                                                type="text" 
+                                                value={data.opening_hours_weekend}
+                                                onChange={e => setData('opening_hours_weekend', e.target.value)}
+                                                className="w-full px-7 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-[#00C48C]/10 outline-none"
+                                                placeholder="10:00 - 22:00"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="pt-6 border-t border-gray-100 flex justify-end">

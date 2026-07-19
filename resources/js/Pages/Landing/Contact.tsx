@@ -108,12 +108,12 @@ export default function Contact() {
                                 </h4>
                                 <div className="space-y-4 relative z-10">
                                     <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                                        <span className="text-gray-400 font-medium">Senin - Jumat</span>
-                                        <span className="font-bold">08:00 - 19:00</span>
+                                        <span className="text-gray-400 font-medium">{site_settings.opening_hours_weekday_label || 'Senin - Jumat'}</span>
+                                        <span className="font-bold">{site_settings.opening_hours_weekday || '09:00 - 21:00'}</span>
                                     </div>
                                     <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                                        <span className="text-gray-400 font-medium">Sabtu - Minggu</span>
-                                        <span className="font-bold">08:00 - 18:00</span>
+                                        <span className="text-gray-400 font-medium">{site_settings.opening_hours_weekend_label || 'Sabtu - Minggu'}</span>
+                                        <span className="font-bold">{site_settings.opening_hours_weekend || '10:00 - 22:00'}</span>
                                     </div>
                                     <div className="flex items-center gap-2 pt-2 text-[10px] text-[#00C48C] font-black uppercase tracking-widest">
                                         <ShieldCheck size={14} /> Terbuka di hari libur nasional

@@ -621,6 +621,7 @@ class SuperAdminController extends Controller
             'site_name', 'site_title', 'hero_title', 'hero_subtitle',
             'footer_text', 'contact_whatsapp', 'contact_email', 'instagram_url',
             'otp_enabled', 'otp_email_enabled', 'wa_notifications_enabled', 'android_download_url',
+            'opening_hours_weekday', 'opening_hours_weekday_label', 'opening_hours_weekend', 'opening_hours_weekend_label',
         ];
 
         foreach ($textSettings as $key) {
