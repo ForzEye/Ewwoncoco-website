@@ -403,10 +403,14 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
                                             onChange={e => setData('daily_report_time', e.target.value)}
                                             className="w-full px-5 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
                                         >
-                                            <option value="07:00">07:00 Pagi (Rekomendasi - Rekap Kemarin)</option>
-                                            <option value="08:00">08:00 Pagi</option>
-                                            <option value="23:59">23:59 Malam (Selesai Operasional)</option>
+                                            <option value="21:00">21:00 Malam (Tutup Toko - Rekap Hari Ini)</option>
+                                            <option value="22:00">22:00 Malam (Tutup Toko - Rekap Hari Ini)</option>
+                                            <option value="23:00">23:00 Malam (Rekap Hari Ini)</option>
+                                            <option value="23:59">23:59 Malam (Akhir Hari Ini)</option>
+                                            <option value="07:00">07:00 Pagi (Rekomendasi Pagi - Rekap Kemarin)</option>
+                                            <option value="08:00">08:00 Pagi (Rekap Kemarin)</option>
                                         </select>
+
                                     </div>
 
                                     <div className="pt-3 border-t border-gray-100 flex flex-col gap-2">

@@ -40,7 +40,11 @@ class SendDailySalesReportCommand extends Command
             return 0;
         }
 
-        $targetDate = $this->option('date') ?: Carbon::yesterday()->toDateString();
+        $reportTime = SystemSetting::getVal('daily_report_time', '07:00');
+        $isNightSchedule = in_array($reportTime, ['20:00', '21:00', '22:00', '23:00', '23:59']) || now()->hour >= 20;
+
+        $targetDate = $this->option('date') ?: ($isNightSchedule ? Carbon::today()->toDateString() : Carbon::yesterday()->toDateString());
+
         
         $recipientsStr = $this->option('email') ?: SystemSetting::getVal('daily_report_recipients');
         if (empty($recipientsStr)) {

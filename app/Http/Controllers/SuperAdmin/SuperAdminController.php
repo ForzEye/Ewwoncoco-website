@@ -650,7 +650,11 @@ class SuperAdminController extends Controller
      */
     public function previewDailyReport(Request $request, \App\Services\DailySalesReportService $service)
     {
-        $date = $request->query('date', now()->subDay()->toDateString());
+        $reportTime = SystemSetting::getVal('daily_report_time', '07:00');
+        $isNightSchedule = in_array($reportTime, ['20:00', '21:00', '22:00', '23:00', '23:59']) || now()->hour >= 20;
+
+        $defaultDate = $isNightSchedule ? now()->toDateString() : now()->subDay()->toDateString();
+        $date = $request->query('date', $defaultDate);
         $data = $service->getDailyReportData($date);
 
         $html = view('pdf.daily_sales_report', ['data' => $data])->render();
@@ -675,10 +679,15 @@ class SuperAdminController extends Controller
     {
         $email = $request->input('test_email');
         
-        $params = ['--date' => now()->subDay()->toDateString()];
+        $reportTime = SystemSetting::getVal('daily_report_time', '07:00');
+        $isNightSchedule = in_array($reportTime, ['20:00', '21:00', '22:00', '23:00', '23:59']) || now()->hour >= 20;
+        $defaultDate = $isNightSchedule ? now()->toDateString() : now()->subDay()->toDateString();
+
+        $params = ['--date' => $defaultDate];
         if ($email) {
             $params['--email'] = $email;
         }
+
 
         try {
             $exitCode = \Illuminate\Support\Facades\Artisan::call('report:daily-sales', $params);
