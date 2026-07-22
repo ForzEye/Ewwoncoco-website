@@ -60,10 +60,14 @@ class SendDailySalesReportCommand extends Command
         try {
             $data = $service->getDailyReportData($targetDate);
 
-            // Generate PDF
-            $pdf = app('dompdf.wrapper')->loadView('pdf.daily_sales_report', ['data' => $data]);
-            $pdf->setPaper('a4', 'portrait');
-            $pdfContent = $pdf->output();
+            // Generate PDF using native Dompdf
+            $html = view('pdf.daily_sales_report', ['data' => $data])->render();
+            $dompdf = new \Dompdf\Dompdf(['isRemoteEnabled' => true]);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('a4', 'portrait');
+            $dompdf->render();
+            $pdfContent = $dompdf->output();
+
 
 
             $this->info("Sending report PDF to: " . implode(', ', $recipients));

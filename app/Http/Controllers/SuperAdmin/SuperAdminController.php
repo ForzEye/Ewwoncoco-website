@@ -653,11 +653,19 @@ class SuperAdminController extends Controller
         $date = $request->query('date', now()->subDay()->toDateString());
         $data = $service->getDailyReportData($date);
 
-        $pdf = app('dompdf.wrapper')->loadView('pdf.daily_sales_report', ['data' => $data]);
-        $pdf->setPaper('a4', 'portrait');
+        $html = view('pdf.daily_sales_report', ['data' => $data])->render();
 
-        return $pdf->stream('Preview_Laporan_Penjualan_Harian_' . $date . '.pdf');
+        $dompdf = new \Dompdf\Dompdf(['isRemoteEnabled' => true]);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('a4', 'portrait');
+        $dompdf->render();
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="Preview_Laporan_Penjualan_Harian_' . $date . '.pdf"',
+        ]);
     }
+
 
 
     /**
