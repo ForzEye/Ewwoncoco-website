@@ -622,6 +622,7 @@ class SuperAdminController extends Controller
             'footer_text', 'contact_whatsapp', 'contact_email', 'instagram_url',
             'otp_enabled', 'otp_email_enabled', 'wa_notifications_enabled', 'android_download_url',
             'opening_hours_weekday', 'opening_hours_weekday_label', 'opening_hours_weekend', 'opening_hours_weekend_label',
+            'daily_report_enabled', 'daily_report_recipients', 'daily_report_time',
         ];
 
         foreach ($textSettings as $key) {
@@ -643,4 +644,40 @@ class SuperAdminController extends Controller
 
         return back()->with('success', 'Pengaturan berhasil diperbarui.');
     }
+
+    /**
+     * Preview generated Daily Sales Report PDF directly in browser
+     */
+    public function previewDailyReport(Request $request, \App\Services\DailySalesReportService $service)
+    {
+        $date = $request->query('date', now()->subDay()->toDateString());
+        $data = $service->getDailyReportData($date);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.daily_sales_report', ['data' => $data]);
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->stream('Preview_Laporan_Penjualan_Harian_' . $date . '.pdf');
+    }
+
+    /**
+     * Trigger manual test email sending for Daily Sales Report
+     */
+    public function sendTestDailyReport(Request $request)
+    {
+        $email = $request->input('test_email');
+        
+        $params = ['--date' => now()->subDay()->toDateString()];
+        if ($email) {
+            $params['--email'] = $email;
+        }
+
+        $exitCode = \Illuminate\Support\Facades\Artisan::call('report:daily-sales', $params);
+
+        if ($exitCode === 0) {
+            return redirect()->back()->with('success', 'Test laporan harian berhasil dikirim ke email!');
+        }
+
+        return redirect()->back()->with('error', 'Gagal mengirim test laporan. Periksa log email Anda.');
+    }
 }
+

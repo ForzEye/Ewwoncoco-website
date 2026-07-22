@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+
 import { 
     Globe, 
     Image as ImageIcon, 
@@ -48,6 +49,12 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
         opening_hours_weekend: settings.opening_hours_weekend || '10:00 - 22:00',
         opening_hours_weekend_label: settings.opening_hours_weekend_label || 'Sabtu - Minggu',
 
+        // Daily BI Report Settings
+        daily_report_enabled: settings.daily_report_enabled !== undefined ? String(settings.daily_report_enabled) : '1',
+        daily_report_recipients: settings.daily_report_recipients || '',
+        daily_report_time: settings.daily_report_time || '07:00',
+
+
         // Mobile App Settings
         app_landing_promo_text: appSettings.app_landing_promo_text || '',
         app_support_whatsapp: appSettings.app_support_whatsapp || settings.contact_whatsapp || '',
@@ -65,6 +72,17 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
         : (appImages.app_landing_hero_image ? [appImages.app_landing_hero_image] : []);
     
     const [appHeroPreviews, setAppHeroPreviews] = useState<string[]>(initialAppHeroes);
+    const [sendingTestEmail, setSendingTestEmail] = useState(false);
+
+    const handleTestSendDailyReport = () => {
+        setSendingTestEmail(true);
+        router.post(route('superadmin.settings.test_daily_report'), {
+            test_email: data.daily_report_recipients,
+        }, {
+            onFinish: () => setSendingTestEmail(false),
+        });
+    };
+
 
     const isAppHealthy = () => {
         if (!appLastConnected) return false;
@@ -344,7 +362,77 @@ export default function Settings({ settings, appSettings, appImages, appLastConn
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Daily BI Report Email Settings */}
+                            <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-poppins font-bold text-lg flex items-center gap-2 text-charcoal">
+                                        <Mail size={20} className="text-[#00C48C]" />
+                                        Laporan BI Harian (Email PDF)
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => setData('daily_report_enabled', data.daily_report_enabled === '1' ? '0' : '1')}
+                                        className={`px-4 py-2 rounded-lg font-black text-[10px] tracking-wider uppercase transition-all ${
+                                            data.daily_report_enabled === '1'
+                                                ? 'bg-[#F0FAF6] text-[#00C48C] border border-[#00C48C]'
+                                                : 'bg-red-50 text-red-500 border border-red-200'
+                                        }`}
+                                    >
+                                        {data.daily_report_enabled === '1' ? 'AKTIF' : 'NONAKTIF'}
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Email Penerima (Bos / Management)</label>
+                                        <input 
+                                            type="text" 
+                                            value={data.daily_report_recipients}
+                                            onChange={e => setData('daily_report_recipients', e.target.value)}
+                                            className="w-full px-5 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                            placeholder="bos@ewwoncoco.com, owner@ewwoncoco.com"
+                                        />
+                                        <p className="text-[9px] text-gray-400 ml-1">Pisahkan dengan koma jika ada lebih dari 1 penerima.</p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Jadwal Pengiriman Harian</label>
+                                        <select
+                                            value={data.daily_report_time}
+                                            onChange={e => setData('daily_report_time', e.target.value)}
+                                            className="w-full px-5 py-3 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#00C48C]/20 outline-none"
+                                        >
+                                            <option value="07:00">07:00 Pagi (Rekomendasi - Rekap Kemarin)</option>
+                                            <option value="08:00">08:00 Pagi</option>
+                                            <option value="23:59">23:59 Malam (Selesai Operasional)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="pt-3 border-t border-gray-100 flex flex-col gap-2">
+                                        <a
+                                            href={route('superadmin.settings.preview_daily_report')}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-charcoal font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors"
+                                        >
+                                            <Download size={14} />
+                                            Preview PDF Laporan (Browser)
+                                        </a>
+                                        <button
+                                            type="button"
+                                            onClick={handleTestSendDailyReport}
+                                            disabled={sendingTestEmail}
+                                            className="w-full py-2.5 px-4 bg-[#F0FAF6] hover:bg-[#00C48C] hover:text-white text-[#00C48C] font-bold text-xs rounded-xl border border-[#00C48C]/30 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                                        >
+                                            <Mail size={14} />
+                                            {sendingTestEmail ? 'Mengirim...' : 'Kirim Test Email ke Bos Sekarang'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
 
                         {/* Right Column: Content CMS */}
                         <div className="lg:col-span-8 space-y-6">

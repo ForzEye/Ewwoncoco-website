@@ -307,6 +307,9 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
     // System Settings
     Route::get('/settings', [SuperAdminController::class, 'settings'])->name('settings');
     Route::post('/settings', [SuperAdminController::class, 'updateSettings'])->name('settings.update');
+    Route::get('/settings/preview-daily-report', [SuperAdminController::class, 'previewDailyReport'])->name('settings.preview_daily_report');
+    Route::post('/settings/test-daily-report', [SuperAdminController::class, 'sendTestDailyReport'])->name('settings.test_daily_report');
+
 
     // Global Order Management
     Route::get('/orders', [SuperAdminController::class, 'orders'])->name('orders');
