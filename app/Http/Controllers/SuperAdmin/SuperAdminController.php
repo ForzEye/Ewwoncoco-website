@@ -680,13 +680,20 @@ class SuperAdminController extends Controller
             $params['--email'] = $email;
         }
 
-        $exitCode = \Illuminate\Support\Facades\Artisan::call('report:daily-sales', $params);
+        try {
+            $exitCode = \Illuminate\Support\Facades\Artisan::call('report:daily-sales', $params);
+            $output = \Illuminate\Support\Facades\Artisan::output();
 
-        if ($exitCode === 0) {
-            return redirect()->back()->with('success', 'Test laporan harian berhasil dikirim ke email!');
+            if ($exitCode === 0) {
+                return redirect()->back()->with('success', 'Test laporan harian berhasil dikirim ke ' . ($email ?: 'email penerima') . '!');
+            }
+
+            return redirect()->back()->with('error', 'Gagal mengirim test laporan: ' . $output);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Test Daily Report Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal mengirim test laporan: ' . $e->getMessage());
         }
-
-        return redirect()->back()->with('error', 'Gagal mengirim test laporan. Periksa log email Anda.');
     }
+
 }
 
