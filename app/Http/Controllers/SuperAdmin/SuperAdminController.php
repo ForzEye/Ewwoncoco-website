@@ -653,11 +653,12 @@ class SuperAdminController extends Controller
         $date = $request->query('date', now()->subDay()->toDateString());
         $data = $service->getDailyReportData($date);
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.daily_sales_report', ['data' => $data]);
+        $pdf = app('dompdf.wrapper')->loadView('pdf.daily_sales_report', ['data' => $data]);
         $pdf->setPaper('a4', 'portrait');
 
         return $pdf->stream('Preview_Laporan_Penjualan_Harian_' . $date . '.pdf');
     }
+
 
     /**
      * Trigger manual test email sending for Daily Sales Report

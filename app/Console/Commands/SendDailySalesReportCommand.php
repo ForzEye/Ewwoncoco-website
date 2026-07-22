@@ -61,9 +61,10 @@ class SendDailySalesReportCommand extends Command
             $data = $service->getDailyReportData($targetDate);
 
             // Generate PDF
-            $pdf = Pdf::loadView('pdf.daily_sales_report', ['data' => $data]);
+            $pdf = app('dompdf.wrapper')->loadView('pdf.daily_sales_report', ['data' => $data]);
             $pdf->setPaper('a4', 'portrait');
             $pdfContent = $pdf->output();
+
 
             $this->info("Sending report PDF to: " . implode(', ', $recipients));
 
